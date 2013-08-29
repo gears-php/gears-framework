@@ -18,7 +18,7 @@ Above is the default routing rule. The routing principles will be explained late
 # index.php
 <?php
 
-use Zen\Core\App;
+use Gf\Core\App;
 
 // framework
 require_once 'path/to/vendor/gears-php/framework/Gf/bootstrap.php';
