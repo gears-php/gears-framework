@@ -1,4 +1,7 @@
-framework
+Gears Framework (Gf)
 =========
 
-A PHP framework whish aims to be simple, solid and fast. 
+A web development framework whish aims to be simple, solid and fast
+
+Do more, write less
+------------------------
