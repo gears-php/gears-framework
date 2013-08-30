@@ -27,9 +27,21 @@ class Response
     private $body = '';
 
     /**
+     * Set HTTP response code
+     * @param int $code
+     * @return $this
+     */
+    public function setCode($code)
+    {
+        http_response_code($code);
+        return $this;
+    }
+
+    /**
      * Set HTTP response header(s)
      * @param string|array $name
      * @param $value|null
+     * @return $this
      */
     public function setHeader($name, $value = null)
     {
@@ -40,43 +52,50 @@ class Response
         } elseif (is_string($name)) {
             $this->headers[$name] = $value;
         }
-    }
-
-    /**
-     * Append response body content to an existing one
-     * @param $body
-     */
-    public function appendBody($body) {
-        $this->body .= $body;
+        return $this;
     }
 
     /**
      * Set response body content
      * @param string $body
+     * @return $this
      */
     public function setBody($body)
     {
         $this->body = $body;
+        return $this;
     }
 
-	/**
-	 * Return response body content
-	 * @return string
-	 */
-	public function getBody()
-	{
-		return $this->body;
-	}
+    /**
+     * Return response body content
+     * @return string
+     */
+    public function getBody()
+    {
+        return $this->body;
+    }
+
+    /**
+     * Append response body content to an existing one
+     * @param $body
+     * @return $this
+     */
+    public function appendBody($body)
+    {
+        $this->body .= $body;
+        return $this;
+    }
 
     /**
      * Encode the given data into JSON format
      * and prepare to respond json content
      * @param mixed $data
+     * @return $this
      */
     public function setJson($data)
     {
-        $this->setBody(json_encode($data));
-        $this->setHeader('Content-Type', 'application/json');
+        $this->setBody(json_encode($data))->setHeader('Content-Type', 'application/json');
+        return $this;
     }
 
     /**

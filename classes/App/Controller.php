@@ -72,12 +72,15 @@ abstract class Controller
 
 	/**
 	 * Redirect to another url within application
-	 * @param string $url
-	 */
-	public function redirect($url)
+	 * @param string $url Redirection resource
+     * @param int $code HTTP response code
+     */
+    public function redirect($url, $code = 302)
 	{
-        $this->getResponse()->setHeader('Location', APP_URI . trim($url, ' /') . '/');
-		$this->getResponse()->flush();
+        $this->getResponse()
+            ->setCode($code)
+            ->setHeader('Location', APP_URI . trim($url, ' /') . '/')
+		    ->flush();
 	}
 
 	/**
