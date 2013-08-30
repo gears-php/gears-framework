@@ -9,32 +9,36 @@ namespace Gears\Framework\App;
  */
 class Autoloader
 {
-    private $namespace;
+    private $namespacePrefix;
     private $includePath;
+    private static $ns = '\\';
+    private static $ds = DIRECTORY_SEPARATOR;
 
     /**
-     * Register a set of namespaces for classes autoloading
+     * Register a set of namespace prefixes and their base directories
      * @param array $vendors
      */
     public static function registerNamespaces(array $vendors)
     {
-        foreach ($vendors as $namespace => $includePath) {
-            (new self($namespace, $includePath))->register();
+        foreach ($vendors as $namespacePrefix => $includePath) {
+            (new self($namespacePrefix, $includePath))->register();
         }
     }
 
     /**
-     * @param string $namespace
+     * @param string $namespacePrefix
      * @param string $includePath The base include path from within to load classes
      */
-    public function __construct($namespace = null, $includePath = '')
+    public function __construct($namespacePrefix, $includePath)
     {
-        $this->namespace = $namespace;
-        $this->includePath = $includePath;
+        // store fully qualified namespace prefix
+        $this->namespacePrefix = rtrim(self::$ns . ltrim($namespacePrefix, self::$ns), self::$ns) . self::$ns;
+        // store normalized base include path
+        $this->includePath = rtrim($includePath, self::$ds) . self::$ds;
     }
 
     /**
-     * Register spl_autoload() implementation
+     * Register current loader
      * @return bool
      */
     public function register()
@@ -43,13 +47,17 @@ class Autoloader
     }
 
     /**
-     * Try to load the given class matching its namespace against the registered ones
-     * @param $className
+     * Try to load the given class by matching its full name against the registered
+     * namespace prefixes and then transforming it into class file full path
+     * @param string $className
      */
     public function loadClass($className)
     {
-        if (null === $this->namespace || 0 === strpos($className, $this->namespace)) {
-            $fileName = str_replace($this->namespace, $this->includePath, str_replace(['_', '\\'], DS, $className)) . '.php';
+        // getting fully qualified class name
+        $className = self::$ns . ltrim($className, self::$ns);
+        if (0 === strpos($className, $this->namespacePrefix)) {
+            $relativeClassName = substr($className, strlen($this->namespacePrefix));
+            $fileName = $this->includePath . str_replace(self::$ns, self::$ds, $relativeClassName) . '.php';
             if (is_file($fileName)) {
                 require_once $fileName;
             }
