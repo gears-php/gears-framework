@@ -3,15 +3,35 @@
 namespace Gears\Framework\App;
 
 /**
- * Provides classes autoload functionality
+ * Provides classes autoload functionality. Follows to yet non accpetped PSR-4 proposal
+ * (https://github.com/php-fig/fig-standards/blob/master/proposed/psr-4-autoloader/psr-4-autolader.md)
  * @package    Gears\Framework
  * @subpackage App
  */
 class Autoloader
 {
+    /**
+     * Namespace prefix by which to match a loaded class name
+     * @var string
+     */
     private $namespacePrefix;
+    
+    /**
+     * Full path to the directory from within to load class files
+     * @var string
+     */
     private $includePath;
+    
+    /**
+     * Namespace separator shortuct
+     * @var string
+     */
     private static $ns = '\\';
+    
+    /**
+     * Directory separator shortcut
+     * @var string
+     */
     private static $ds = DIRECTORY_SEPARATOR;
 
     /**
@@ -31,8 +51,8 @@ class Autoloader
      */
     public function __construct($namespacePrefix, $includePath)
     {
-        // store fully qualified namespace prefix
-        $this->namespacePrefix = rtrim(self::$ns . ltrim($namespacePrefix, self::$ns), self::$ns) . self::$ns;
+        // store normalized namespace prefix
+        $this->namespacePrefix = rtrim($namespacePrefix, self::$ns) . self::$ns;
         // store normalized base include path
         $this->includePath = rtrim($includePath, self::$ds) . self::$ds;
     }
@@ -53,8 +73,6 @@ class Autoloader
      */
     public function loadClass($className)
     {
-        // getting fully qualified class name
-        $className = self::$ns . ltrim($className, self::$ns);
         if (0 === strpos($className, $this->namespacePrefix)) {
             $relativeClassName = substr($className, strlen($this->namespacePrefix));
             $fileName = $this->includePath . str_replace(self::$ns, self::$ds, $relativeClassName) . '.php';
