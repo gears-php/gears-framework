@@ -1,4 +1,4 @@
-Gears Framework (Gf)
+Gears Framework (Gears\Framework)
 =========
 
 A web development PHP framework whish aims to be simple, solid and fast. **Do more, write less**
@@ -18,10 +18,10 @@ Above is the default routing rule. The routing principles will be explained late
 # index.php
 <?php
 
-use Gf\Core\App;
+use Gears\Framework\App\App;
 
 // framework
-require_once 'path/to/vendor/gears-php/framework/Gf/bootstrap.php';
+require_once 'path/to/vendor/gears-php/framework/bootstrap.php';
 
 try {
 	(new App)->run();
