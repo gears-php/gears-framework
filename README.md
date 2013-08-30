@@ -1,10 +1,10 @@
-Gears Framework (Gears\Framework)
+Gears Framework
 =========
 
-A web development PHP framework whish aims to be simple, solid and fast. **Do more, write less**
+A web development PHP framework with a focuse on simplicity, speed and a high code quality. **Do more, write less**
 
 
-## Basics
+### Basics
 The minimum you need to run your app
 
 ```yaml
