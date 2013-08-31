@@ -1,9 +1,9 @@
 <?php
 namespace Gears\Framework\View;
 
-use Gears\Framework\View\View;
 use Gears\Framework\View\Parser;
 use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
+use Gears\Framework\View\View;
 
 /**
  * Template class instantiated per each specific template file

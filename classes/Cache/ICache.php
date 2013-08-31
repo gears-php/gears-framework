@@ -15,8 +15,11 @@ namespace Gears\Framework\Cache;
  */
 interface ICache
 {
-	function __construct($cachePath, $cacheParams = []);
-	function isValid($cacheKey = false);
-	function save($data, $cacheKey = false);
-	function load($cacheKey = false);
+    function __construct($cachePath, $cacheParams = []);
+
+    function isValid($cacheKey = false);
+
+    function save($data, $cacheKey = false);
+
+    function load($cacheKey = false);
 }

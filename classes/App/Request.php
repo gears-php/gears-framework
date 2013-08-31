@@ -13,23 +13,23 @@ namespace Gears\Framework\App;
  */
 class Request
 {
-	/**
-	 * Request route pattern
-	 * @var string
-	 */
-	private $pattern = '';
+    /**
+     * Request route pattern
+     * @var string
+     */
+    private $pattern = '';
 
-	/**
-	 * Controller name
-	 * @var string
-	 */
-	private $controllerName = '';
+    /**
+     * Controller name
+     * @var string
+     */
+    private $controllerName = '';
 
-	/**
-	 * Action name
-	 * @var string
-	 */
-	private $actionName = '';
+    /**
+     * Action name
+     * @var string
+     */
+    private $actionName = '';
 
     /**
      * Stores path full path under which controllers, models and views are stored
@@ -46,27 +46,27 @@ class Request
      */
     private $mvcPath = '';
 
-	/**
-	 * Request parameters
-	 * @var array
-	 */
-	private $params = [];
+    /**
+     * Request parameters
+     * @var array
+     */
+    private $params = [];
 
-	/**
-	 *
-	 */
-	public function __construct(array $route)
-	{
-		$route = (object) $route;
+    /**
+     *
+     */
+    public function __construct(array $route)
+    {
+        $route = (object)$route;
         // remember url matching pattern
         $this->pattern = $route->route;
         // remember base path to MVC folder
         $this->mvcPath = $route->base;
         // requested controller name part
         preg_match('/\/(?P<class>[\w-]+)?(?:\/(?P<method>[\w-]+))?(?P<params>(?:\/[\w-]+)*)/', $route->to, $uri);
-        $this->controllerName = $uri['class'] ?: 'index';
+        $this->controllerName = $uri['class'] ? : 'index';
         // requested action name part
-        $this->actionName = $uri['method'] ?: 'index';
+        $this->actionName = $uri['method'] ? : 'index';
         // remember url placeholder params
         $this->params = $route->params;
         // extract "/name/value" url params
@@ -78,7 +78,7 @@ class Request
                 $this->params[$key] = $value;
             }
         }
-	}
+    }
 
     /**
      * Get full path to the current MVC folder
@@ -89,40 +89,40 @@ class Request
         return APP_PATH . $this->mvcPath . DS;
     }
 
-	/**
+    /**
      * Get requested controller names
-	 * @return string
-	 */
-	public function getControllerName()
-	{
-		return $this->controllerName;
-	}
+     * @return string
+     */
+    public function getControllerName()
+    {
+        return $this->controllerName;
+    }
 
-	/**
+    /**
      * Get requested controller action name
-	 * @return string
-	 */
-	public function getActionName()
-	{
-		return $this->actionName;
-	}
+     * @return string
+     */
+    public function getActionName()
+    {
+        return $this->actionName;
+    }
 
-	/**
-	 * Get all request params parsed from uri
-	 * @return object
-	 */
-	public function getParams()
-	{
-		return (object)$this->params;
-	}
+    /**
+     * Get all request params parsed from uri
+     * @return object
+     */
+    public function getParams()
+    {
+        return (object)$this->params;
+    }
 
-	/**
-	 * Whether current request is asynchronous
-	 */
-	public function isAjax()
-	{
-		return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && ($_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'));
-	}
+    /**
+     * Whether current request is asynchronous
+     */
+    public function isAjax()
+    {
+        return (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && ($_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest'));
+    }
 
     /**
      * Get json decoded request data
@@ -142,12 +142,12 @@ class Request
         return [];
     }
 
-	/**
-	 * Get unique hash key based on all current request info (controller, action, parameters, etc.)
-	 * @return string
-	 */
-	public function getUniqueKey()
-	{
-		return md5(var_export($this, true));
-	}
+    /**
+     * Get unique hash key based on all current request info (controller, action, parameters, etc.)
+     * @return string
+     */
+    public function getUniqueKey()
+    {
+        return md5(var_export($this, true));
+    }
 }

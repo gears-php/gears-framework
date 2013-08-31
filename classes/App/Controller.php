@@ -15,41 +15,41 @@ use Gears\Framework\App\Response;
  */
 abstract class Controller
 {
-	/**
-	 * {@see App} instance holder
-	 * @var object
-	 */
-	private $app = null;
+    /**
+     * {@see App} instance holder
+     * @var object
+     */
+    private $app = null;
 
-	/**
-	 * Constructor
-	 * @param Request $request
+    /**
+     * Constructor
+     * @param Request $request
      * @param Response $response
      * @param Services $services
      */
     public function __construct(App $app)
-	{
-		$this->app = $app;
-		$this->init();
-	}
+    {
+        $this->app = $app;
+        $this->init();
+    }
 
-	/**
-	 * Get application instance
-	 * @return App
-	 */
-	public function getApp()
-	{
-		return $this->app;
-	}
+    /**
+     * Get application instance
+     * @return App
+     */
+    public function getApp()
+    {
+        return $this->app;
+    }
 
-	/**
-	 * Return request instance
+    /**
+     * Return request instance
      * @return Request
-	 */
-	public function getRequest()
-	{
+     */
+    public function getRequest()
+    {
         return $this->getApp()->getRequest();
-	}
+    }
 
     /**
      * Return response instance
@@ -70,24 +70,24 @@ abstract class Controller
         return $this->getApp()->getService($name);
     }
 
-	/**
-	 * Redirect to another url within application
-	 * @param string $url Redirection resource
+    /**
+     * Redirect to another url within application
+     * @param string $url Redirection resource
      * @param int $code HTTP response code
      */
     public function redirect($url, $code = 302)
-	{
+    {
         $this->getResponse()
             ->setCode($code)
             ->setHeader('Location', APP_URI . trim($url, ' /') . '/')
-		    ->flush();
-	}
+            ->flush();
+    }
 
-	/**
-	 * Method to be extended by descendant action controllers
-	 * in case they require some initial preparations
-	 */
-	public function init()
-	{
-	}
+    /**
+     * Method to be extended by descendant action controllers
+     * in case they require some initial preparations
+     */
+    public function init()
+    {
+    }
 }

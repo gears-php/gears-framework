@@ -15,8 +15,8 @@ namespace Gears\Framework\App\Exception;
  */
 class ResourceNotFound extends \Exception
 {
-	public function __construct($message)
-	{
-		parent::__construct($message);
-	}
+    public function __construct($message)
+    {
+        parent::__construct($message);
+    }
 }

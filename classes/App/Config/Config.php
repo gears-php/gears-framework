@@ -100,7 +100,7 @@ class Config
      * Get some configuration property. If nothing passed returns full configuration tree.
      * If no property found returns NULL. Example:
      *
-     * $dbUsername = Config::get('server.db.username'); 
+     * $dbUsername = Config::get('server.db.username');
      * # which equals to:
      * $cfg = Config::get();
      * $dbUsername = $cfg['server']['db']['username'];

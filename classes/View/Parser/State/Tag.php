@@ -3,6 +3,7 @@
  * @author Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  */
 namespace Gears\Framework\View\Parser\State;
+
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser;
 
@@ -17,7 +18,7 @@ class Tag extends State
             $buffer = ltrim($buffer, '/');
             $closingTagPrefix = 'end';
         }
-		return sprintf('<?= $this->t%s([', ucfirst($closingTagPrefix . $buffer));
+        return sprintf('<?= $this->t%s([', ucfirst($closingTagPrefix . $buffer));
     }
 
     public function run($char, Parser $parser)

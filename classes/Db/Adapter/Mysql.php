@@ -12,25 +12,25 @@ use Gears\Framework\Db\Adapter\Generic;
  */
 class Mysql extends Generic
 {
-	protected $driver = 'mysql';
+    protected $driver = 'mysql';
 
-	public function escapeIdentifier($identifier)
-	{
-		return "`" . str_replace('`', '``', $identifier) . "`";
-	}
+    public function escapeIdentifier($identifier)
+    {
+        return "`" . str_replace('`', '``', $identifier) . "`";
+    }
 
-	public function getLastRowCount()
-	{
-		return intval($this->conn->query('SELECT FOUND_ROWS()')->fetchColumn());
-	}
+    public function getLastRowCount()
+    {
+        return intval($this->conn->query('SELECT FOUND_ROWS()')->fetchColumn());
+    }
 
-	protected function getPlaceholderIgnoreRegex()
-	{
-		return '
+    protected function getPlaceholderIgnoreRegex()
+    {
+        return '
             "   (?> [^"\\\\]+|\\\\"|\\\\)*    "   |
             \'  (?> [^\'\\\\]+|\\\\\'|\\\\)* \'   |
             `   (?> [^`]+ | ``)*              `   |   # backticks
             /\* .*?                          \*/      # comments
         ';
-	}
+    }
 }

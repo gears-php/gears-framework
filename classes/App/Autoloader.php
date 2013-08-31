@@ -15,19 +15,19 @@ class Autoloader
      * @var string
      */
     private $namespacePrefix;
-    
+
     /**
      * Full path to the directory from within to load class files
      * @var string
      */
     private $includePath;
-    
+
     /**
      * Namespace separator shortuct
      * @var string
      */
     private static $ns = '\\';
-    
+
     /**
      * Directory separator shortcut
      * @var string

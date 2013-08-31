@@ -7,9 +7,9 @@
  */
 namespace Gears\Framework\App;
 
-use Gears\Framework\Event\Dispatcher;
 use Gears\Framework\App\Config\Config;
 use Gears\Framework\App\Exception\ResourceNotFound;
+use Gears\Framework\Event\Dispatcher;
 
 /**
  * Provides the most low-level application functionality, controls the application flow
@@ -63,7 +63,7 @@ class App extends Dispatcher
         if (ob_get_length()) {
             ob_end_clean();
         }
-        echo sprintf('<pre>%s</pre>', $e.'');
+        echo sprintf('<pre>%s</pre>', $e . '');
         die();
     }
 
@@ -84,23 +84,23 @@ class App extends Dispatcher
         return true;
     }
 
-	/**
-	 * Get request instance
-	 * @return Request
-	 */
-	public function getRequest()
-	{
-		return $this->request;
-	}
+    /**
+     * Get request instance
+     * @return Request
+     */
+    public function getRequest()
+    {
+        return $this->request;
+    }
 
-	/**
-	 * Get response instance
-	 * @return Response
-	 */
-	public function getResponse()
-	{
-		return $this->response;
-	}
+    /**
+     * Get response instance
+     * @return Response
+     */
+    public function getResponse()
+    {
+        return $this->response;
+    }
 
     /**
      * Get application service
@@ -144,7 +144,7 @@ class App extends Dispatcher
         // try to match route for the given uri
         if ($this->request = $this->resolve($uri, $this->getRoutesConfig())) {
             try {
-				$this->response = new Response();
+                $this->response = new Response();
 
                 // create controller reflection class
                 $reflectionController = new \ReflectionClass($this->getControllerClassName());
@@ -202,7 +202,7 @@ class App extends Dispatcher
     private function getModuleConfigFiles($fileName)
     {
         $fileExt = Config::getReader()->getFileExt();
-        return glob(APP_PATH. 'modules' .DS. '*' .DS. 'config' .DS. basename($fileName, $fileExt) . $fileExt);
+        return glob(APP_PATH . 'modules' . DS . '*' . DS . 'config' . DS . basename($fileName, $fileExt) . $fileExt);
     }
 
     /**
@@ -254,7 +254,7 @@ class App extends Dispatcher
 
     /**
      * Match the given url with one of route patterns and return Request instance holding all
-     * the necessary request information. Return false if none of the routes was suitable 
+     * the necessary request information. Return false if none of the routes was suitable
      * @param string $uri Request uri
      * @param array $routes Routes configuration
      * @return Request instance
@@ -287,7 +287,7 @@ class App extends Dispatcher
                     // first check for REST pseudo method
                     if (in_array('REST', $route['methods'])) {
                         $route['to'] = rtrim($route['to'], '/') . '/' . strtolower($_SERVER['REQUEST_METHOD']);
-                    // otherwise current request methods should be among allowed ones
+                        // otherwise current request methods should be among allowed ones
                     } elseif (!in_array($_SERVER['REQUEST_METHOD'], $route['methods'])) {
                         throw new \Exception('Invalid request method: ' . $_SERVER['REQUEST_METHOD']);
                     }
@@ -381,7 +381,7 @@ class App extends Dispatcher
         ];
     }
 
-   /**
+    /**
      * Return full (including namespace) controller class name based
      * on current request controller name info
      * <code>
@@ -396,7 +396,7 @@ class App extends Dispatcher
     {
         $ns = '\\';
         return rtrim(
-            // path to mvc folder
+        // path to mvc folder
             str_replace(DS, $ns, str_replace(ROOT_PATH, '', $this->request->getMvcPath())), $ns
         ) . $ns .
         // next is "controllers" directory name part
@@ -411,5 +411,5 @@ class App extends Dispatcher
     private function toCamelCase($str)
     {
         return preg_replace(['/(\w+)/e', '/-/'], ['ucfirst("$1")', ''], $str);
-    }    
+    }
 }

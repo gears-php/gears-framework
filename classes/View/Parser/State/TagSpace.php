@@ -3,6 +3,7 @@
  * @author Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  */
 namespace Gears\Framework\View\Parser\State;
+
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser;
 

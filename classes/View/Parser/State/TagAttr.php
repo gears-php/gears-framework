@@ -3,6 +3,7 @@
  * @author Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  */
 namespace Gears\Framework\View\Parser\State;
+
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser;
 
@@ -10,7 +11,7 @@ class TagAttr extends State
 {
     public function getProcessedBuffer()
     {
-        return sprintf('\'%s\'=>', rtrim($this->getBuffer(), '='));        
+        return sprintf('\'%s\'=>', rtrim($this->getBuffer(), '='));
     }
 
     public function run($char, Parser $parser)

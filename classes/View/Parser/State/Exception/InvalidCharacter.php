@@ -14,13 +14,13 @@ namespace Gears\Framework\View\Parser\State\Exception;
  */
 class InvalidCharacter extends \Exception
 {
-	public function __construct($stateClass, $char, $pos, $file = '')
-	{
-		parent::__construct(sprintf('%s found invalid character "%s" at %s position in %s file',
-			$stateClass,
-			$char,
-			$pos,
-			$file
-		));
-	}
+    public function __construct($stateClass, $char, $pos, $file = '')
+    {
+        parent::__construct(sprintf('%s found invalid character "%s" at %s position in %s file',
+            $stateClass,
+            $char,
+            $pos,
+            $file
+        ));
+    }
 }
