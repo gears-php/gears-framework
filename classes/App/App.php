@@ -284,9 +284,14 @@ class App extends Dispatcher
      */
     private function setDbConnection()
     {
-        if (!$this->config->get('db.disabled') && ($dbCfg = $this->config->get('db'))) {
-            $dbCfg = (object) $dbCfg;
-            $db = Db::connect($dbCfg->host, $dbCfg->user, $dbCfg->pass, $dbCfg->dbname, $dbCfg->driver);
+        if ($this->config->get('db') && !$this->config->get('db.disabled')) {
+            $db = Db::connect(
+                $this->config->get('db.host'),
+                $this->config->get('db.user'),
+                $this->config->get('db.pass'),
+                $this->config->get('db.dbname'),
+                $this->config->get('db.driver')
+            );
             $db->query('set names utf8');
         }
     }
