@@ -60,7 +60,7 @@ class App extends Dispatcher
         $this->services = new Services();
         $this->config = new Config();
         // try to load main application configuration
-        $this->config->load(CONF_PATH . 'app.yml');
+        $this->config->load($this->getConfigFile('app'));
     }
 
     /**
@@ -130,14 +130,13 @@ class App extends Dispatcher
 
     /**
      * Dispatch request to the specific controller and action based on matched uri route pattern
-     * @param string $uri
      * @throws ResourceNotFound
      */
-    public function run($uri = null)
+    public function run()
     {
         $this->init();
 
-        $uri = str_replace(rtrim(APP_URI, '/'), '', $uri ? : $_SERVER['REQUEST_URI']);
+        $uri = str_replace(rtrim(APP_URI, '/'), '', $_SERVER['REQUEST_URI']);
 
         // try to match route for the given uri
         if ($this->request = $this->resolve($uri, $this->getRoutesConfig())) {
