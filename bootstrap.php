@@ -1,5 +1,6 @@
 <?php
 use Gears\Framework\App\Autoloader;
+use Gears\Framework\App\App;
 
 ini_set('display_errors', 'On');
 
@@ -16,3 +17,5 @@ Autoloader::registerNamespaces([
   'Gears\Framework' => __DIR__ . DS . 'classes',
   'app' => APP_PATH
 ]);
+
+return new App();

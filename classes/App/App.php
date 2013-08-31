@@ -9,11 +9,11 @@ namespace Gears\Framework\App;
 
 use Gears\Framework\App\Config\Config;
 use Gears\Framework\App\Exception\ResourceNotFound;
+use Gears\Framework\Db\Db;
 use Gears\Framework\Event\Dispatcher;
 
 /**
  * Provides the most low-level application functionality, controls the application flow
- *
  * @package    Gears\Framework
  * @subpackage App
  */
@@ -45,6 +45,12 @@ class App extends Dispatcher
     private $ignoreErrorReporting;
 
     /**
+     * Config instance
+     * @var Config
+     */
+    private $config = null;
+
+    /**
      * Constructor
      */
     public function __construct()
@@ -52,36 +58,18 @@ class App extends Dispatcher
         $this->handleErrors();
         $this->handleExceptions();
         $this->services = new Services();
+        $this->config = new Config();
+        // try to load main application configuration
+        $this->config->load(CONF_PATH . 'app.yml');
     }
 
     /**
-     * Exception handler function. Trying to display detailed exception info
-     * @param \Exception $e
+     * Return app config instance
+     * @return Config
      */
-    public function exceptionHandler($e)
+    public function getConfig()
     {
-        if (ob_get_length()) {
-            ob_end_clean();
-        }
-        echo sprintf('<pre>%s</pre>', $e . '');
-        die();
-    }
-
-    /**
-     * Error handler function. Generating exception with debug_backtrace info
-     * @param int $code
-     * @param string $message
-     * @param string $file
-     * @param int $line
-     * @return bool
-     * @throws \ErrorException
-     */
-    public function errorHandler($code, $message, $file, $line)
-    {
-        if (error_reporting() || $this->ignoreErrorReporting) {
-            throw new \ErrorException($message, $code, 1, $file, $line);
-        }
-        return true;
+        return $this->config;
     }
 
     /**
@@ -133,12 +121,22 @@ class App extends Dispatcher
     }
 
     /**
+     * Initialize main application services
+     */
+    public function init()
+    {
+        $this->setDbConnection();
+    }
+
+    /**
      * Dispatch request to the specific controller and action based on matched uri route pattern
      * @param string $uri
      * @throws ResourceNotFound
      */
     public function run($uri = null)
     {
+        $this->init();
+
         $uri = str_replace(rtrim(APP_URI, '/'), '', $uri ? : $_SERVER['REQUEST_URI']);
 
         // try to match route for the given uri
@@ -184,13 +182,43 @@ class App extends Dispatcher
     }
 
     /**
+     * Exception handler function. Trying to display detailed exception info
+     * @param \Exception $e
+     */
+    public function exceptionHandler($e)
+    {
+        if (ob_get_length()) {
+            ob_end_clean();
+        }
+        echo sprintf('<pre>%s</pre>', $e . '');
+        die();
+    }
+
+    /**
+     * Error handler function
+     * @param int $code
+     * @param string $message
+     * @param string $file
+     * @param int $line
+     * @return bool
+     * @throws \ErrorException
+     */
+    public function errorHandler($code, $message, $file, $line)
+    {
+        if (error_reporting() || $this->ignoreErrorReporting) {
+            throw new \ErrorException($message, $code, 1, $file, $line);
+        }
+        return true;
+    }
+
+    /**
      * Get full path to a specific base configuration file
      * @param string $fileName File name
      * @return string
      */
     private function getConfigFile($fileName)
     {
-        $fileExt = Config::getReader()->getFileExt();
+        $fileExt = $this->config->getReader()->getFileExt();
         return CONF_PATH . basename($fileName, $fileExt) . $fileExt;
     }
 
@@ -201,7 +229,7 @@ class App extends Dispatcher
      */
     private function getModuleConfigFiles($fileName)
     {
-        $fileExt = Config::getReader()->getFileExt();
+        $fileExt = $this->config->getReader()->getFileExt();
         return glob(APP_PATH . 'modules' . DS . '*' . DS . 'config' . DS . basename($fileName, $fileExt) . $fileExt);
     }
 
@@ -214,7 +242,7 @@ class App extends Dispatcher
         $routes = [];
 
         // load basic routes for root mvc
-        foreach (Config::read($this->getConfigFile('routes')) as $route) {
+        foreach ($this->config->read($this->getConfigFile('routes')) as $route) {
             $routes[$route['route']] = $route + ['base' => ''];
         }
 
@@ -222,7 +250,7 @@ class App extends Dispatcher
         $moduleRouteFiles = $this->getModuleConfigFiles('routes');
         foreach ($moduleRouteFiles as $file) {
             $moduleMvcPath = str_replace(APP_PATH, '', dirname(dirname($file)));
-            foreach (Config::read($file) as $route) {
+            foreach ($this->config->read($file) as $route) {
                 $routes[$route['route']] = $route + ['base' => $moduleMvcPath];
             }
         }
@@ -250,6 +278,18 @@ class App extends Dispatcher
     {
         $this->ignoreErrorReporting = $ignore;
         return set_error_handler([$this, 'errorHandler']);
+    }
+
+    /**
+     * Establish database connection using existing configuration
+     */
+    private function setDbConnection()
+    {
+        if (!$this->config->get('db.disabled') && ($dbCfg = $this->config->get('db'))) {
+            $dbCfg = (object) $dbCfg;
+            $db = Db::connect($dbCfg->host, $dbCfg->user, $dbCfg->pass, $dbCfg->dbname, $dbCfg->driver);
+            $db->query('set names utf8');
+        }
     }
 
     /**

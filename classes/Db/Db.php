@@ -31,7 +31,7 @@ class Db
      * @param string $driver
      * @return Generic
      */
-    public static function connect($host, $user, $pass, $dbname, $driver = 'mysql')
+    public static function connect($host, $user, $pass, $dbname, $driver)
     {
         $className = __NAMESPACE__ . '\\Adapter\\' . ucfirst(strtolower($driver));
         self::$adapter = new $className($host, $user, $pass, $dbname, $driver);
@@ -45,7 +45,7 @@ class Db
     public static function getAdapter()
     {
         if (null == self::$adapter) {
-            throw new \Exception(__CLASS__ . ': no database adapter set. Please check that db connection was successfully established');
+            throw new \Exception('No database adapter set. Please check that db connection was successfully established');
         }
         return self::$adapter;
     }
