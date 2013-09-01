@@ -126,6 +126,7 @@ class App extends Dispatcher
         $this->config = new Config();
         $this->config->load($this->getConfigFile($configFile));
         $this->setDbConnection();
+        return $this;
     }
 
     /**
@@ -134,8 +135,6 @@ class App extends Dispatcher
      */
     public function run()
     {
-        $this->init();
-
         $uri = str_replace(rtrim(APP_URI, '/'), '', $_SERVER['REQUEST_URI']);
 
         // try to match route for the given uri
