@@ -33,6 +33,9 @@ class Db
      */
     public static function connect($host, $user, $pass, $dbname, $driver)
     {
+        if (null === $driver) {
+            throw new \Exception('Db connection driver is not defined');
+        }
         $className = __NAMESPACE__ . '\\Adapter\\' . ucfirst(strtolower($driver));
         self::$adapter = new $className($host, $user, $pass, $dbname, $driver);
         return self::$adapter;
