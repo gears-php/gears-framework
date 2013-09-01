@@ -5,7 +5,6 @@
  */
 namespace Gears\Framework\App;
 
-use Gears\Framework\App\Config;
 use Gears\Framework\App\Response;
 
 /**
