@@ -5,8 +5,6 @@
  */
 namespace Gears\Framework\App;
 
-use Gears\Framework\App\Response;
-
 /**
  * Abstract controller
  * @package    Gears\Framework
