@@ -65,6 +65,15 @@ abstract class Generic
     }
 
     /**
+     * Get db adapter connection
+     * @return \PDO
+     */
+    public function getConnection()
+    {
+       return $this->conn;
+    }
+
+    /**
      * Process and execute query
      * @return $this
      */

@@ -57,10 +57,6 @@ class App extends Dispatcher
     {
         $this->handleErrors();
         $this->handleExceptions();
-        $this->services = new Services();
-        $this->config = new Config();
-        // try to load main application configuration
-        $this->config->load($this->getConfigFile('app'));
     }
 
     /**
@@ -121,10 +117,14 @@ class App extends Dispatcher
     }
 
     /**
-     * Initialize main application services
+     * Setup main application services
+     * @param string $configFile Name of the app configuration file to be loaded
      */
-    public function init()
+    public function init($configFile = 'app')
     {
+        $this->services = new Services();
+        $this->config = new Config();
+        $this->config->load($this->getConfigFile($configFile));
         $this->setDbConnection();
     }
 
