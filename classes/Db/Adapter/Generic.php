@@ -9,7 +9,7 @@
 namespace Gears\Framework\Db\Adapter;
 
 /**
- * Abstract db adapter implements generic functionality regardless of db type. Uses PDO
+ * Abstract db adapter is a PDO wrapper bringing more handy and laconic functionality over the last one
  * @package Gears\Framework\Db\Adapter
  */
 abstract class Generic
@@ -26,7 +26,7 @@ abstract class Generic
      * Active database connection
      * @var \PDO
      */
-    protected $conn = null;
+    protected $connection = null;
 
     /**
      * Active PDO query result statement
@@ -60,17 +60,28 @@ abstract class Generic
      */
     public function __construct($host, $user, $pass, $dbname)
     {
-        $this->conn = new \PDO("$this->driver:host=$host;dbname=$dbname", $user, $pass);
-        $this->conn->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $this->connection = new \PDO("$this->driver:host=$host;dbname=$dbname", $user, $pass);
+        $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
     }
 
     /**
-     * Get db adapter connection
-     * @return \PDO
+     * Prepare the given query using active connection
+     * @param string $query
      */
-    public function getConnection()
+    public function prepare($query)
     {
-       return $this->conn;
+       $this->statement = $this->connection->prepare($query);
+    }
+
+    /**
+     * Execute latest prepared query with given params
+     * @param array $params
+     */
+    public function execute(array $params = array())
+    {
+        $this->statement->execute($params);
+        // by default each fetched row will be return as an associative array
+        $this->statement->setFetchMode(\PDO::FETCH_ASSOC);
     }
 
     /**
@@ -86,11 +97,9 @@ abstract class Generic
             // next args should be query placeholder params
             $this->expandPlaceholders($query, $args);
             // first parameter should be a query
-            $this->statement = $this->conn->prepare($query);
+            $this->prepare($query);
             // execute prepared SQL statement with given parameter values (if any)
-            $this->statement->execute($args);
-            // by default each row will be return as an associative array
-            $this->statement->setFetchMode(\PDO::FETCH_ASSOC);
+            $this->execute($args);
         } catch (\PDOException $e) {
             // todo: exception should include full (prepared) query string
             throw $e;
@@ -152,7 +161,7 @@ abstract class Generic
      */
     public function escape($value)
     {
-        return $this->conn->quote($value);
+        return $this->connection->quote($value);
     }
 
     /**
@@ -170,7 +179,7 @@ abstract class Generic
      */
     public function getLastInsertId()
     {
-        return $this->conn->lastInsertId();
+        return $this->connection->lastInsertId();
     }
 
     /**

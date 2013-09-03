@@ -21,7 +21,7 @@ class Mysql extends Generic
 
     public function getLastRowCount()
     {
-        return intval($this->conn->query('SELECT FOUND_ROWS()')->fetchColumn());
+        return intval($this->connection->query('SELECT FOUND_ROWS()')->fetchColumn());
     }
 
     protected function getPlaceholderIgnoreRegex()
