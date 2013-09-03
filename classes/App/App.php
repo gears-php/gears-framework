@@ -439,10 +439,9 @@ class App extends Dispatcher
     {
         $ns = '\\';
         return rtrim(
-        // path to mvc folder
+            // path to mvc folder
             str_replace(DS, $ns, str_replace(ROOT_PATH, '', $this->request->getMvcPath())), $ns
         ) . $ns .
-        // next is "controllers" directory name part
         'controllers' . $ns . $this->toCamelCase($this->request->getControllerName()) . 'Controller';
     }
 

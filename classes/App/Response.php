@@ -66,14 +66,6 @@ class Response
         return $this;
     }
 
-    /**
-     * Return response body content
-     * @return string
-     */
-    public function getBody()
-    {
-        return $this->body;
-    }
 
     /**
      * Append response body content to an existing one
@@ -84,6 +76,15 @@ class Response
     {
         $this->body .= $body;
         return $this;
+    }
+
+    /**
+     * Return response body content
+     * @return string
+     */
+    public function getBody()
+    {
+        return $this->body;
     }
 
     /**
@@ -99,7 +100,7 @@ class Response
     }
 
     /**
-     * Do immediate response by setting HTTP headers, status and body
+     * Do immediate response by setting HTTP headers and outputting body
      */
     public function flush()
     {

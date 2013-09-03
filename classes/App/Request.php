@@ -32,8 +32,8 @@ class Request
     private $actionName = '';
 
     /**
-     * Stores path full path under which controllers, models and views are stored
-     * Empty by default meaning that MVC folders are located directly inside app/ folder.
+     * Stores relative path under which controller, model and view folders are located.
+     * Empty by default meaning that MVC folders live directly inside APP_PATH folder
      *
      * <code>
      * APP_PATH
@@ -53,25 +53,31 @@ class Request
     private $params = [];
 
     /**
-     *
+     * Extracting controller, action and paramters from the given route information
+     * @param array $route
      */
     public function __construct(array $route)
     {
-        $route = (object)$route;
+        $route = (object) $route;
         // remember url matching pattern
         $this->pattern = $route->route;
         // remember base path to MVC folder
         $this->mvcPath = $route->base;
-        // requested controller name part
+        
         preg_match('/\/(?P<class>[\w-]+)?(?:\/(?P<method>[\w-]+))?(?P<params>(?:\/[\w-]+)*)/', $route->to, $uri);
+        
+        // requested controller name part
         $this->controllerName = $uri['class'] ? : 'index';
         // requested action name part
         $this->actionName = $uri['method'] ? : 'index';
         // remember url placeholder params
         $this->params = $route->params;
+        
         // extract "/name/value" url params
         $params = explode('/', $uri['params']);
+        
         array_shift($params);
+        
         foreach (array_chunk($params, 2) as $pair) {
             @list($key, $value) = $pair;
             if (!isset($this->params[$key])) {
@@ -82,7 +88,7 @@ class Request
 
     /**
      * Get full path to the current MVC folder
-     * @return string Base path to the MVC folder
+     * @return string
      */
     public function getMvcPath()
     {
@@ -90,7 +96,7 @@ class Request
     }
 
     /**
-     * Get requested controller names
+     * Get requested controller name
      * @return string
      */
     public function getControllerName()
