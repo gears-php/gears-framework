@@ -201,12 +201,15 @@ class Query
     }
 
     /**
-     * Execute query using db adapter set via constructor
+     * Execute query
      */
     public function execute()
     {
         if ($this->db instanceof Generic) {
-            return $this->db->query($this->toString())->fetchRows();
+            return $this->db
+                ->prepare($this->toString())
+                ->execute()
+                ->fetchRows();
         } else {
             throw new \Exception("Query db adapter is not set");
         }

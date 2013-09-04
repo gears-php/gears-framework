@@ -65,23 +65,27 @@ abstract class Generic
     }
 
     /**
-     * Prepare the given query using active connection
+     * Prepare the given query for execution
      * @param string $query
+     * @return $this
      */
     public function prepare($query)
     {
-       $this->statement = $this->connection->prepare($query);
+        $this->statement = $this->connection->prepare($query);
+        return $this;
     }
 
     /**
      * Execute latest prepared query with given params
      * @param array $params
+     * @return $this;
      */
     public function execute(array $params = array())
     {
         $this->statement->execute($params);
         // by default each fetched row will be return as an associative array
         $this->statement->setFetchMode(\PDO::FETCH_ASSOC);
+        return $this;
     }
 
     /**

@@ -71,14 +71,14 @@ abstract class Table
     public function __construct()
     {
         // init table db adapter
-        $this->db = Db::getAdapter();
+        $this->initDb();
 
         if (is_null($this->tableName)) {
             throw new \Exception(get_called_class() . ' - table name is not specified');
         }
 
         // build default query
-        $this->defaultQuery = new Query($this->db);
+        $this->defaultQuery = new Query($this->getDb());
         $this->defaultQuery
             ->select($this->getDefaultFields(), null, $this->getTableName())
             ->from($this->getTableName())
@@ -367,6 +367,15 @@ abstract class Table
      */
     protected function init()
     {
+    }
+
+    /*
+     * Setup table database adapter. Can be extended by descendant
+     * classes to use some another specific db connection
+     */
+    protected function initDb()
+    {
+        $this->db = Db::getAdapter();
     }
 
     /**
