@@ -53,7 +53,7 @@ class Request
     private $params = [];
 
     /**
-     * Extracting controller, action and paramters from the given route information
+     * Extracting controller, action and parameters from the given route information
      * @param array $route
      */
     public function __construct(array $route)
@@ -92,7 +92,7 @@ class Request
      */
     public function getMvcPath()
     {
-        return APP_PATH . $this->mvcPath . DS;
+        return APP_PATH . $this->mvcPath;
     }
 
     /**
