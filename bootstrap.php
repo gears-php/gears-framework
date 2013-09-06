@@ -13,9 +13,6 @@ mb_internal_encoding("UTF-8");
 require_once 'defines.php';
 require_once 'classes/App/Autoloader.php';
 
-Autoloader::registerNamespaces([
-  'Gears\Framework' => __DIR__ . DS . 'classes',
-  'app' => APP_PATH
-]);
+(new Autoloader('Gears\Framework', __DIR__ . DS . 'classes'))->register();
 
 return new App();
