@@ -51,6 +51,13 @@ class App extends Dispatcher
     private $config = null;
 
     /**
+     * Store [relativePath => namespacePrefix] list of all autoload
+     * mappings read from config files
+     * @var array
+     */
+    private $autoloadPaths = [];
+
+    /**
      * Constructor
      */
     public function __construct()
@@ -119,13 +126,15 @@ class App extends Dispatcher
     /**
      * Setup main application services
      * @param string $configFile Name of the app configuration file to be loaded
+     * @return $this
      */
     public function init($configFile = 'app')
     {
         $this->services = new Services();
         $this->config = new Config();
         $this->config->load($this->getConfigFile($configFile));
-        $this->setDbConnection();
+        $this->initAutoloading();
+        $this->initDbConnection();
         return $this;
     }
 
@@ -160,8 +169,11 @@ class App extends Dispatcher
                 // after requested action is invoked event
                 $this->dispatch('afterAction');
 
+                // special event for rendering step
+                $this->dispatch('render', [$actionResult]);
+
                 // before HTTP response event                
-                $this->dispatch('beforeResponse', [$actionResult]);
+                $this->dispatch('beforeResponse');
 
                 $this->getResponse()->appendBody(ob_get_clean());
                 $this->getResponse()->flush();
@@ -245,10 +257,10 @@ class App extends Dispatcher
         }
 
         // load module routes
-        $moduleRouteFiles = $this->getModuleConfigFiles('routes');
-        foreach ($moduleRouteFiles as $file) {
-            $moduleMvcPath = str_replace(APP_PATH, '', dirname(dirname($file)));
-            foreach ($this->config->read($file) as $route) {
+        $moduleRoutingFiles = $this->getModuleConfigFiles('routes');
+        foreach ($moduleRoutingFiles as $routingFile) {
+            $moduleMvcPath = str_replace(APP_PATH, '', dirname(dirname($routingFile)));
+            foreach ($this->config->read($routingFile) as $route) {
                 $routes[$route['route']] = $route + ['base' => $moduleMvcPath];
             }
         }
@@ -279,19 +291,50 @@ class App extends Dispatcher
     }
 
     /**
+     * Process autoloading mappings in order to register necessary autoloaders
+     */
+    private function initAutoloading()
+    {
+        // process main app config autoload mappings
+        if (is_array($mappings = $this->config->get('autoload'))) {
+            $this->setAutoloadMappings($mappings);
+        }
+        // process module config files autoload mappings
+        $moduleCfgFiles = $this->getModuleConfigFiles('module');
+        foreach ($moduleCfgFiles as $cfgFile) {
+            $mappings = $this->config->read($cfgFile, 'autoload');
+            if (is_array($mappings)) {
+                $this->setAutoloadMappings($mappings);
+            }
+        }
+    }
+
+    /**
+     * Register new autoload mappings
+     * @param array $mappings Mappings list in [namespacePrefix => includePath] format
+     */
+    private function setAutoloadMappings(array $mappings)
+    {
+        foreach ($mappings as $namespacePrefix => $path) {
+            $includePath = trim(str_replace('/', DS, $path), DS);
+            $this->autoloadPaths[$includePath] = $namespacePrefix;
+            (new Autoloader($namespacePrefix, \ROOT_PATH . $includePath))->register();
+        }
+    }
+
+    /**
      * Establish database connection using existing configuration
      */
-    private function setDbConnection()
+    private function initDbConnection()
     {
         if ($this->config->get('db') && !$this->config->get('db.disabled')) {
-            $db = Db::connect(
+            Db::connect(
                 $this->config->get('db.host'),
                 $this->config->get('db.user'),
                 $this->config->get('db.pass'),
                 $this->config->get('db.dbname'),
                 $this->config->get('db.driver')
-            );
-            $db->query('set names utf8');
+            )->query('set names utf8');
         }
     }
 
@@ -438,11 +481,13 @@ class App extends Dispatcher
     private function getControllerClassName()
     {
         $ns = '\\';
-        return rtrim(
-            // path to mvc folder
-            str_replace(DS, $ns, str_replace(ROOT_PATH, '', $this->request->getMvcPath())), $ns
-        ) . $ns .
-        'controllers' . $ns . $this->toCamelCase($this->request->getControllerName()) . 'Controller';
+        $controllersPath = str_replace(ROOT_PATH, '', $this->request->getMvcPath()) . 'controllers';
+        if (isset($this->autoloadPaths[$controllersPath])) {
+            $namespacePrefix = trim($this->autoloadPaths[$controllersPath], $ns);
+        } else {
+            $namespacePrefix = str_replace(DS, $ns, $controllersPath);
+        }
+        return  $namespacePrefix . $ns . $this->toCamelCase($this->request->getControllerName()) . 'Controller';
     }
 
     /**
