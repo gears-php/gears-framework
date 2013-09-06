@@ -19,34 +19,54 @@ class Config
      * Configuration internal storage
      * @var array
      */
-    protected static $storage = [];
+    protected $storage = null;
 
     /**
      * Configuration file reader instance
      * @var IReader
      */
-    protected static $reader = null;
+    protected $reader = null;
+
+    /**
+     * Config can be initialized with a given tree configuration array
+     * for further manipulations
+     * @param array (optional) $node
+     */
+    public function __construct($node = null)
+    {
+        $this->storage = $node;
+    }
+
+    /**
+     * Return a first-level node value from current configuration
+     * @param string $prop
+     * @return mixed
+     */
+    public function __get($prop)
+    {
+        return $this->get($prop);
+    }
 
     /**
      * Set config files reader
      * @param IReader $reader
      */
-    public static function setReader(IReader $reader)
+    public function setReader(IReader $reader)
     {
-        self::$reader = $reader;
+        $this->reader = $reader;
     }
 
     /**
      * Get reader instance. Creates default reader if none exists
      * @return IReader Config reader object
      */
-    public static function getReader()
+    public function getReader()
     {
-        if (null === self::$reader) {
+        if (null === $this->reader) {
             // support yaml configuration files by default
-            self::$reader = new Yaml();
+            $this->reader = new Yaml();
         }
-        return self::$reader;
+        return $this->reader;
     }
 
     /**
@@ -55,21 +75,22 @@ class Config
      * @param string $file Path to the file
      * @param string (optional) $node Sub-node to be returned
      * @return array Configuration tree
+     * @throws \Exception If config file is not found
      */
-    public static function read($file, $node = null)
+    public function read($file, $node = null)
     {
         if (is_file($file)) {
-            $loaded = self::getReader()->getFileConfig($file);
+            $loaded = $this->getReader()->getFileConfig($file);
 
             // load sub files, if any
-            $fileExtLength = strlen(self::$reader->getFileExt());
+            $fileExtLength = strlen($this->reader->getFileExt());
             array_walk_recursive($loaded, function (&$item) use ($file, $fileExtLength) {
-                if (is_string($item) && substr($item, -$fileExtLength) == self::$reader->getFileExt()) {
-                    $item = self::read(dirname($file) . DS . $item);
+                if (is_string($item) && substr($item, -$fileExtLength) == $this->reader->getFileExt()) {
+                    $item = $this->read(dirname($file) . DS . $item);
                 }
             });
 
-            return $loaded ? self::get($node, $loaded) : [];
+            return $loaded ? $this->get($node, $loaded) : [];
         } else {
             throw new \Exception('Config file not found: ' . $file);
         }
@@ -83,35 +104,46 @@ class Config
      * @param string (optional) $node Dot separated path of the node under which to store the loaded config
      * @return array Loaded configuration tree
      */
-    public static function load($file, $node = null)
+    public function load($file, $node = null)
     {
-        $loaded = self::read($file);
+        $loaded = $this->read($file);
 
         if (!is_string($node)) {
-            self::$storage = $loaded;
+            $this->storage = $loaded;
         } else {
-            self::set($node, $loaded);
+            $this->set($node, $loaded);
         }
 
         return $loaded;
     }
 
     /**
+     * Same as {@link get()} but returns a new Config instance 
+     * @param string $node
+     * @param null (optional) $storage
+     * @return Config
+     */
+    public function getObj($node, $storage = null)
+    {
+        return new Config($this->get($node, $storage));
+    }
+
+    /**
      * Get some configuration property. If nothing passed returns full configuration tree.
      * If no property found returns NULL. Example:
      *
-     * $dbUsername = Config::get('server.db.username');
+     * $dbUsername = $cfg->get('server.db.username');
      * # which equals to:
-     * $cfg = Config::get();
+     * $cfg = $cfg->get();
      * $dbUsername = $cfg['server']['db']['username'];
      *
      * @param string (optional) $node Path to the property inside configuration tree, separated by dots
      * @param array (optional) $storage Storage from where to get property. Inner class storage by default
      * @return array|mixed|NULL Full configuration tree | found configuration property value | NULL if nothing is found
      */
-    public static function get($node = '', $storage = null)
+    public function get($node = null, $storage = null)
     {
-        $storage = $storage ? : self::$storage;
+        $storage = $storage ? : $this->storage;
 
         if ('' == trim($node)) {
             return $storage;
@@ -134,21 +166,21 @@ class Config
     /**
      * Set some configuration property (new or overwrite existent). Example:
      *
-     * $success = Config::set('server.db.username', 'johndoe');
+     * $success = $cfg->set('server.db.username', 'john doe');
      * # which equals to:
-     * $cfg = Config::get();
-     * $cfg['server']['db']['username'] = 'johndoe';
+     * $cfg = $cfg->get();
+     * $cfg['server']['db']['username'] = 'john doe';
      *
-     * @param string $node Path to the propery inside configuration tree, separated by dots
+     * @param string $node Path to the property inside configuration tree, separated by dots
      * @param mixed $value
      * @return boolean Whether value was set or not
      */
-    public static function set($node, $value)
+    public function set($node, $value)
     {
         if ('' == trim($node)) {
             return false;
         } else {
-            $p = & self::$storage;
+            $p = & $this->storage;
             $p = (array)$p;
 
             $path = explode('.', $node);
