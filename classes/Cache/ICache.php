@@ -8,18 +8,14 @@
 namespace Gears\Framework\Cache;
 
 /**
- * Cache interface to be implemented by any cache system implementation
- *
+ * Cache interface which should be implemented by any specific cache system
  * @package    Gears\Framework
  * @subpackage Cache
  */
 interface ICache
 {
-    function __construct($cachePath, $cacheParams = []);
-
-    function isValid($cacheKey = false);
-
-    function save($data, $cacheKey = false);
-
-    function load($cacheKey = false);
+    public function __construct($cachePath, $cacheParams = []);
+    public function isValid($cacheKey = false);
+    public function set($data, $cacheKey = false);
+    public function get($cacheKey = false);
 }

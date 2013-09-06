@@ -9,7 +9,6 @@ namespace Gears\Framework\Cache;
 
 /**
  * File system cache implementation
- *
  * @package    Gears\Framework
  * @subpackage Cache
  */
@@ -61,7 +60,7 @@ class File implements ICache
      */
     public function isValid($cacheKey = false)
     {
-        $cacheFile = $this->_getCacheFile($cacheKey);
+        $cacheFile = $this->getCacheFile($cacheKey);
         if (file_exists($cacheFile)) {
             if (time() - filemtime($cacheFile) <= $this->expireTimeSeconds) return true;
         }
@@ -72,24 +71,25 @@ class File implements ICache
      * Save data to the cache
      * @param mixed $data
      * @param string|boolean $cacheKey
+     * @throws \Exception If cache dir is not writable
      */
-    public function save($data, $cacheKey = false)
+    public function set($data, $cacheKey = false)
     {
         if (!is_writable($this->cacheDir)) {
             throw new \Exception('Cache dir is not writable');
         }
-        file_put_contents($this->_getCacheFile($cacheKey), serialize($data));
+        file_put_contents($this->getCacheFile($cacheKey), serialize($data));
     }
 
     /**
-     * Load cached data
-     * @param string|boolean $key
-     * @return mixed
+     * Get data from the cache
+     * @param string|boolean $cacheKey
+     * @return mixed|bool Actual cache content or false if it is not valid
      */
-    public function load($cacheKey = false)
+    public function get($cacheKey = false)
     {
         if ($this->isValid($cacheKey)) {
-            return unserialize(file_get_contents($this->_getCacheFile($cacheKey)));
+            return unserialize(file_get_contents($this->getCacheFile($cacheKey)));
         }
         return false;
     }
@@ -97,8 +97,10 @@ class File implements ICache
     /**
      * Get name of cache file by a given cache key
      * @param string|boolean $cacheKey
+     * @return string
+     * @throws \Exception If cache key is not available
      */
-    private function _getCacheFile($cacheKey)
+    private function getCacheFile($cacheKey)
     {
         if (empty($cacheKey)) {
             // cache key was possibly passed within constructor options
