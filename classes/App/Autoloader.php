@@ -3,7 +3,7 @@
 namespace Gears\Framework\App;
 
 /**
- * Provides classes autoload functionality. Follows to yet non accpetped PSR-4 proposal
+ * Provides classes autoload functionality. Follows to yet non accepted PSR-4 proposal
  * (https://github.com/php-fig/fig-standards/blob/master/proposed/psr-4-autoloader/psr-4-autolader.md)
  * @package    Gears\Framework
  * @subpackage App
@@ -23,7 +23,7 @@ class Autoloader
     private $includePath;
 
     /**
-     * Namespace separator shortuct
+     * Namespace separator shortcut
      * @var string
      */
     private static $ns = '\\';
@@ -36,11 +36,11 @@ class Autoloader
 
     /**
      * Register a set of namespace prefixes and their base directories
-     * @param array $vendors
+     * @param array $mappings
      */
-    public static function registerNamespaces(array $vendors)
+    public static function registerNamespaces(array $mappings)
     {
-        foreach ($vendors as $namespacePrefix => $includePath) {
+        foreach ($mappings as $namespacePrefix => $includePath) {
             (new self($namespacePrefix, $includePath))->register();
         }
     }
@@ -52,7 +52,7 @@ class Autoloader
     public function __construct($namespacePrefix, $includePath)
     {
         // store normalized namespace prefix
-        $this->namespacePrefix = rtrim($namespacePrefix, self::$ns) . self::$ns;
+        $this->namespacePrefix = trim($namespacePrefix, self::$ns) . self::$ns;
         // store normalized base include path
         $this->includePath = rtrim($includePath, self::$ds) . self::$ds;
     }
