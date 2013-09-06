@@ -327,13 +327,14 @@ class App extends Dispatcher
      */
     private function initDbConnection()
     {
-        if ($this->config->get('db') && !$this->config->get('db.disabled')) {
+        $dbCfg = $this->config->getObj('db');
+        if ($dbCfg->get() && !$dbCfg->get('disabled')) {
             Db::connect(
-                $this->config->get('db.host'),
-                $this->config->get('db.user'),
-                $this->config->get('db.pass'),
-                $this->config->get('db.dbname'),
-                $this->config->get('db.driver')
+                $dbCfg->host,
+                $dbCfg->user,
+                $dbCfg->pass,
+                $dbCfg->dbname,
+                $dbCfg->driver
             )->query('set names utf8');
         }
     }
@@ -487,7 +488,7 @@ class App extends Dispatcher
         } else {
             $namespacePrefix = str_replace(DS, $ns, $controllersPath);
         }
-        return  $namespacePrefix . $ns . $this->toCamelCase($this->request->getControllerName()) . 'Controller';
+        return $namespacePrefix . $ns . $this->toCamelCase($this->request->getControllerName()) . 'Controller';
     }
 
     /**
