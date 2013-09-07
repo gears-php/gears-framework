@@ -40,6 +40,8 @@ class File implements ICache
     {
         if (isset($cacheParams['expireTimeSeconds'])) {
             $this->expireTimeSeconds = intval($cacheParams['expireTimeSeconds']);
+        } elseif (isset($cacheParams['noExpire'])) {
+            $this->expireTimeSeconds = false;
         }
 
         if (isset($cacheParams['key'])) {
@@ -62,7 +64,7 @@ class File implements ICache
     {
         $cacheFile = $this->getCacheFile($cacheKey);
         if (file_exists($cacheFile)) {
-            if (!intval($this->expireTimeSeconds)) return true;
+            if (!$this->expireTimeSeconds) return true;
             if (time() - filemtime($cacheFile) <= $this->expireTimeSeconds) return true;
         }
         return false;
