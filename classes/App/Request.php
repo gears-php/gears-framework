@@ -61,8 +61,8 @@ class Request
         $route = (object) $route;
         // remember url matching pattern
         $this->pattern = $route->route;
-        // remember base path to MVC folder
-        $this->mvcPath = trim($route->base, DS) . DS;
+        // construct full path to MVC folder
+        $this->mvcPath = trim(APP_PATH . $route->base, DS) . DS;
         
         preg_match('/\/(?P<class>[\w-]+)?(?:\/(?P<method>[\w-]+))?(?P<params>(?:\/[\w-]+)*)/', $route->to, $uri);
         
@@ -92,7 +92,7 @@ class Request
      */
     public function getMvcPath()
     {
-        return APP_PATH . $this->mvcPath;
+        return $this->mvcPath;
     }
 
     /**
