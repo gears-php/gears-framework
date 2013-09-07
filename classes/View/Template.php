@@ -290,22 +290,23 @@ class Template
 
     /**
      * Gather all given key=>value pairs into html tag attributes string (e.g. attr="value")
-     * @param $attrs
+     * @param $attributes
      * @return string
      */
-    private function getTagAttributesString($attrs)
+    private function getTagAttributesString($attributes)
     {
-        $attrsString = '';
-        foreach ($attrs as $name => $value) {
-            $attrsString .= sprintf(' %s="%s"', $name, $value);
+        $attributesString = '';
+        foreach ($attributes as $name => $value) {
+            $attributesString .= sprintf(' %s="%s"', $name, $value);
         }
-        return $attrsString;
+        return $attributesString;
     }
 
     /**
      * Process and return template content
      * @param array $vars
      * @return string
+     * @throws InvalidCharacter
      */
     private function process(array $vars)
     {
