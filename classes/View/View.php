@@ -7,6 +7,7 @@
  */
 namespace Gears\Framework\View;
 
+use Gears\Framework\Cache\ICache;
 use Gears\Framework\View\Template;
 
 /**
@@ -42,21 +43,36 @@ class View
     protected $templateFileExt = '.phtml';
 
     /**
-     * Path to compiled templates directory
-     * @var string
+     * Cache implementation instance
+     * @var ICache
      */
-    protected $cachePath = '';
+    protected $cache = null;
 
     /**
-     * Constructor
+     * Constructor. Accepts array of supported options
+     * @param array $options
      */
-    public function __construct($paths = [])
+    public function __construct($options = [])
     {
-        $this->setTemplatePaths($paths);
+        // setup template file path(s)
+        if (isset($options['templates'])) {
+            if (is_string($tpl = $options['templates'])) {
+                $this->addTemplatePath($tpl);
+            } elseif (is_array($tpl)) {
+                $this->setTemplatePaths($tpl);
+            }
+        }
+
+        // setup cache storage
+        if (isset($options['cache'])) {
+            if (($cache = $options['cache']) instanceof ICache) {
+                $this->cache = $cache;
+            }
+        }
     }
 
     /**
-     * Magic method used to catch non-existant view method which is
+     * Magic method used to catch non-existent view method which is
      * treated as some helper class call
      * @param $method
      * @param $args
@@ -86,24 +102,6 @@ class View
     }
 
     /**
-     * Set templates cache directory
-     * @param string $cachePath
-     */
-    public function setCachePath($cachePath)
-    {
-        $this->cachePath = $cachePath;
-    }
-
-    /**
-     * Return cached templates directory
-     * @return string
-     */
-    public function getCachePath()
-    {
-        return $this->cachePath;
-    }
-
-    /**
      * Get template by full or relative name OR alias name (for already stored templates)
      * @param string $name Template name to get the template. Extension is optional
      * @param bool|string $alias (optional) Unique name under which to store and access template for future
@@ -130,7 +128,7 @@ class View
                 $path = (0 === strpos($fileName, APP_PATH)) ? $fileName : $path . DS . $fileName;
 
                 if (is_file($path)) {
-                    $tpl = new Template($path, $this);
+                    $tpl = new Template($path, $this, $this->cache);
                     break;
                 }
             }

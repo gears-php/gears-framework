@@ -1,6 +1,7 @@
 <?php
 namespace Gears\Framework\View;
 
+use Gears\Framework\Cache\ICache;
 use Gears\Framework\View\Parser;
 use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 use Gears\Framework\View\View;
@@ -15,6 +16,7 @@ class Template
 {
     protected $name = '';
     protected $path = '';
+    protected $content = '';
     protected $vars = [];
     protected $parent = null;
     protected $view = null;
@@ -23,21 +25,36 @@ class Template
     protected $disabled = false;
 
     /**
-     * Basic initialization
+     * Process template file
+     * @param string $filePath Full path to a template file
+     * @param View $view
+     * @param ICache (optional) $cache Cache storage instance to be used for storing compiled templates
+     * @throws \Exception If template file not found
      */
-    public function __construct($filePath, View $view)
+    public function __construct($filePath, View $view, ICache $cache = null)
     {
-        if (is_file($filePath)) {
-            $this->path = str_replace('/', DS, dirname($filePath));
-            $this->name = basename($filePath);
-            $this->view = $view;
+        $this->path = str_replace('/', DS, dirname($filePath));
+        $this->name = basename($filePath);
+        $this->view = $view;
 
-            if (!is_file($cached = $this->getCachedPath()) || filemtime($cached) < filemtime($filePath)) {
-                $parser = new Parser();
-                file_put_contents($cached, $parser->parseFile($filePath));
+        $templateKey = md5($filePath);
+
+        // try to use non-outdated processed template from cache
+        if ($cache && $cache->getTime($templateKey) > filemtime($filePath)) {
+            $this->content = $cache->get($templateKey);
+        }
+
+        if (!$this->content) {
+            // processing (compiling) template file only once during construction since
+            // it can be used in a loop for rendering some repeatable content
+            if (is_file($filePath)) {
+                $this->content = (new Parser())->parseFile($filePath);
+                if ($cache) {
+                    $cache->set($this->content, $templateKey);
+                }
+            } else {
+                throw new \Exception('Template file not found: ' . $filePath);
             }
-        } else {
-            throw new \Exception('Template file not found: ' . $filePath);
         }
     }
 
@@ -46,7 +63,7 @@ class Template
      */
     public function __call($method, $params)
     {
-        return $this->view()->helper($method, $params);
+        return $this->view->helper($method, $params);
     }
 
     /**
@@ -94,18 +111,12 @@ class Template
     }
 
     /**
-     * Get path to the cached template file
-     * @return string
-     */
-    public function getCachedPath()
-    {
-        return $this->view()->getCachePath() . DS . md5($this->getFilePath());
-    }
-
-    /**
+     * Get view instance
+     * @deprecated
      * @return View
+     * @todo Check method usage outside of template class and remove if not used
      */
-    public function view()
+    public function getView()
     {
         return $this->view;
     }
@@ -148,7 +159,7 @@ class Template
 
     /**
      * Render template
-     * @param $vars Template variables
+     * @param array $vars Template variables
      * @return string Rendered template content
      */
     public function render($vars = [])
@@ -166,7 +177,8 @@ class Template
 
     /**
      * Get or set decorator parent template
-     * @return Template
+     * @param Template $tpl
+     * @return Template|null
      */
     private function parent(Template $tpl = null)
     {
@@ -204,7 +216,7 @@ class Template
      */
     private function tInclude(array $args)
     {
-        echo $this->view()->load($args['name'])->assign($this->vars)->render();
+        echo $this->view->load($args['name'])->assign($this->vars)->render();
     }
 
     /**
@@ -213,7 +225,7 @@ class Template
      */
     private function tExtends(array $args)
     {
-        $this->parent($this->view()->load($args['name']));
+        $this->parent($this->view->load($args['name']));
     }
 
     /**
@@ -300,7 +312,7 @@ class Template
         try {
             ob_start();
             extract($vars);
-            include $this->getCachedPath();
+            eval('?>' . $this->content);
             return ob_get_clean();
         } catch (InvalidCharacter $e) {
             throw $e;
