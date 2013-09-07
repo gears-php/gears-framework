@@ -18,4 +18,5 @@ interface ICache
     public function isValid($cacheKey = false);
     public function set($data, $cacheKey = false);
     public function get($cacheKey = false);
+    public function getTime($cacheKey = false);
 }

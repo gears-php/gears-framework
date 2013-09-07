@@ -39,7 +39,7 @@ class File implements ICache
     public function __construct($cacheDir, $cacheParams = [])
     {
         if (isset($cacheParams['expireTimeSeconds'])) {
-            $this->expireTimeSeconds = $cacheParams['expireTimeSeconds'];
+            $this->expireTimeSeconds = intval($cacheParams['expireTimeSeconds']);
         }
 
         if (isset($cacheParams['key'])) {
@@ -62,6 +62,7 @@ class File implements ICache
     {
         $cacheFile = $this->getCacheFile($cacheKey);
         if (file_exists($cacheFile)) {
+            if (!intval($this->expireTimeSeconds)) return true;
             if (time() - filemtime($cacheFile) <= $this->expireTimeSeconds) return true;
         }
         return false;
@@ -78,13 +79,16 @@ class File implements ICache
         if (!is_writable($this->cacheDir)) {
             throw new \Exception('Cache dir is not writable');
         }
-        file_put_contents($this->getCacheFile($cacheKey), serialize($data));
+        // store cache content
+        file_put_contents($cacheFile = $this->getCacheFile($cacheKey), serialize($data));
+        // store `dummy` cache timestamp file in order to fixate its modification time
+        file_put_contents($cacheFile . 'tm', filemtime($cacheFile));
     }
 
     /**
      * Get data from the cache
      * @param string|boolean $cacheKey
-     * @return mixed|bool Actual cache content or false if it is not valid
+     * @return mixed|boolean Actual cache content or false if it is not valid
      */
     public function get($cacheKey = false)
     {
@@ -92,6 +96,20 @@ class File implements ICache
             return unserialize(file_get_contents($this->getCacheFile($cacheKey)));
         }
         return false;
+    }
+
+    /**
+     * Get UNIX time when the specific cache was last modified
+     * @param bool $cacheKey
+     * @return int
+     */
+    public function getTime($cacheKey = false)
+    {
+        $cacheFile = $this->getCacheFile($cacheKey);
+        if (file_exists($cacheFile)) {
+            return filemtime($this->getCacheFile($cacheKey) . 'tm');
+        }
+        return -1;
     }
 
     /**
