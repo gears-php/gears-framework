@@ -67,11 +67,15 @@ class App extends Dispatcher
     }
 
     /**
-     * Return app config instance
+     * Return app config instance or config node value if node is given
+	 * @param string $node Dot-separated node to get the config value
      * @return Config
      */
-    public function getConfig()
+    public function getConfig($node = null)
     {
+		if (trim($node)) {
+			return $this->config->get($node);
+		}
         return $this->config;
     }
 
