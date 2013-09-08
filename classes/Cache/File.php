@@ -82,9 +82,7 @@ class File implements ICache
             throw new \Exception('Cache dir is not writable');
         }
         // store cache content
-        file_put_contents($cacheFile = $this->getCacheFile($cacheKey), serialize($data));
-        // store `dummy` cache timestamp file in order to fixate its modification time
-        file_put_contents($cacheFile . 'tm', filemtime($cacheFile));
+        file_put_contents($cacheFile = $this->getCacheFile($cacheKey), json_encode($data));
     }
 
     /**
@@ -95,7 +93,7 @@ class File implements ICache
     public function get($cacheKey = false)
     {
         if ($this->isValid($cacheKey)) {
-            return unserialize(file_get_contents($this->getCacheFile($cacheKey)));
+            return json_decode(file_get_contents($this->getCacheFile($cacheKey)));
         }
         return false;
     }
@@ -107,9 +105,8 @@ class File implements ICache
      */
     public function getTime($cacheKey = false)
     {
-        $cacheFile = $this->getCacheFile($cacheKey);
-        if (file_exists($cacheFile)) {
-            return filemtime($this->getCacheFile($cacheKey) . 'tm');
+        if (file_exists($cacheFile = $this->getCacheFile($cacheKey))) {
+            return filemtime($cacheFile);
         }
         return -1;
     }
