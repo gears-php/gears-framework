@@ -163,6 +163,6 @@ class Request
      */
     public function getUniqueKey()
     {
-        return md5(var_export($this, true));
+        return md5(var_export($this, true) + var_export($_GET));
     }
 }
