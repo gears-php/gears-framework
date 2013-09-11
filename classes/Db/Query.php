@@ -205,14 +205,10 @@ class Query
      */
     public function execute()
     {
-        if ($this->db instanceof Generic) {
-            return $this->db
-                ->prepare($this->toString())
-                ->execute()
-                ->fetchRows();
-        } else {
-            throw new \Exception("Query db adapter is not set");
-        }
+        return $this->db
+            ->prepare($this->toString())
+            ->execute()
+            ->fetchRows();
     }
 
     /**
