@@ -114,6 +114,15 @@ class Request
     }
 
     /**
+     * Get requested 'controller/action' name pair
+     * @return string
+     */
+    public function getFullActionName()
+    {
+        return $this->controllerName . '/' . $this->actionName;
+    }
+
+    /**
      * Get all request params parsed from uri
      * @return object
      */
