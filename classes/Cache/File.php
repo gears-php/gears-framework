@@ -56,7 +56,7 @@ class File implements ICache
                 mkdir($this->cacheDir);
             }
         } catch (\Exception $e) {
-            throw new \Exception($e->getMessage() . ' for cache directory ' . $this->cacheDir, $e->getCode());
+            throw new \Exception(sprintf('Unable to create cache directory "%s"', $this->cacheDir));
         }
     }
 
