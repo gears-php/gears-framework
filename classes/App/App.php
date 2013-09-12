@@ -73,9 +73,9 @@ class App extends Dispatcher
      */
     public function getConfig($node = null)
     {
-		if (trim($node)) {
-			return $this->config->get($node);
-		}
+	if (trim($node)) {
+		return $this->config->get($node);
+	}
         return $this->config;
     }
 
