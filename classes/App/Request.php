@@ -62,7 +62,7 @@ class Request
         // remember url matching pattern
         $this->pattern = $route->route;
         // construct full path to MVC folder
-        $this->mvcPath = trim(APP_PATH . $route->base, DS) . DS;
+        $this->mvcPath = rtrim(APP_PATH . $route->base, DS) . DS;
         
         preg_match('/\/(?P<class>[\w-]+)?(?:\/(?P<method>[\w-]+))?(?P<params>(?:\/[\w-]+)*)/', $route->to, $uri);
         
