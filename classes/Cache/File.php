@@ -51,12 +51,12 @@ class File implements ICache
 
         $this->cacheDir = $cacheDir;
 
-        if (!is_dir($this->cacheDir)) {
-            try {
+        try {
+            if (!is_dir($this->cacheDir)) {
                 mkdir($this->cacheDir);
-            } catch (\Exception $e) {
-                throw new \Exception($e->getMessage() . ' for cache directory '. $this->cacheDir, $e->getCode());
             }
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage() . ' for cache directory ' . $this->cacheDir, $e->getCode());
         }
     }
 
@@ -69,8 +69,12 @@ class File implements ICache
     {
         $cacheFile = $this->getCacheFile($cacheKey);
         if (file_exists($cacheFile)) {
-            if (!$this->expireTimeSeconds) return true;
-            if (time() - filemtime($cacheFile) <= $this->expireTimeSeconds) return true;
+            if (!$this->expireTimeSeconds) {
+                return true;
+            }
+            if (time() - filemtime($cacheFile) <= $this->expireTimeSeconds) {
+                return true;
+            }
         }
         return false;
     }
