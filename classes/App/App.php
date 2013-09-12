@@ -473,14 +473,7 @@ class App extends Dispatcher
     }
 
     /**
-     * Return full (including namespace) controller class name based
-     * on current request controller name info
-     * <code>
-     * app\
-     *   [mvc\path\]
-     *     controllers\
-     *       ControllerName
-     * </code>
+     * Return full `namespaced` class name of requested controller
      * @return string
      */
     private function getControllerClassName()
