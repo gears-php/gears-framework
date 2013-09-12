@@ -35,6 +35,7 @@ class File implements ICache
      * Cache initialization
      * @param string $cacheDir Cache folder
      * @param array $cacheParams Additional options
+     * @throws \Exception If cache dir is not writable
      */
     public function __construct($cacheDir, $cacheParams = [])
     {
@@ -51,6 +52,9 @@ class File implements ICache
         $this->cacheDir = $cacheDir;
 
         if (!is_dir($this->cacheDir)) {
+            if (!is_writable($this->cacheDir)) {
+                throw new \Exception('Cache directory is not writable: '.$this->cacheDir);
+            }
             mkdir($this->cacheDir);
         }
     }
