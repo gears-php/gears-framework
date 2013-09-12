@@ -254,7 +254,7 @@ class App extends Dispatcher
      */
     private function processConfig(array $config)
     {
-        $vars = $this->config->get('system.vars');
+        $vars = $this->config->get('vars');
         if (count($vars)) {
             $search = array_keys($vars);
             $replace = array_values($vars);
