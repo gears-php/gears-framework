@@ -52,10 +52,11 @@ class File implements ICache
         $this->cacheDir = $cacheDir;
 
         if (!is_dir($this->cacheDir)) {
-            if (!is_writable($this->cacheDir)) {
-                throw new \Exception('Cache directory is not writable: '.$this->cacheDir);
+            try {
+                mkdir($this->cacheDir);
+            } catch (\Exception $e) {
+                throw new \Exception($e->getMessage() . ' for cache directory '. $this->cacheDir, $e->getCode());
             }
-            mkdir($this->cacheDir);
         }
     }
 
