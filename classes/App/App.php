@@ -68,14 +68,14 @@ class App extends Dispatcher
 
     /**
      * Return app config instance or config node value if node is given
-	 * @param string $node Dot-separated node to get the config value
+     * @param string $node Dot-separated node to get the config value
      * @return Config
      */
     public function getConfig($node = null)
     {
-	if (trim($node)) {
-		return $this->config->get($node);
-	}
+        if (trim($node)) {
+            return $this->config->get($node);
+        }
         return $this->config;
     }
 
@@ -248,6 +248,24 @@ class App extends Dispatcher
     }
 
     /**
+     * Process given config tree by replacing all config variables with their values
+     * @param array $config
+     * @return array Processed tree
+     */
+    private function processConfig(array $config)
+    {
+        $vars = $this->config->get('system.vars');
+        if (count($vars)) {
+            $search = array_keys($vars);
+            $replace = array_values($vars);
+            array_walk_recursive($config, function (&$value) use ($search, $replace) {
+                $value = str_replace($search, $replace, $value);
+            });
+        }
+        return $config;
+    }
+
+    /**
      * Merge module routing files and basic routing file into a single sorted routes list
      * @return array
      */
@@ -256,7 +274,8 @@ class App extends Dispatcher
         $routes = [];
 
         // load basic routes for root mvc
-        foreach ($this->config->read($this->getConfigFile('routes')) as $route) {
+        $routesConfig = $this->config->read($this->getConfigFile('routes'));
+        foreach ($this->processConfig($routesConfig) as $route) {
             $routes[$route['route']] = $route + ['base' => ''];
         }
 
@@ -264,7 +283,8 @@ class App extends Dispatcher
         $moduleRoutingFiles = $this->getModuleConfigFiles('routes');
         foreach ($moduleRoutingFiles as $routingFile) {
             $moduleMvcPath = str_replace(APP_PATH, '', dirname(dirname($routingFile)));
-            foreach ($this->config->read($routingFile) as $route) {
+            $routesConfig = $this->config->read($routingFile);
+            foreach ($this->processConfig($routesConfig) as $route) {
                 $routes[$route['route']] = $route + ['base' => $moduleMvcPath];
             }
         }
