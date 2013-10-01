@@ -515,6 +515,8 @@ class App extends Dispatcher
      */
     private function toCamelCase($str)
     {
-        return preg_replace(['/(\w+)/e', '/-/'], ['ucfirst("$1")', ''], $str);
+        return preg_replace_callback(['/(\w+)/', '/-/'], function ($matches) {
+            return $matches[0] == '-' ? '' : ucfirst($matches[0]);
+        }, $str);
     }
 }
