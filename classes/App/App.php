@@ -315,15 +315,15 @@ class App extends Dispatcher
     }
 
     /**
-     * Process autoloading mappings in order to register necessary autoloaders
+     * Process autoload mappings from config files in order to register all necessary autoloaders
      */
     private function initAutoloading()
     {
-        // process main app config autoload mappings
+        // process autoload mappings of main app config
         if (is_array($mappings = $this->config->get('autoload'))) {
             $this->setAutoloadMappings($mappings);
         }
-        // process module config files autoload mappings
+        // process autoload mappings of module config files
         $moduleCfgFiles = $this->getModuleConfigFiles('module');
         foreach ($moduleCfgFiles as $cfgFile) {
             $mappings = $this->config->read($cfgFile, 'autoload');
