@@ -76,7 +76,7 @@ abstract class Controller
     {
         $this->getResponse()
             ->setCode($code)
-            ->setHeader('Location', APP_URI . trim($uri, ' /') . '/')
+            ->setHeader('Location', BASE_URL . trim($uri, ' /') . '/')
             ->flush();
     }
 

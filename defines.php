@@ -20,6 +20,6 @@ define('APP_PATH', ROOT_PATH . 'app' . DS);
 define('CONF_PATH', APP_PATH . 'config' . DS);
 
 /**
- * Base application url
+ * Base project url
  */
-define('APP_URI', rtrim(dirname($_SERVER['PHP_SELF']), DS) . '/');
+define('BASE_URL', ($_SERVER['SCRIPT_NAME'] == $_SERVER['PHP_SELF'] ? '' : $_SERVER['SCRIPT_NAME']) . '/');

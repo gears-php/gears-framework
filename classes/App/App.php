@@ -148,7 +148,7 @@ class App extends Dispatcher
      */
     public function run()
     {
-        $uri = str_replace(rtrim(APP_URI, '/'), '', $_SERVER['REQUEST_URI']);
+        $uri = str_replace(rtrim(BASE_URL, '/'), '', $_SERVER['REQUEST_URI']);
 
         // try to match route for the given uri
         if ($this->request = $this->resolve($uri, $this->getRoutesConfig())) {
@@ -515,8 +515,8 @@ class App extends Dispatcher
      */
     private function toCamelCase($str)
     {
-        return preg_replace_callback(['/(\w+)/', '/-/'], function ($matches) {
-            return $matches[0] == '-' ? '' : ucfirst($matches[0]);
-        }, $str);
+        return implode('', array_map(function ($chunk) {
+            return ucfirst($chunk);
+        }, explode('-', $str)));
     }
 }

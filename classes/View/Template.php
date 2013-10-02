@@ -111,17 +111,6 @@ class Template
     }
 
     /**
-     * Get view instance
-     * @deprecated
-     * @return View
-     * @todo Check method usage outside of template class and remove if not used
-     */
-    public function getView()
-    {
-        return $this->view;
-    }
-
-    /**
      * Disable template rendering
      */
     public function disable()
@@ -235,7 +224,7 @@ class Template
      */
     private function tCss(array $args)
     {
-        $args['href'] = $this->completeUrl($args['src']); // Style file web url
+        $args['href'] = $this->url($args['src']); // Style file web url
         unset($args['src']);
         $args += ['media' => 'screen']; // default media type
         return sprintf('<link rel="stylesheet" type="text/css"%s />', $this->getTagAttributesString($args));
@@ -248,7 +237,7 @@ class Template
      */
     private function tJs(array $args)
     {
-        $args['src'] = $this->completeUrl($args['src']); // Script file web url
+        $args['src'] = $this->url($args['src']); // Script file web url
         return sprintf('<script type="text/javascript"%s></script>', $this->getTagAttributesString($args));
     }
 
@@ -259,7 +248,7 @@ class Template
      */
     private function tImage(array $args)
     {
-        $args['src'] = $this->completeUrl($args['src']); // Image web url
+        $args['src'] = $this->url($args['src']); // Image web url
         return sprintf('<img%s />', $this->getTagAttributesString($args));
     }
 
@@ -327,34 +316,29 @@ class Template
      */
     private function url($path)
     {
+		if (0 === strpos($path, '/')) return $path;
+
+		$path = ltrim($path, '/');
         // probably we have asset (img/js/css) path given
         // find out this by extension
         $ext = substr($path, strrpos($path, '.') + 1);
         switch ($ext) {
             // style
             case 'css':
-                return \APP_URI . 'css/' . $path;
+                return '/css/' . $path;
             // script
             case 'js':
-                return \APP_URI . 'js/' . $path;
+                return '/js/' . $path;
             // image
             case 'png':
             case 'gif':
             case 'jpg':
             case 'ico':
-                return \APP_URI . 'img/' . $path;
+                return '/img/' . $path;
             // just some url
             default:
-                return \APP_URI . $path;
+                return \BASE_URL . $path;
         }
-    }
-
-    /**
-     * Complete full url for the given path
-     */
-    private function completeUrl($path)
-    {
-        return (0 === strpos($path, \APP_URI)) ? $path : $this->url($path);
     }
 
     /**
@@ -364,7 +348,7 @@ class Template
     private function appJs()
     {
         return sprintf('<script type="text/javascript">var app = app || {};%s</script>',
-            $this->jsVars(['uri' => APP_URI, 'img_uri' => APP_URI . 'img/'], 'app')
+            $this->jsVars(['uri' => \BASE_URL, 'img_uri' => '/img/'], 'app')
         );
     }
 
