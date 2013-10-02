@@ -32,8 +32,8 @@ class Request
     private $actionName = '';
 
     /**
-     * Stores relative path under which controller, model and view folders are located.
-     * Empty by default meaning that MVC folders live directly inside APP_PATH folder
+     * Stores full path to the MVC folders of currently routed module.
+     * Empty by default meaning that MVC resides directly under APP_PATH folder
      *
      * <code>
      * APP_PATH
