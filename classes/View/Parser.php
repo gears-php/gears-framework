@@ -100,7 +100,7 @@ class Parser
     /**
      * Read file and process its content
      * @param string $filePath Full path to the file to be processed
-     * @return Processed content
+     * @return string Processed content
      */
     public function parseFile($filePath)
     {

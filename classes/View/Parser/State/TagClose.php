@@ -18,7 +18,9 @@ class TagClose extends State
     {
         if ('/' == $char) {
             $this->addBuffer($char);
-        } elseif ('>' == $char) {
+            $char = $parser->readChar();
+        }
+        if ('>' == $char) {
             $this->addBuffer($char);
         } elseif ($parser->isChar('>', -1)) {
             $parser->switchState('Read');
