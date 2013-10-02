@@ -32,8 +32,8 @@ class Request
     private $actionName = '';
 
     /**
-     * Stores full path to the MVC folders of currently routed module.
-     * Empty by default meaning that MVC resides directly under APP_PATH folder
+     * Stores full path to the MVC folder of currently routed module.
+     * Empty by default meaning that MVC structure resides directly under APP_PATH folder
      *
      * <code>
      * APP_PATH
@@ -61,7 +61,7 @@ class Request
         $route = (object) $route;
         // remember url matching pattern
         $this->pattern = $route->route;
-        // construct full path to MVC folders
+        // construct full path to MVC folder
         $this->mvcPath = rtrim(APP_PATH . $route->base, DS) . DS;
         
         preg_match('/\/(?P<class>[\w-]+)?(?:\/(?P<method>[\w-]+))?(?P<params>(?:\/[\w-]+)*)/', $route->to, $uri);
