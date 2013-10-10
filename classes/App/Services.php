@@ -11,7 +11,7 @@ class Services
     protected $fallback = null;
 
     /**
-     * Set fallback service which is called in case some specific
+     * Set fallback service factory which is called in case some specific
      * service was not found during {@see get()} call
      * @param $callable
      */
