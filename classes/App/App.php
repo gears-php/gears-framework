@@ -19,6 +19,8 @@ use Gears\Framework\Event\Dispatcher;
  */
 class App extends Dispatcher
 {
+    use ServicesProvider;
+
     /**
      * Request instance
      * @var Request
@@ -30,12 +32,6 @@ class App extends Dispatcher
      * @var Response
      */
     private $response = null;
-
-    /**
-     * Services container instance
-     * @var Services
-     */
-    private $services = null;
 
     /**
      * If to ignore error_reporting() level (so @ error suppression symbol
@@ -64,6 +60,8 @@ class App extends Dispatcher
     {
         $this->handleErrors();
         $this->handleExceptions();
+        $this->services = new Services();
+        $this->config = new Config();
     }
 
     /**
@@ -98,33 +96,12 @@ class App extends Dispatcher
     }
 
     /**
-     * Get application service
-     * @param string $name
-     * @return object
+     * Return services container
+     * @return Services
      */
-    public function getService($name)
+    public function getServices()
     {
-        return $this->services->get($name);
-    }
-
-    /**
-     * Set application service
-     * @param string $name
-     * @param callable $callable
-     */
-    public function setService($name, $callable)
-    {
-        $this->services->set($name, $callable);
-    }
-
-    /**
-     * Set a shared application service
-     * @param string $name
-     * @param callable $callable
-     */
-    public function setSharedService($name, $callable)
-    {
-        $this->services->setShared($name, $callable);
+        return $this->services;
     }
 
     /**
@@ -134,8 +111,6 @@ class App extends Dispatcher
      */
     public function init($configFile = 'app')
     {
-        $this->services = new Services();
-        $this->config = new Config();
         $this->config->load($this->getConfigFile($configFile));
         $this->initAutoloading();
         $this->initDbConnection();
@@ -353,13 +328,13 @@ class App extends Dispatcher
     {
         $dbCfg = $this->config->getObj('db');
         if ($dbCfg->get() && !$dbCfg->get('disabled')) {
-            Db::connect(
+            $this->set('db', Db::connect(
                 $dbCfg->host,
                 $dbCfg->user,
                 $dbCfg->pass,
                 $dbCfg->dbname,
                 $dbCfg->driver
-            )->query('set names utf8');
+            )->query('set names utf8'));
         }
     }
 

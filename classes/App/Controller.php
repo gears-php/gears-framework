@@ -12,6 +12,8 @@ namespace Gears\Framework\App;
  */
 abstract class Controller
 {
+    use ServicesProvider;
+
     /**
      * {@see App} instance holder
      * @var object
@@ -27,6 +29,7 @@ abstract class Controller
     public function __construct(App $app)
     {
         $this->app = $app;
+        $this->services = $app->getServices();
         $this->init();
     }
 
@@ -55,16 +58,6 @@ abstract class Controller
     public function getResponse()
     {
         return $this->getApp()->getResponse();
-    }
-
-    /**
-     * Get some application service by its name
-     * @param $name
-     * @return object
-     */
-    public function getService($name)
-    {
-        return $this->getApp()->getService($name);
     }
 
     /**
