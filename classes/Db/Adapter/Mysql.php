@@ -4,13 +4,13 @@
  */
 namespace Gears\Framework\Db\Adapter;
 
-use Gears\Framework\Db\Adapter\Generic;
+use Gears\Framework\Db\Adapter\AdapterAbstract;
 
 /**
  * Implements database adapter functionality specific to MySQL db storage
  * @package Gears\Framework\Db\Adapter
  */
-class Mysql extends Generic
+class Mysql extends AdapterAbstract
 {
     protected $driver = 'mysql';
 

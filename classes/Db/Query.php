@@ -7,7 +7,7 @@
  */
 namespace Gears\Framework\Db;
 
-use Gears\Framework\Db\Adapter\Generic;
+use Gears\Framework\Db\Adapter\AdapterAbstract;
 
 /**
  * Query constructor class
@@ -31,9 +31,9 @@ class Query
 
     /**
      * Init query with the db adapter instance
-     * @param Generic $db
+     * @param AdapterAbstract $db
      */
-    public function __construct(Generic $db)
+    public function __construct(AdapterAbstract $db)
     {
         $this->db = $db;
     }

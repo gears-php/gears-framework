@@ -12,7 +12,7 @@ namespace Gears\Framework\Db\Adapter;
  * Abstract db adapter is a PDO wrapper bringing more handy and laconic functionality over the last one
  * @package Gears\Framework\Db\Adapter
  */
-abstract class Generic
+abstract class AdapterAbstract
 {
     const DB_SKIP = 'DB_SKIP';
 
