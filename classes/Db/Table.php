@@ -7,7 +7,7 @@
  */
 namespace Gears\Framework\Db;
 
-use Gears\Framework\Db\Db;
+use Gears\Framework\Db\Adapter\AdapterAbstract;
 
 /**
  * Advanced implementation of Table Data Gateway pattern
@@ -49,7 +49,7 @@ abstract class Table
 
     /**
      * Db adapter instance holder
-     * @var Adapter\Generic
+     * @var AdapterAbstract
      */
     private $db;
 
@@ -68,10 +68,10 @@ abstract class Table
     /**
      * Constructor
      */
-    public function __construct()
+    public function __construct(AdapterAbstract $db)
     {
         // init table db adapter
-        $this->initDb();
+        $this->db = $db;
 
         if (is_null($this->tableName)) {
             throw new \Exception(get_called_class() . ' - table name is not specified');
@@ -321,7 +321,7 @@ abstract class Table
     }
 
     /**
-     * @return Adapter\Generic
+     * @return AdapterAbstract
      */
     public function getDb()
     {
@@ -367,15 +367,6 @@ abstract class Table
      */
     protected function init()
     {
-    }
-
-    /*
-     * Setup table database adapter. Can be extended by descendant
-     * classes to use some another specific db connection
-     */
-    protected function initDb()
-    {
-        $this->db = Db::getAdapter();
     }
 
     /**

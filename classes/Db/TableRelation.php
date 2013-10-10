@@ -51,7 +51,7 @@ class TableRelation
         }
 
         if (!isset(self::$_tables[$tableName])) {
-            self::$_tables[$tableName] = new $tableName();
+            self::$_tables[$tableName] = new $tableName($owner->getDb());
         }
 
         $this->_table = self::$_tables[$tableName];
