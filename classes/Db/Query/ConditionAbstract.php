@@ -39,10 +39,6 @@ abstract class ConditionAbstract
      * Add query condition for WHERE clause. Takes two string parameters as for the left and right operands of
      * simple equality condition. Alternatively takes a ConditionAbstract object parameter as
      * for some complex condition to be added.
-     *
-     * ! IMPORTANT The auto-escaping of passed filter identifier and value is not currently supported. You
-     * should do this manually
-     *
      * @param string|array|ConditionAbstract $left Field or [table => field] pair or ConditionAbstract object
      * @param string $right (optional) Field value
      */
