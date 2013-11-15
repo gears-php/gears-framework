@@ -22,4 +22,4 @@ define('CONF_PATH', APP_PATH . 'config' . DS);
 /**
  * Base project url
  */
-define('BASE_URL', ($_SERVER['SCRIPT_NAME'] == $_SERVER['PHP_SELF'] ? '' : $_SERVER['SCRIPT_NAME']) . '/');
+define('BASE_URL', isset($_SERVER['HTACCESS']) ? '/' : $_SERVER['SCRIPT_NAME']. '/') ;
