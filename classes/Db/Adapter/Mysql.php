@@ -4,8 +4,6 @@
  */
 namespace Gears\Framework\Db\Adapter;
 
-use Gears\Framework\Db\Adapter\AdapterAbstract;
-
 /**
  * Implements database adapter functionality specific to MySQL db storage
  * @package Gears\Framework\Db\Adapter

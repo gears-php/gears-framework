@@ -8,6 +8,7 @@
 namespace Gears\Framework\Db;
 
 use Gears\Framework\Db\Adapter\AdapterAbstract;
+use Gears\Framework\Db\Query\ConditionAnd;
 
 /**
  * Advanced implementation of Table Data Gateway pattern
@@ -78,11 +79,11 @@ abstract class Table
         }
 
         // build default query
-        $this->defaultQuery = new Query($this->getDb());
+        $this->defaultQuery = new Query($db);
         $this->defaultQuery
             ->select($this->getDefaultFields(), null, $this->getTableName())
             ->from($this->getTableName())
-            ->where(new QueryConditionAnd)
+            ->where(new ConditionAnd($db))
             ->orderBy($this->defaultOrderBy);
 
         // do custom preparations
@@ -248,19 +249,19 @@ abstract class Table
 
     /**
      * Filter table data by given field value
-     * @param string|array $field Table field name
+     * @param string|array $field Field name/alias or [table => field] pair
      * @param mixed $value Value by which to filter
      * @param boolean $allowEmpty Whether to apply filter if empty/zero field value was passed
      */
     public function filterBy($field, $value, $allowEmpty = true)
     {
-        // field alias given, replace it with real db field name
-        if (isset($this->tableFields[$field])) {
-            $field = $this->tableFields[$field];
-        }
-
         if ($allowEmpty || !empty($value)) {
-            $this->getQuery()->getWhere()->add($field, $this->getDb()->escape($value));
+            if (!is_array($field)) {
+                if (isset($this->tableFields[$field])) { // field alias exists, replace it with real db field name
+                    $field = $this->tableFields[$field];
+                }
+            }
+            $this->getQuery()->getWhere()->add($field, $value);
         }
     }
 
@@ -284,8 +285,10 @@ abstract class Table
                 [$relationName => $relation->getTable()->getTableName()],
                 // relation table field used for linking
                 $relation->getFieldName(),
-                // current table field used for linking
-                [$this->getTableName() => $relation->getForeignName()]
+                // current table used for linking
+                $this->getTableName(),
+                // current table field
+                $relation->getForeignName()
             );
 
             // we need to select some fields from the joined table

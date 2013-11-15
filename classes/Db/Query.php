@@ -8,6 +8,7 @@
 namespace Gears\Framework\Db;
 
 use Gears\Framework\Db\Adapter\AdapterAbstract;
+use Gears\Framework\Db\Query\ConditionAbstract;
 
 /**
  * Query constructor class
@@ -25,7 +26,12 @@ class Query
     private $select = [];
     private $from = [];
     private $join = [];
+
+    /**
+     * @var ConditionAbstract
+     */
     private $where = null;
+
     private $orderBy = [];
     private $limit = null;
 
@@ -92,10 +98,11 @@ class Query
      * Table name is used otherwise
      * @param string|array $joinTable Joined table name or [alias => name]
      * @param string $joinField Joined table field
-     * @param array $joinBase Basic [table => field] to join with
+     * @param string $baseTable Basic table to join with
+     * @param string $baseField Basic table field to join on
      * @return Query
      */
-    public function join($joinTable, $joinField, $joinBase)
+    public function join($joinTable, $joinField, $baseTable, $baseField)
     {
         if (is_array($joinTable)) {
             $joinAlias = array_keys($joinTable)[0];
@@ -107,8 +114,8 @@ class Query
         $this->join[] = sprintf(' INNER JOIN %s AS %s ON %s.%s = %s.%s',
             $this->db->escapeIdentifier($joinTable),
             $this->db->escapeIdentifier($joinAlias),
-            $this->db->escapeIdentifier(key($joinBase)),
-            $this->db->escapeIdentifier(reset($joinBase)),
+            $this->db->escapeIdentifier($baseTable),
+            $this->db->escapeIdentifier($baseField),
             $this->db->escapeIdentifier($joinAlias),
             $this->db->escapeIdentifier($joinField)
         );
@@ -116,11 +123,11 @@ class Query
     }
 
     /**
-     * Add a {@link QueryCondition} object of WHERE clause
-     * @param QueryCondition $where
+     * Add a {@see ConditionAbstract} object of WHERE clause
+     * @param ConditionAbstract $where
      * @return Query
      */
-    public function where(QueryCondition $where)
+    public function where(ConditionAbstract $where)
     {
         $this->where = $where;
         return $this;
@@ -128,7 +135,7 @@ class Query
 
     /**
      * Get WHERE clause conditions object
-     * @return QueryCondition
+     * @return ConditionAbstract
      */
     public function getWhere()
     {
@@ -152,7 +159,7 @@ class Query
      *
      * @param string|array $field Field name or array of fields
      * @param string $ascDesc (optional) Sort direction
-     * @return \Gears\Framework\Db\Query
+     * @return Query
      */
     public function orderBy($field, $ascDesc = '')
     {
@@ -247,72 +254,8 @@ class Query
     }
 }
 
-/**
- * Implements the and/or query conditions logic for WHERE clause
- */
-abstract class QueryCondition
-{
-    /**
-     * Operator by which to join conditions (specified in descendant class)
-     * @var string
-     */
-    protected $_joinOperator;
 
-    /**
-     * Conditions storage
-     * @var string
-     */
-    private $_conditions = [];
 
-    /**
-     * Add query condition. Takes two string parameters as for the left and right operands of
-     * simple string condition. Alternatively takes a single QueryCondition object parameter as
-     * for some complex condition to be added.
-     *
-     * ! IMPORTANT The auto-escaping of passed filter identifier and value is not currently supported. You
-     * should do this manually
-     *
-     * @param string|QueryCondition $leftOperand Identifier or QueryCondition object
-     * @param string $rightOperand (optional) Filtering value
-     */
-    public function add($leftOperand, $rightOperand = '?')
-    {
-        if ($leftOperand instanceof QueryCondition) {
-            $this->_conditions[] = $leftOperand;
-        } else {
-            // @todo Think of how to pass db adapter instance to be used for auto-escaping
-            $this->_conditions[] = sprintf('%s=%s', $leftOperand, $rightOperand);
-        }
-    }
 
-    /**
-     * Count and return the number of currently added conditions
-     * @return integer
-     */
-    public function count()
-    {
-        return count($this->_conditions);
-    }
 
-    /**
-     * Build and return conditions SQL string
-     */
-    public function toString()
-    {
-        $this->_conditions = array_map(function ($condition) {
-            return ($condition instanceof QueryCondition) ? $condition->toString() : $condition;
-        }, $this->_conditions);
 
-        return '(' . implode($this->_joinOperator, $this->_conditions) . ')';
-    }
-}
-
-class QueryConditionAnd extends QueryCondition
-{
-    protected $_joinOperator = ' AND ';
-}
-
-class QueryConditionOr extends QueryCondition
-{
-    protected $_joinOperator = ' OR ';
-}
