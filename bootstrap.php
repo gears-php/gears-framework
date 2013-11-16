@@ -15,5 +15,10 @@ require_once 'classes/App/Autoloader.php';
 
 (new Autoloader('Gears\Framework', __DIR__ . DS . 'classes'))->register();
 
-require_once APP_PATH . 'Bootstrap.php';
-return new Bootstrap(new App());
+if (is_file(APP_PATH . 'Bootstrap.php')) {
+    require_once APP_PATH . 'Bootstrap.php';
+    return new Bootstrap(new App());
+} else {
+    return new \Gears\Framework\App\Bootstrap(new App());
+}
+
