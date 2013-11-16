@@ -15,7 +15,7 @@ class Services
      * service was not found during {@see get()} call
      * @param $callable
      */
-    public function call($callable)
+    public function fallback($callable)
     {
         if (is_callable($callable)) {
             $this->fallback = $callable;

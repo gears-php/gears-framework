@@ -8,7 +8,7 @@ namespace Gears\Framework\App;
  * Provides functionality for services management
  * @package Gears\Framework\App
  */
-trait ServicesProvider
+trait ServiceProvider
 {
     /**
      * Services container instance
@@ -52,9 +52,9 @@ trait ServicesProvider
      * Set fallback service
      * @param $callable
      */
-    public function call($callable)
+    public function fallback($callable)
     {
-        $this->services->call($callable);
+        $this->services->fallback($callable);
         return $this;
     }
 }

@@ -12,7 +12,7 @@ namespace Gears\Framework\App;
  */
 abstract class Controller
 {
-    use ServicesProvider;
+    use ServiceProvider;
 
     /**
      * {@see App} instance holder

@@ -19,7 +19,7 @@ use Gears\Framework\Event\Dispatcher;
  */
 class App extends Dispatcher
 {
-    use ServicesProvider;
+    use ServiceProvider;
 
     /**
      * Request instance
