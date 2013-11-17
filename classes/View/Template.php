@@ -226,7 +226,7 @@ class Template
     {
         $args['href'] = $this->url($args['src']); // Style file web url
         unset($args['src']);
-        $args += ['media' => 'screen']; // default media type
+        $args += ['media' => 'all']; // default media type
         return sprintf('<link rel="stylesheet" type="text/css"%s />', $this->getTagAttributesString($args));
     }
 
