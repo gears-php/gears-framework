@@ -8,7 +8,7 @@
 namespace Gears\Framework\Db;
 
 use Gears\Framework\Db\Adapter\AdapterAbstract;
-use Gears\Framework\Db\Query\ConditionAnd;
+use Gears\Framework\Db\Query\WhereAnd;
 
 /**
  * Advanced implementation of Table Data Gateway pattern
@@ -83,7 +83,7 @@ abstract class Table
         $this->defaultQuery
             ->select($this->getDefaultFields(), null, $this->getTableName())
             ->from($this->getTableName())
-            ->where(new ConditionAnd($db))
+            ->where(new WhereAnd($db))
             ->orderBy($this->defaultOrderBy);
 
         // do custom preparations
@@ -261,7 +261,7 @@ abstract class Table
                     $field = $this->tableFields[$field];
                 }
             }
-            $this->getQuery()->getWhere()->add($field, $value);
+            $this->getQuery()->getWhere()->filter($field, $value);
         }
     }
 

@@ -8,7 +8,7 @@
 namespace Gears\Framework\Db;
 
 use Gears\Framework\Db\Adapter\AdapterAbstract;
-use Gears\Framework\Db\Query\ConditionAbstract;
+use Gears\Framework\Db\Query\WhereAbstract;
 
 /**
  * Query constructor class
@@ -28,7 +28,7 @@ class Query
     private $join = [];
 
     /**
-     * @var ConditionAbstract
+     * @var WhereAbstract
      */
     private $where = null;
 
@@ -47,8 +47,10 @@ class Query
     /**
      * Add a single field or array of fields to the SELECT clause
      *
-     *    $query->select('field', 'fieldAlias');
-     *    $query->select(array('field1Alias' => 'field1', 'field2', 'field3'));
+     * <code>
+     * $query->select('field', 'fieldAlias');
+     * $query->select(['field1Alias' => 'field1', 'field2', 'field3']);
+     * </code>
      *
      * @param string|array $field Field name or array of fields
      * @param string $alias (optional) Field alias
@@ -123,11 +125,11 @@ class Query
     }
 
     /**
-     * Add a {@see ConditionAbstract} object of WHERE clause
-     * @param ConditionAbstract $where
+     * Add a {@see WhereAbstract} object of WHERE clause
+     * @param WhereAbstract $where
      * @return Query
      */
-    public function where(ConditionAbstract $where)
+    public function where(WhereAbstract $where)
     {
         $this->where = $where;
         return $this;
@@ -135,7 +137,7 @@ class Query
 
     /**
      * Get WHERE clause conditions object
-     * @return ConditionAbstract
+     * @return WhereAbstract
      */
     public function getWhere()
     {
@@ -154,8 +156,10 @@ class Query
     /**
      * Add a single field or array of fields to the ORDER BY clause. Example:
      *
-     *    $query->orderBy('lastName', Query::SORT_ASC);
-     *    $query->orderBy(array('lastName', 'firstName' => Query::SORT_DESC));
+     * <code>
+     * $query->orderBy('lastName', Query::SORT_ASC);
+     * $query->orderBy(['lastName', 'firstName' => Query::SORT_DESC]);
+     * </code>
      *
      * @param string|array $field Field name or array of fields
      * @param string $ascDesc (optional) Sort direction

@@ -2,7 +2,7 @@
 
 namespace Gears\Framework\Db\Query;
 
-class ConditionAnd extends ConditionAbstract
+class WhereAnd extends WhereAbstract
 {
     protected $joinOperator = ' AND ';
 }

@@ -2,7 +2,7 @@
 
 namespace Gears\Framework\Db\Query;
 
-class ConditionOr extends ConditionAbstract
+class ConditionOr extends WhereAbstract
 {
     protected $joinOperator = ' OR ';
 }
