@@ -38,19 +38,26 @@ class Response
     }
 
     /**
-     * Set HTTP response header(s)
-     * @param string|array $name
-     * @param $value|null
+     * Set HTTP response header
+     * @param string $name
+     * @param string $value
      * @return $this
      */
-    public function setHeader($name, $value = null)
+    public function setHeader($name, $value)
     {
-        if (is_array($name)) {
-            foreach ($name as $header => $value) {
-                $this->setHeader($header, $value);
-            }
-        } elseif (is_string($name)) {
-            $this->headers[$name] = $value;
+        $this->headers[$name] = $value;
+        return $this;
+    }
+
+    /**
+     * Set several HTTP response headers at once
+     * @param array $headers
+     * @return $this
+     */
+    public function setHeaders(array $headers)
+    {
+        foreach ($headers as $name => $value) {
+            $this->setHeader($name, $value);
         }
         return $this;
     }
@@ -104,8 +111,8 @@ class Response
      */
     public function flush()
     {
-        foreach ($this->headers as $hName => $hValue) {
-            header("$hName: $hValue");
+        foreach ($this->headers as $name => $value) {
+            header("$name: $value");
         }
         echo $this->body;
     }
