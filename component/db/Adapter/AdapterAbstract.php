@@ -6,11 +6,11 @@
  * refactored and much simplified version of same functionality taken from DbSimple library
  * (https://github.com/DmitryKoterov/DbSimple)
  */
-namespace Gears\Framework\Db\Adapter;
+namespace Gears\Db\Adapter;
 
 /**
  * Abstract db adapter is a PDO wrapper bringing more handy and laconic functionality over the last one
- * @package Gears\Framework\Db\Adapter
+ * @package Gears\Db\Adapter
  */
 abstract class AdapterAbstract
 {

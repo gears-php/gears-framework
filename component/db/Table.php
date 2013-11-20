@@ -5,10 +5,10 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
-namespace Gears\Framework\Db;
+namespace Gears\Db;
 
-use Gears\Framework\Db\Adapter\AdapterAbstract;
-use Gears\Framework\Db\Query\WhereAnd;
+use Gears\Db\Adapter\AdapterAbstract;
+use Gears\Db\Query\WhereAnd;
 
 /**
  * Advanced implementation of Table Data Gateway pattern

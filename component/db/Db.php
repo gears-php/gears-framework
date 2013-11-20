@@ -5,9 +5,9 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
-namespace Gears\Framework\Db;
+namespace Gears\Db;
 
-use Gears\Framework\Db\Adapter\AdapterAbstract;
+use Gears\Db\Adapter\AdapterAbstract;
 
 /**
  * Database abstraction layer class. Factory for the specific database adaptors

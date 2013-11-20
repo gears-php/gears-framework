@@ -1,8 +1,8 @@
 <?php
 
-namespace Gears\Framework\Db\Query;
+namespace Gears\Db\Query;
 
-use Gears\Framework\Db\Adapter\AdapterAbstract;
+use Gears\Db\Adapter\AdapterAbstract;
 
 /**
  * Implements the and/or query conditions logic for WHERE clause

@@ -5,10 +5,10 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
-namespace Gears\Framework\Db;
+namespace Gears\Db;
 
-use Gears\Framework\Db\Adapter\AdapterAbstract;
-use Gears\Framework\Db\Query\WhereAbstract;
+use Gears\Db\Adapter\AdapterAbstract;
+use Gears\Db\Query\WhereAbstract;
 
 /**
  * Query constructor class

@@ -1,6 +1,6 @@
 <?php
 
-namespace Gears\Framework\Db\Query;
+namespace Gears\Db\Query;
 
 class ConditionOr extends WhereAbstract
 {

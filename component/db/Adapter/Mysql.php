@@ -2,11 +2,11 @@
 /**
  * @author deniskrasilnikov86@gmail.com
  */
-namespace Gears\Framework\Db\Adapter;
+namespace Gears\Db\Adapter;
 
 /**
  * Implements database adapter functionality specific to MySQL db storage
- * @package Gears\Framework\Db\Adapter
+ * @package Gears\Db\Adapter
  */
 class Mysql extends AdapterAbstract
 {

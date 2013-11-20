@@ -13,7 +13,13 @@ mb_internal_encoding("UTF-8");
 require_once 'defines.php';
 require_once 'App/Autoloader.php';
 
-(new Autoloader('Gears\Framework', __DIR__))->register();
+// register PSR-4 style mappings
+Autoloader::registerNamespaces([
+    // framework internal sources
+    'Gears\Framework' => __DIR__,
+    // external components
+    'Gears\Db' => __DIR__ . '/../component/db'
+]);
 
 if (is_file(APP_PATH . 'Bootstrap.php')) {
     require_once APP_PATH . 'Bootstrap.php';
