@@ -1,0 +1,17 @@
+{
+    "name": "gears-php/db",
+    "type": "library",
+    "description": "Db component for Gears Framework",
+    "keywords": ["db"],
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Denis Krasilnikov",
+            "email": "deniskrasilnikov86@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0"
+    }
+}
