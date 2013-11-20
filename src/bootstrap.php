@@ -11,9 +11,9 @@ date_default_timezone_set('UTC');
 mb_internal_encoding("UTF-8");
 
 require_once 'defines.php';
-require_once 'classes/App/Autoloader.php';
+require_once 'App/Autoloader.php';
 
-(new Autoloader('Gears\Framework', __DIR__ . DS . 'classes'))->register();
+(new Autoloader('Gears\Framework', __DIR__))->register();
 
 if (is_file(APP_PATH . 'Bootstrap.php')) {
     require_once APP_PATH . 'Bootstrap.php';
