@@ -4,5 +4,5 @@ namespace Gears\Db\Query;
 
 class WhereAnd extends WhereAbstract
 {
-    protected $joinOperator = ' AND ';
+    protected $joinOperator = 'and';
 }

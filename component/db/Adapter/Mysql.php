@@ -10,25 +10,30 @@ namespace Gears\Db\Adapter;
  */
 class Mysql extends AdapterAbstract
 {
-    protected $driver = 'mysql';
+    /**
+     * {@inheritdoc}
+     */
+    protected $patterns = [
+        'create_table' => [
+            ' pk ' => ' INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY ',
+            ' string ' => ' TEXT ',
+            ' float ' => ' REAL '
+        ]
+    ];
 
-    public function escapeIdentifier($identifier)
+    /**
+     * {@inheritdoc}
+     */
+    public function escapeIdentifier($name)
     {
-        return "`" . str_replace('`', '``', $identifier) . "`";
+        return "`" . str_replace('`', '``', $name) . "`";
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getLastRowCount()
     {
         return intval($this->connection->query('SELECT FOUND_ROWS()')->fetchColumn());
-    }
-
-    protected function getPlaceholderIgnoreRegex()
-    {
-        return '
-            "   (?> [^"\\\\]+|\\\\"|\\\\)*    "   |
-            \'  (?> [^\'\\\\]+|\\\\\'|\\\\)* \'   |
-            `   (?> [^`]+ | ``)*              `   |   # backticks
-            /\* .*?                          \*/      # comments
-        ';
     }
 }

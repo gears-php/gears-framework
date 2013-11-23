@@ -1,6 +1,6 @@
 <?php
 /**
- * @package   Gears\Framework
+ * @package   Gears\Db
  * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
@@ -12,7 +12,7 @@ use Gears\Db\Query\WhereAnd;
 
 /**
  * Advanced implementation of Table Data Gateway pattern
- * @package    Gears\Framework
+ * @package    Gears\Db
  * @subpackage Database
  */
 abstract class Table
@@ -55,13 +55,7 @@ abstract class Table
     private $db;
 
     /**
-     * Table default query instance
-     * @var Query
-     */
-    private $defaultQuery;
-
-    /**
-     * Table current (configurable) query instance
+     * Table query instance
      * @var Query
      */
     private $query;
@@ -79,31 +73,24 @@ abstract class Table
         }
 
         // build default query
-        $this->defaultQuery = new Query($db);
-        $this->defaultQuery
+        $this->query = (new Query($db))
             ->select($this->getDefaultFields(), null, $this->getTableName())
             ->from($this->getTableName())
             ->where(new WhereAnd($db))
-            ->orderBy($this->defaultOrderBy);
+            ->order($this->defaultOrderBy);
 
         // do custom preparations
         $this->init();
-
-        // reset current table query selection
-        $this->resetSelection();
     }
 
     /**
      * Add table own field to the selection query
-     * @param string $fieldName Table field name or alias
-     * @param string (optional) $fieldAlias
+     * @param string $field Table field name or alias
+     * @param string (optional) $alias Alias name for selection
      */
-    public function select($fieldName, $fieldAlias = null)
+    public function select($field, $alias = null)
     {
-        if (null === $fieldAlias && isset($this->tableFields[$fieldName])) {
-            $fieldName = $this->tableFields[$fieldAlias = $fieldName];
-        }
-        $this->getQuery()->select($fieldName, $fieldAlias, $this->getTableName());
+        $this->getQuery()->select($this->getFieldName($field), $alias, $this->getTableName());
     }
 
     /**
@@ -112,7 +99,7 @@ abstract class Table
      */
     public function fetchRows()
     {
-        return $this->getQuery()->execute();
+        return $this->getQuery()->exec()->fetchAll();
     }
 
     /**
@@ -141,29 +128,19 @@ abstract class Table
     {
         // yank db only if positive row id number given
         if (intval($rowId)) {
-            // fetch own table row data
-            $rowData = $this->getDb()->query('SELECT ?# FROM ?# WHERE ?# = ?',
-                array_values($this->tableFields),
-                $this->tableName,
-                $this->primaryKey,
-                $rowId
-            )->fetchRow();
+            // fetch all own table row data
+            $q = $this->getQuery()->select($this->tableFields, null, $this->getTableName());
+            $q->getWhere()->eq($this->primaryKey, $rowId);
+            $row = $q->exec()->fetchRow();
         }
 
         // no row data fetched, fill all fields with NULL value
-        if (empty($rowData)) {
-            $rowData = array_fill_keys($this->tableFields, null);
+        if (empty($row)) {
+            foreach ($this->tableFields as $fieldKey => $fieldValue) {
+                $row[is_string($fieldKey) ? $fieldKey : $fieldValue] = null;
+            }
             // prevent processing relations
             $relations = false;
-        }
-
-        // modify row data to use field aliases as array keys
-        foreach ($this->tableFields as $fieldKey => $fieldName) {
-            // we have a field alias as key
-            if (is_string($fieldKey)) {
-                $rowData[$fieldKey] = $rowData[$fieldName];
-                unset($rowData[$fieldName]);
-            }
         }
 
         // load relation table rows
@@ -187,13 +164,12 @@ abstract class Table
                 // add relative table row to current table row
                 $foreignName = $relation->getForeignName();
                 // add relation table row data
-                $rowData[$relationName] = $relation->getTable()->fetchRow($rowData[$foreignName]);
+                $row[$relationName] = $relation->getTable()->fetchRow($row[$foreignName]);
                 // remove original table foreign field
-                unset($rowData[$foreignName]);
+                unset($row[$foreignName]);
             }
         }
-
-        return (object)$rowData;
+        return (object)$row;
     }
 
     /**
@@ -205,46 +181,68 @@ abstract class Table
     }
 
     /**
-     * Inserts or updates db record depending on
-     * record primary key presence among input data
-     * @param array|object $rowData Record field values
+     * Insert or update db record depending on record primary key presence among the input data
+     * @param array|object $row Record field values
      * @return integer Record id
      */
-    public function saveRow($rowData)
+    public function save($row)
     {
         // casting input data to array in case of object was given
-        if (is_object($rowData)) {
-            $rowData = (array)$rowData;
+        if (is_object($row)) {
+            $row = (array)$row;
         }
 
-        // modify row data to use db field names as array keys
-        foreach ($this->tableFields as $fieldKey => $fieldName) {
-            // we have field value under field alias key
-            if (isset($rowData[$fieldKey])) {
-                $rowData[$fieldName] = $rowData[$fieldKey];
-                unset($rowData[$fieldKey]);
+        // replace data `alias` keys with real db field names
+        foreach ($this->tableFields as $fieldKey => $fieldValue) {
+            if (is_string($fieldKey) && isset($row[$fieldKey])) {
+                $row[$fieldValue] = $row[$fieldKey];
+                unset($row[$fieldKey]);
             }
         }
 
         // filter out accidental (non table field one) keys
-        $rowData = array_intersect_key($rowData, array_flip($this->tableFields));
+        $row = array_intersect_key($row, array_flip($this->tableFields));
 
         // do insert/update depending on primary key value presence
-        if (!empty($rowData[$this->primaryKey])) {
-            $this->updateRow($rowData);
+        if (!empty($row[$this->primaryKey])) {
+            $this->update($row, $rowId = $row[$this->primaryKey]);
         } else {
-            $rowData[$this->primaryKey] = $this->insertRow($rowData);
+            $rowId = $this->insert($row);
         }
 
-        return $rowData[$this->primaryKey];
+        return $rowId;
     }
 
     /**
-     * Delete db row by a given id
+     * Insert new table record
+     * @param array $row
+     * @return integer New record id
      */
-    public function deleteRow($rowId)
+    public function insert($row)
     {
-        $this->getDb()->query('DELETE FROM ?# WHERE ?# = ?', $this->tableName, $this->primaryKey, $rowId);
+        $this->getDb()->insert($this->tableName, [$row]);
+        return $this->getDb()->getLastInsertId();
+    }
+
+    /**
+     * Update table record matched by id
+     * @param array $data New data
+     * @param integer $id Record id
+     */
+    public function update($data, $rowId)
+    {
+        $table = $this->getDb()->escapeIdentifier($this->getTableName());
+        $this->getDb()->update($table, $data, [$this->primaryKey => $rowId]);
+    }
+
+    /**
+     * Delete table record by a given id
+     * @param integer $rowId
+     */
+    public function delete($rowId)
+    {
+        $table = $this->getDb()->escapeIdentifier($this->getTableName());
+        $this->getDb()->delete($table, [$this->primaryKey => $rowId]);
     }
 
     /**
@@ -253,15 +251,15 @@ abstract class Table
      * @param mixed $value Value by which to filter
      * @param boolean $allowEmpty Whether to apply filter if empty/zero field value was passed
      */
-    public function filterBy($field, $value, $allowEmpty = true)
+    public function filter($field, $value, $allowEmpty = true)
     {
         if ($allowEmpty || !empty($value)) {
             if (!is_array($field)) {
-                if (isset($this->tableFields[$field])) { // field alias exists, replace it with real db field name
-                    $field = $this->tableFields[$field];
+                if ($fieldName = $this->getFieldName($field)) {
+                    $field = $fieldName; // replace input alias by real field name
                 }
             }
-            $this->getQuery()->getWhere()->filter($field, $value);
+            $this->getQuery()->getWhere()->eq($field, $value);
         }
     }
 
@@ -276,12 +274,11 @@ abstract class Table
     public function with($relationName, $relationFields = true)
     {
         if (isset($this->relations[$relationName])) {
-            /** @var $relation TableRelation */
             $relation = $this->getRelation($relationName);
 
             // add join condition to link current table with the relation one
             $this->getQuery()->join(
-            // alias => name of joined table
+                // alias => name of joined table
                 [$relationName => $relation->getTable()->getTableName()],
                 // relation table field used for linking
                 $relation->getFieldName(),
@@ -315,29 +312,11 @@ abstract class Table
     }
 
     /**
-     * Reset current table query configuration to the default
-     */
-    public function resetSelection()
-    {
-        unset($this->query);
-        $this->query = clone $this->getDefaultQuery();
-    }
-
-    /**
      * @return AdapterAbstract
      */
     public function getDb()
     {
         return $this->db;
-    }
-
-    /**
-     * Get current selection query instance
-     * @return Query
-     */
-    public function getQuery()
-    {
-        return $this->query;
     }
 
     /**
@@ -349,7 +328,7 @@ abstract class Table
     }
 
     /**
-     * Get default field set to be used for default query
+     * Get default field set
      */
     public function getDefaultFields()
     {
@@ -357,11 +336,11 @@ abstract class Table
     }
 
     /**
-     * Get default query instance
+     * Get table inner query instance
      */
-    protected function getDefaultQuery()
+    protected function getQuery()
     {
-        return $this->defaultQuery;
+        return $this->query;
     }
 
     /**
@@ -370,6 +349,16 @@ abstract class Table
      */
     protected function init()
     {
+    }
+
+    /**
+     * Return field name by the given field alias
+     * @param string $alias
+     * @return string|null
+     */
+    private function getFieldName($alias)
+    {
+        return isset($this->tableFields[$alias]) ? $this->tableFields[$alias] : $alias;
     }
 
     /**
@@ -385,28 +374,5 @@ abstract class Table
         }
 
         return $this->relations[$relation];
-    }
-
-    /**
-     * Insert new database record data
-     *
-     * @param array $rowData
-     * @return integer New record id
-     */
-    private function insertRow($rowData)
-    {
-        $this->getDb()->query('INSERT INTO ?# SET ?a', $this->tableName, $rowData);
-        return $this->getDb()->getLastInsertId();
-    }
-
-    /**
-     * Update database record with the given data
-     *
-     * @param array $rowData
-     */
-    private function updateRow($rowData)
-    {
-        $query = 'UPDATE ?# SET ?a WHERE ?# = ?';
-        $this->getDb()->query($query, $this->tableName, $rowData, $this->primaryKey, $rowData[$this->primaryKey]);
     }
 }

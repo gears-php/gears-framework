@@ -1,6 +1,6 @@
 <?php
 /**
- * @package   Gears\Framework
+ * @package   Gears\Db
  * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
@@ -11,26 +11,21 @@ use Gears\Db\Adapter\AdapterAbstract;
 
 /**
  * Database abstraction layer class. Factory for the specific database adaptors
- * @package    Gears\Framework
+ * @package    Gears\Db
  * @subpackage Database
  */
 class Db
 {
     /**
-     * Create database connection using the given connection parameters
-     * @param string $host
-     * @param string $user
-     * @param string $pass
-     * @param string $dbname
-     * @param string $driver
+     * Instantiate new db adapter connection
+     * @param array $config Connection properties
+     * @param array $options Additional connection options
      * @return AdapterAbstract
      */
-    public static function connect($host, $user, $pass, $dbname, $driver)
+    public static function connect(array $config, array $options = array())
     {
-        if (null === $driver) {
-            throw new \Exception('Db connection driver is not defined');
-        }
+        $driver = $config['driver'];
         $className = __NAMESPACE__ . '\\Adapter\\' . ucfirst(strtolower($driver));
-        return new $className($host, $user, $pass, $dbname, $driver);
+        return new $className($config, $options);
     }
 }

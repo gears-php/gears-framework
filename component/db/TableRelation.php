@@ -1,6 +1,6 @@
 <?php
 /**
- * @package   Gears\Framework
+ * @package   Gears\Db
  * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
@@ -10,7 +10,7 @@ namespace Gears\Db;
 /**
  * Object representation of the relation of some particular table to another one
  *
- * @package    Gears\Framework
+ * @package    Gears\Db
  * @subpackage Database
  */
 class TableRelation

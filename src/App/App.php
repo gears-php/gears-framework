@@ -328,13 +328,7 @@ class App extends Dispatcher
     {
         $dbCfg = $this->config->getObj('db');
         if ($dbCfg->get() && !$dbCfg->get('disabled')) {
-            $this->set('db', Db::connect(
-                $dbCfg->host,
-                $dbCfg->user,
-                $dbCfg->pass,
-                $dbCfg->dbname,
-                $dbCfg->driver
-            )->query('set names utf8'));
+            $this->set('db', Db::connect($dbCfg->get())->query('set names utf8'));
         }
     }
 

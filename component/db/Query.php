@@ -1,6 +1,6 @@
 <?php
 /**
- * @package   Gears\Framework
+ * @package   Gears\Db
  * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
@@ -12,19 +12,37 @@ use Gears\Db\Query\WhereAbstract;
 
 /**
  * Query constructor class
- *
- * @package    Gears\Framework
- * @subpackage Database
+ * @package Gears\Db
  */
 class Query
 {
-    const SORT_ASC = 'ASC';
-    const SORT_DESC = 'DESC';
+    # sort direction constants
+    const ASC = 'asc';
+    const DESC = 'desc';
 
+    /**
+     * @var AdapterAbstract
+     */
     private $db = null;
+
+    /**
+     * @var string
+     */
     private $selectOptions = '';
+
+    /**
+     * @var array
+     */
     private $select = [];
+
+    /**
+     * @var array
+     */
     private $from = [];
+
+    /**
+     * @var array
+     */
     private $join = [];
 
     /**
@@ -32,7 +50,19 @@ class Query
      */
     private $where = null;
 
-    private $orderBy = [];
+    /**
+     * @var array
+     */
+    private $group = [];
+
+    /**
+     * @var array
+     */
+    private $order = [];
+
+    /**
+     * @var null
+     */
     private $limit = null;
 
     /**
@@ -46,36 +76,81 @@ class Query
 
     /**
      * Add a single field or array of fields to the SELECT clause
-     *
      * <code>
      * $query->select('field', 'fieldAlias');
      * $query->select(['field1Alias' => 'field1', 'field2', 'field3']);
      * </code>
-     *
      * @param string|array $field Field name or array of fields
      * @param string $alias (optional) Field alias
-     * @param string $tableName (optional) Table name
+     * @param string $table (optional) Table name
      * @return Query
      */
-    public function select($field, $alias = null, $tableName = '')
+    public function select($field, $alias = null, $table = '')
     {
         if (is_array($field)) {
             // array of column fields was passed
             foreach ($field as $fieldKey => $fieldValue) {
-                $this->select($fieldValue, $fieldKey, $tableName);
+                $this->selectSingle($fieldValue, is_string($fieldKey) ? $fieldKey : null, $table);
             }
-        } else { // add a single column field
-            $field = $this->db->escapeIdentifier($field);
-
-            if (is_string($alias) && '' != $alias) {
-                $field .= ' AS ' . $this->db->escapeIdentifier($alias);
-            }
-            if ('' != $tableName) {
-                $field = $this->db->escapeIdentifier($tableName) . '.' . $field;
-            }
-
-            $this->select[] = $field;
+        } else {
+            $this->selectSingle($field, $alias, $table);
         }
+        return $this;
+    }
+
+    /**
+     * Select a single field wrapped in COUNT() aggregate function
+     * {@see selectSingle()}
+     * @param string $field
+     * @param string $alias
+     * @param string $table
+     */
+    public function selectCount($field, $alias = null, $table = null)
+    {
+        $this->selectSingle(['count' => $field], $alias, $table);
+        return $this;
+    }
+
+    /**
+     * Add a single field to SELECT clause
+     * @param string|array $field Field name or [aggregate_function => field] mapping
+     * @param string $alias (optional) Field alias
+     * @param string $table (optional) Table name
+     * @return Query
+     */
+    public function selectSingle($field, $alias = null, $table = null)
+    {
+        $fn = '%s';
+        if (is_array($field)) { // function => field
+            $key = key($field);
+            if (!is_numeric($key)) {
+                $fn = strtoupper($key) . '(%s)';
+            }
+            $field = current($field);
+        }
+
+        $field = $this->db->escapeIdentifier($field);
+        if (!empty($table)) {
+            $field = $this->db->escapeIdentifier($table) . '.' . $field;
+        }
+
+        $field = sprintf($fn, $field);
+
+        if (!empty($alias)) {
+            $field .= ' AS ' . $this->db->escapeIdentifier($alias);
+        }
+
+        $this->select[$field] = $field;
+        return $this;
+    }
+
+    /**
+     * Select all fields
+     * return Query
+     */
+    public function selectAll()
+    {
+        $this->select[] = '*';
         return $this;
     }
 
@@ -96,7 +171,38 @@ class Query
     }
 
     /**
-     * Add INNER JOIN clause. Note that $joinTable alias (if given) will be used to qualify $joinField.
+     * Add JOIN clause. Note that $joinTable alias (if given) will be used to qualify $joinField.
+     * Table name is used otherwise. By default INNER JOIN is applied
+     * @param string|array $joinTable Joined table name or [alias => name]
+     * @param string $joinField Joined table field
+     * @param string $baseTable Basic table to join with
+     * @param string $baseField Basic table field to join on
+     * @param string (optional) $type Join type
+     * @return Query
+     */
+    public function join($joinTable, $joinField, $baseTable, $baseField, $type = 'inner')
+    {
+        if (is_array($joinTable)) {
+            $joinAlias = key($joinTable);
+            $joinTable = current($joinTable);
+        } else {
+            $joinAlias = $joinTable;
+        }
+
+        $this->join[] = sprintf('%s JOIN %s AS %s ON %s.%s = %s.%s',
+            strtoupper($type),
+            $this->db->escapeIdentifier($joinTable),
+            $this->db->escapeIdentifier($joinAlias),
+            $this->db->escapeIdentifier($joinAlias),
+            $this->db->escapeIdentifier($joinField),
+            $this->db->escapeIdentifier($baseTable),
+            $this->db->escapeIdentifier($baseField)
+        );
+        return $this;
+    }
+
+    /**
+     * Add LEFT JOIN clause. Note that $joinTable alias (if given) will be used to qualify $joinField.
      * Table name is used otherwise
      * @param string|array $joinTable Joined table name or [alias => name]
      * @param string $joinField Joined table field
@@ -104,23 +210,9 @@ class Query
      * @param string $baseField Basic table field to join on
      * @return Query
      */
-    public function join($joinTable, $joinField, $baseTable, $baseField)
+    public function leftJoin($joinTable, $joinField, $baseTable, $baseField)
     {
-        if (is_array($joinTable)) {
-            $joinAlias = array_keys($joinTable)[0];
-            $joinTable = $joinTable[$joinAlias];
-        } else {
-            $joinAlias = $joinTable;
-        }
-
-        $this->join[] = sprintf(' INNER JOIN %s AS %s ON %s.%s = %s.%s',
-            $this->db->escapeIdentifier($joinTable),
-            $this->db->escapeIdentifier($joinAlias),
-            $this->db->escapeIdentifier($baseTable),
-            $this->db->escapeIdentifier($baseField),
-            $this->db->escapeIdentifier($joinAlias),
-            $this->db->escapeIdentifier($joinField)
-        );
+        $this->join($joinTable, $joinField, $baseTable, $baseField, 'left');
         return $this;
     }
 
@@ -146,45 +238,54 @@ class Query
 
     /**
      * Add GROUP BY clause field(s)
-     * @return Query
+     * @param string|array $field
+     * @param string (optional) $table
+     * @return $this
      */
-    public function groupBy()
+    public function group($field, $table = null)
     {
+        if (is_array($field)) {
+            foreach ($field as $fieldName) {
+                $this->group($fieldName, $table);
+            }
+        } else {
+            $field = $this->db->escapeIdentifier($field);
+            if (!empty($table)) {
+                $field = $this->db->escapeIdentifier($table) . '.' . $field;
+            }
+            $this->group[] = $field;
+        }
         return $this;
     }
 
     /**
      * Add a single field or array of fields to the ORDER BY clause. Example:
-     *
      * <code>
-     * $query->orderBy('lastName', Query::SORT_ASC);
-     * $query->orderBy(['lastName', 'firstName' => Query::SORT_DESC]);
+     * $query->order('lastName', Query::SORT_ASC);
+     * $query->order(['lastName', 'firstName' => Query::SORT_DESC]);
      * </code>
-     *
-     * @param string|array $field Field name or array of fields
-     * @param string $ascDesc (optional) Sort direction
+     * @param string|array $field Field name or array of fields ot order
+     * @param string $sort (optional) Sort direction
      * @return Query
      */
-    public function orderBy($field, $ascDesc = '')
+    public function order($field, $sort = '')
     {
-        // array of order by fields was passed
-        if (is_array($field)) {
+        if (is_array($field)) { // array of order-by fields
             foreach ($field as $fieldKey => $fieldValue) {
                 // numeric element index
                 if (is_numeric($fieldKey)) {
                     // just pass field name
-                    $this->orderBy($fieldValue);
+                    $this->order($fieldValue);
                 } // we have [field name => sort direction] pair
                 else {
-                    $this->orderBy($fieldKey, $fieldValue);
+                    $this->order($fieldKey, $fieldValue);
                 }
             }
-        } // add a single column field
-        else {
+        } else { // add a single column field
             if (null === $field) {
-                $this->orderBy[] = 'NULL';
+                $this->order[] = 'NULL';
             } else {
-                $this->orderBy[] = rtrim($this->db->escapeIdentifier($field) . ' ' . $ascDesc);
+                $this->order[] = rtrim($this->db->escapeIdentifier($field) . ' ' . strtoupper($sort));
             }
         }
         return $this;
@@ -199,7 +300,7 @@ class Query
     public function limit($offset, $rowCount)
     {
         // @todo take the limit clause from specific db adapter implementation
-        $this->limit = sprintf(' LIMIT %d, %d', $offset, $rowCount);
+        $this->limit = sprintf('LIMIT %d,%d', $offset, $rowCount);
         return $this;
     }
 
@@ -212,14 +313,15 @@ class Query
     }
 
     /**
-     * Execute query
+     * Execute query and return db adapter
+     * @return AdapterAbstract
      */
-    public function execute()
+    public function exec()
     {
-        return $this->db
-            ->prepare($this->toString())
-            ->execute()
-            ->fetchRows();
+        if (!count($this->select)) {
+            $this->selectAll();
+        }
+        return $this->db->query($this);
     }
 
     /**
@@ -228,38 +330,53 @@ class Query
      */
     public function toString()
     {
+        return $this->glue();
+    }
+
+    /**
+     * Wrapper for the {@see toString()}
+     * @return string
+     */
+    public function __toString()
+    {
+        return $this->toString();
+    }
+
+    /**
+     * Build the query as a string
+     * @return string
+     */
+    public function glue($sep = ' ')
+    {
         // SELECT fields and options
-        $queryString = 'SELECT ' . $this->selectOptions . implode(', ', $this->select);
+        $queryString = 'SELECT' . $sep . $this->selectOptions . implode(',' . $sep, $this->select);
 
         // FROM tables
-        $queryString .= ' FROM ' . implode(', ', $this->from);
+        $queryString .= $sep . 'FROM' . $sep . implode(',' . $sep, $this->from);
 
         // JOIN conditions
-        $queryString .= implode('', $this->join);
+        $queryString .= $sep . implode($sep, $this->join);
 
         // WHERE conditions
         if (is_object($this->where) && $this->where->count()) {
-            $queryString .= ' WHERE ' . $this->where->toString();
+            $queryString .= 'WHERE' . $sep . $this->where->toString();
         }
 
         // GROUP BY fields
+        if (count($this->group)) {
+            $queryString .= $sep . 'GROUP BY' . $sep . implode(',' . $sep, $this->group);
+        }
 
         // ORDER BY fields
-        if (count($this->orderBy)) {
-            $queryString .= ' ORDER BY ' . implode(', ', $this->orderBy);
+        if (count($this->order)) {
+            $queryString .= $sep . 'ORDER BY' . $sep . implode(',' . $sep, $this->order);
         }
 
         // LIMIT condition
         if (!empty($this->limit)) {
-            $queryString .= $this->limit;
+            $queryString .= $sep . $this->limit;
         }
 
         return $queryString;
     }
 }
-
-
-
-
-
-
