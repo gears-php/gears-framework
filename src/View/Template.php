@@ -262,7 +262,6 @@ class Template
         // partial template variables collection
         $collection = $this->vars[ltrim($args['source'], '$')];
         if (!empty($collection)) {
-            /** @var $tpl Template */
             $tpl = $this->view->load($args['name']);
             $html = '';
             $collection = array_values($collection);
@@ -272,8 +271,8 @@ class Template
                 $html .= $tpl->render();
             }
             return $html;
-        } else {
-            return __CLASS__ . ' error: partial collection is empty';
+        } elseif (isset($args['alt'])) {
+            return $args['alt'];
         }
     }
 
