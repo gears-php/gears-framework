@@ -81,7 +81,7 @@ abstract class WhereAbstract
         $this->conditions[] = preg_replace_callback($regex, function () use (&$args) {
             return $this->db->escape(array_shift($args));
         }, $condition);
-        var_dump($this->conditions);die();
+
         return $this;
     }
 
