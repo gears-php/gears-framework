@@ -310,6 +310,7 @@ class Query
     public function calcFoundRows()
     {
         $this->selectOptions .= ' SQL_CALC_FOUND_ROWS ';
+        return $this;
     }
 
     /**

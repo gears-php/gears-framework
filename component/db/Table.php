@@ -338,7 +338,7 @@ abstract class Table
     /**
      * Get table inner query instance
      */
-    protected function getQuery()
+    public function getQuery()
     {
         return $this->query;
     }

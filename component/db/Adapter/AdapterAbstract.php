@@ -64,15 +64,23 @@ abstract class AdapterAbstract implements \ArrayAccess
     /**
      * Fetch multiple rows
      * @return array Array of rows
-     * @todo drop ARRAY_KEY support and use fetchAll() instead (with PDO::FETCH_COLUMN | PDO::FETCH_GROUP ?)
      */
     public function fetchAll()
     {
+        return $this->statement->fetchAll();
+    }
+
+    /**
+     * Fetch multiple rows using the given field as an array key for each fetched row
+     * @return array Array of rows
+     * @todo use fetchAll() instead (with PDO::FETCH_COLUMN | PDO::FETCH_GROUP ?)
+     */
+    public function fetchAssoc($key = 'id')
+    {
         $rows = [];
         while ($row = $this->statement->fetch()) {
-            if (isset($row['ARRAY_KEY'])) {
-                $rows[$arrKey = $row['ARRAY_KEY']] = $row;
-                unset($rows[$arrKey]['ARRAY_KEY']);
+            if (isset($row[$key])) {
+                $rows[$row[$key]] = $row;
             } else {
                 $rows[] = $row;
             }
