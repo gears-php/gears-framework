@@ -13,7 +13,7 @@ use Gears\Framework\App\Config\Reader\Yaml;
  * @package    Gears\Framework
  * @subpackage App
  */
-class Config
+class Config implements \ArrayAccess
 {
     /**
      * Configuration internal storage
@@ -30,21 +30,11 @@ class Config
     /**
      * Config can be initialized with a given tree configuration array
      * for further manipulations
-     * @param array (optional) $node
+     * @param array (optional) $tree
      */
-    public function __construct($node = null)
+    public function __construct($tree = null)
     {
-        $this->storage = $node;
-    }
-
-    /**
-     * Return a first-level node value from current configuration
-     * @param string $prop
-     * @return mixed
-     */
-    public function __get($prop)
-    {
-        return $this->get($prop);
+        $this->storage = $tree;
     }
 
     /**
@@ -70,14 +60,45 @@ class Config
     }
 
     /**
-     * Read and return the full file configuration tree or its sub-node. Please note that this function
-     * does not saves the loaded config / sub-node internally. Use {@link load()} for this
-     * @param string $file Path to the file
-     * @param string (optional) $node Sub-node to be returned
-     * @return array Configuration tree
-     * @throws \Exception If config file is not found
+     * Load some configuration tree from file and store it internally for future usage. Optionally
+     * put it into sub-node defined by second parameter. Otherwise it will fully replace existing
+     * internal storage
+     * @param string $file
+     * @param string (optional) $path Dot separated path of the node under which to store the loaded config
+     * @return array Loaded configuration tree
      */
-    public function read($file, $node = null)
+    public function load($file, $path = null)
+    {
+        $loaded = $this->read($file);
+
+        if (!is_string($path)) {
+            $this->storage = $loaded;
+        } else {
+            $this->set($path, $loaded);
+        }
+
+        return $loaded;
+    }
+
+    /**
+     * Same as {@see read()} but returns a Config instance
+     * @param string $file
+     * @param string (optional) $node
+     */
+    public function readObj($file, $node = null)
+    {
+        return new Config($this->read($file, $node));
+    }
+
+    /**
+     * Read and return the full file configuration tree or its sub-node. Please note that this function
+     * does not save the loaded config / sub-node internally. Use {@link load()} for this
+     * @param string $file Path to the file
+     * @param string (optional) $path Dot separated path to the sub-node to be returned
+     * @return array Configuration tree
+     * @throws \Exception In case config file is not found
+     */
+    public function read($file, $path = null)
     {
         if (is_file($file)) {
             $loaded = $this->getReader()->getFileConfig($file);
@@ -90,42 +111,21 @@ class Config
                 }
             });
 
-            return $loaded ? $this->get($node, $loaded) : [];
+            return $loaded ? $this->get($path, $loaded) : [];
         } else {
             throw new \Exception('Config file not found: ' . $file);
         }
     }
 
     /**
-     * Load some configuration tree from file and store it internally for future usage. Optionally
-     * put it into sub-node given as second parameter. Otherwise it will fully replace existing
-     * internal storage
-     * @param string $file
-     * @param string (optional) $node Dot separated path of the node under which to store the loaded config
-     * @return array Loaded configuration tree
-     */
-    public function load($file, $node = null)
-    {
-        $loaded = $this->read($file);
-
-        if (!is_string($node)) {
-            $this->storage = $loaded;
-        } else {
-            $this->set($node, $loaded);
-        }
-
-        return $loaded;
-    }
-
-    /**
      * Same as {@link get()} but returns a new Config instance 
-     * @param string $node
-     * @param null (optional) $storage
+     * @param string $path
+     * @param array (optional) $storage
      * @return Config
      */
-    public function getObj($node, $storage = null)
+    public function getObj($path, $storage = null)
     {
-        return new Config($this->get($node, $storage));
+        return new Config($this->get($path, $storage));
     }
 
     /**
@@ -137,21 +137,21 @@ class Config
      * $cfg = $cfg->get();
      * $dbUsername = $cfg['server']['db']['username'];
      *
-     * @param string (optional) $node Path to the property inside configuration tree, separated by dots
+     * @param string (optional) $path Path to the property inside configuration tree, separated by dots
      * @param array (optional) $storage Storage from where to get property. Inner class storage by default
      * @return array|mixed|NULL Full configuration tree | found configuration property value | NULL if nothing is found
      */
-    public function get($node = null, $storage = null)
+    public function get($path = null, $storage = null)
     {
         $storage = $storage ? : $this->storage;
 
-        if ('' == trim($node)) {
+        if ('' == trim($path)) {
             return $storage;
         } else {
             $p = & $storage;
             $p = (array)$p;
 
-            $path = explode('.', $node);
+            $path = explode('.', $path);
 
             foreach ($path as $node) {
                 if (isset($p[$node])) {
@@ -164,6 +164,16 @@ class Config
     }
 
     /**
+     * Return a first-level node value from current configuration
+     * @param string $prop
+     * @return mixed
+     */
+    public function __get($prop)
+    {
+        return $this->get($prop);
+    }
+
+    /**
      * Set some configuration property (new or overwrite existent). Example:
      *
      * $success = $cfg->set('server.db.username', 'john doe');
@@ -171,27 +181,92 @@ class Config
      * $cfg = $cfg->get();
      * $cfg['server']['db']['username'] = 'john doe';
      *
-     * @param string $node Path to the property inside configuration tree, separated by dots
+     * @param string $path Path to the property inside configuration tree, separated by dots
      * @param mixed $value
-     * @return boolean Whether value was set or not
+     * @return void
      */
-    public function set($node, $value)
+    public function set($path, $value)
     {
-        if ('' == trim($node)) {
-            return false;
-        } else {
+        if (trim($path)) {
             $p = & $this->storage;
             $p = (array)$p;
 
-            $path = explode('.', $node);
+            $path = explode('.', $path);
 
             foreach ($path as $node) {
                 $p = & $p[$node];
             }
 
             $p = $value;
+        }
+    }
 
-            return true;
+    /**
+     * Check whether the configuration tree property exists
+     * @param string $path Dot separated path to the property inside configuration tree
+     * @return boolean
+     */
+    public function offsetExists($path)
+    {
+        $p = & $this->storage;
+        $p = (array)$p;
+
+        $path = explode('.', $path);
+
+        foreach ($path as $node) {
+            if (isset($p[$node])) {
+                $p = & $p[$node];
+            } else {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get configuration property. See {@see get()}
+     * @param string $path
+     * @return mixed
+     */
+    public function offsetGet($path)
+    {
+        return $this->get($path);
+    }
+
+    /**
+     * Set configuration property. See {@see set()}
+     * @param string $path
+     * @param mixed $value
+     * @return void
+     */
+    public function offsetSet($path, $value)
+    {
+        $this->set($path, $value);
+    }
+
+    /**
+     * Remove configuration tree node
+     * @param string $path
+     * @return void
+     */
+    public function offsetUnset($path)
+    {
+        $p = & $this->storage;
+        $p = (array)$p;
+
+        $path = explode('.', $path);
+
+        $nodeCount = count($path);
+        while (--$nodeCount) {
+            $node = array_shift($path);
+            if (isset($p[$node])) {
+                $p = & $p[$node];
+            }
+        }
+
+        if (is_array($p)) {
+            unset($p[array_shift($path)]);
         }
     }
 }
