@@ -131,12 +131,12 @@ class Config implements \ArrayAccess
     /**
      * Get some configuration property. If nothing passed returns full configuration tree.
      * If no property found returns NULL. Example:
-     *
+     * <code>
      * $dbUsername = $cfg->get('server.db.username');
      * # which equals to:
      * $cfg = $cfg->get();
      * $dbUsername = $cfg['server']['db']['username'];
-     *
+     * </code>
      * @param string (optional) $path Path to the property inside configuration tree, separated by dots
      * @param array (optional) $storage Storage from where to get property. Inner class storage by default
      * @return array|mixed|NULL Full configuration tree | found configuration property value | NULL if nothing is found
@@ -175,12 +175,12 @@ class Config implements \ArrayAccess
 
     /**
      * Set some configuration property (new or overwrite existent). Example:
-     *
-     * $success = $cfg->set('server.db.username', 'john doe');
+     * <code>
+     * $cfg->set('server.db.username', 'john doe');
      * # which equals to:
      * $cfg = $cfg->get();
      * $cfg['server']['db']['username'] = 'john doe';
-     *
+     * </code>
      * @param string $path Path to the property inside configuration tree, separated by dots
      * @param mixed $value
      * @return void
