@@ -47,6 +47,28 @@ abstract class AdapterAbstract implements \ArrayAccess
     }
 
     /**
+     * Prepare the given sql query
+     * @param string|Query $query
+     * @return $this
+     */
+    public function prepare($query)
+    {
+        $this->statement = $this->connection->prepare($query . '');
+        return $this;
+    }
+
+    /**
+     * Execute query previously prepared with {@see prepare()}
+     * @param array $params
+     * @return $this
+     */
+    public function execute($params)
+    {
+        $this->statement->execute($params);
+        return $this;
+    }
+
+    /**
      * Prepare and execute the given query
      * @param string|Query $query
      * @param array $params
@@ -54,8 +76,7 @@ abstract class AdapterAbstract implements \ArrayAccess
      */
     public function query($query, array $params = array())
     {
-        $this->statement = $this->connection->prepare($query . '');
-        $this->statement->execute($params);
+        $this->prepare($query)->execute($params);
         // by default each fetched row will be return as an associative array
         $this->statement->setFetchMode(\PDO::FETCH_ASSOC);
         return $this;
