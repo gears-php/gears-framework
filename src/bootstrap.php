@@ -18,6 +18,7 @@ Autoloader::registerNamespaces([
     // framework internal sources
     'Gears\Framework' => __DIR__,
     // external components
+    'Gears\Config' => __DIR__ . '/../component/config',
     'Gears\Db' => __DIR__ . '/../component/db'
 ]);
 

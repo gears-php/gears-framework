@@ -7,7 +7,7 @@
  */
 namespace Gears\Framework\App;
 
-use Gears\Framework\App\Config\Config;
+use Gears\Config\Config;
 use Gears\Framework\App\Exception\ResourceNotFound;
 use Gears\Db\Db;
 use Gears\Framework\Event\Dispatcher;
