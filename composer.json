@@ -14,6 +14,7 @@
         "php": ">=5.4.0"
     },
     "replace": {
+        "gears-php/config": "self.version",
         "gears-php/db": "self.version"
     }
 }
