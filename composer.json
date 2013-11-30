@@ -12,7 +12,7 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "mustangostang/spyc": "dev-master"
+        "mustangostang/spyc": "0.5.*@dev"
     },
     "replace": {
         "gears-php/config": "self.version",
