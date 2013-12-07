@@ -4,7 +4,7 @@
  */
 namespace Gears\Config;
 
-use Gears\Config\Reader\IReader;
+use Gears\Config\Reader\ReaderAbstract;
 use Gears\Config\Reader\Yaml;
 
 /**
@@ -21,7 +21,7 @@ class Config implements \ArrayAccess
 
     /**
      * Configuration file reader instance
-     * @var IReader
+     * @var ReaderAbstract
      */
     protected $reader = null;
 
@@ -37,16 +37,16 @@ class Config implements \ArrayAccess
 
     /**
      * Set config files reader
-     * @param IReader $reader
+     * @param ReaderAbstract $reader
      */
-    public function setReader(IReader $reader)
+    public function setReader(ReaderAbstract $reader)
     {
         $this->reader = $reader;
     }
 
     /**
      * Get reader instance. Creates default reader if none exists
-     * @return IReader Config reader object
+     * @return ReaderAbstract Config reader object
      */
     public function getReader()
     {
@@ -95,25 +95,20 @@ class Config implements \ArrayAccess
      * @param string $file Path to the file
      * @param string (optional) $path Dot separated path to the sub-node to be returned
      * @return array Configuration tree
-     * @throws \Exception In case config file is not found
      */
     public function read($file, $path = null)
     {
-        if (is_file($file)) {
-            $loaded = $this->getReader()->getFileConfig($file);
+        $tree = $this->getReader()->read($file);
 
-            // load sub files, if any
-            $fileExtLength = strlen($this->reader->getFileExt());
-            array_walk_recursive($loaded, function (&$item) use ($file, $fileExtLength) {
-                if (is_string($item) && substr($item, -$fileExtLength) == $this->reader->getFileExt()) {
-                    $item = $this->read(dirname($file) . DS . $item);
-                }
-            });
+        // load sub files, if any
+        $fileExtLength = strlen($this->getReader()->getFileExt());
+        array_walk_recursive($tree, function (&$item) use ($file, $fileExtLength) {
+            if (is_string($item) && substr($item, -$fileExtLength) == $this->getReader()->getFileExt()) {
+                $item = $this->read(dirname($file) . DS . $item);
+            }
+        });
 
-            return $loaded ? $this->get($path, $loaded) : [];
-        } else {
-            throw new \Exception('Config file not found: ' . $file);
-        }
+        return $tree ? $this->get($path, $tree) : [];
     }
 
     /**
@@ -201,6 +196,31 @@ class Config implements \ArrayAccess
     }
 
     /**
+     * Remove configuration tree node
+     * @param string $path
+     * @return void
+     */
+    public function del($path)
+    {
+        $p = & $this->storage;
+        $p = (array)$p;
+
+        $path = explode('.', $path);
+
+        $nodeCount = count($path);
+        while (--$nodeCount) {
+            $node = array_shift($path);
+            if (isset($p[$node])) {
+                $p = & $p[$node];
+            }
+        }
+
+        if (is_array($p)) {
+            unset($p[array_shift($path)]);
+        }
+    }
+
+    /**
      * Check whether the configuration tree property exists
      * @param string $path Dot separated path to the property inside configuration tree
      * @return boolean
@@ -245,27 +265,12 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Remove configuration tree node
+     * Remove configuration tree node. See {@see delete()}
      * @param string $path
      * @return void
      */
     public function offsetUnset($path)
     {
-        $p = & $this->storage;
-        $p = (array)$p;
-
-        $path = explode('.', $path);
-
-        $nodeCount = count($path);
-        while (--$nodeCount) {
-            $node = array_shift($path);
-            if (isset($p[$node])) {
-                $p = & $p[$node];
-            }
-        }
-
-        if (is_array($p)) {
-            unset($p[array_shift($path)]);
-        }
+        $this->del($path);
     }
 }
