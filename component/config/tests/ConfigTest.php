@@ -6,6 +6,7 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 {
     protected $pathToProp = 'path.to.prop';
     protected $pathTo = 'path.to';
+    protected $filePath = 'path/to/file';
     protected $value = 'value';
     protected $storage;
     protected $propStorage;
@@ -40,15 +41,16 @@ class ConfigTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($this->value, $config->get($this->pathToProp));
     }
 
-    /**
-     * @depends testSet
-     */
-    public function testGetObj($config)
+    public function testGetObj()
     {
-        $subConfig = $config->getObj($this->pathTo);
-        $this->assertInstanceOf('Gears\Config\Config', $subConfig);
-        $actual = $this->readAttribute($subConfig, 'storage');
-        $this->assertEquals($this->propStorage, $actual);
+        $config = $this->getMock('Gears\Config\Config', array('get'));
+        $config->expects($this->once())
+            ->method('get')
+            ->with(
+                $this->equalTo($this->pathTo),
+                $this->equalTo(null)
+            );
+        $this->assertInstanceOf('Gears\Config\Config', $config->getObj($this->pathTo));
     }
 
     /**
@@ -59,18 +61,29 @@ class ConfigTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($this->storage, $config->get());
     }
 
-    /**
-     * @depends testSet
-     */
-    public function testGetFirstLevelValue($config)
+    public function testGetAsAProperty()
     {
-        $this->assertEquals($this->storage['path'], $config->path);
+        $config = $this->getMock('Gears\Config\Config', array('get'));
+        $config->expects($this->once())
+            ->method('get')
+            ->with($this->equalTo('path'))
+            ->will($this->returnValue($this->value));
+        $this->assertEquals($this->value, $config->path);
     }
 
-    public function testGetFromExternal()
+    public function testGetFromGivenStorage()
     {
         $config = new Config();
         $this->assertEquals($this->propStorage, $config->get($this->pathTo, $this->storage));
+    }
+
+    public function testDel()
+    {
+        $config = new Config($this->storage);
+        unset($config[$this->pathTo]);
+        $expected = $this->storage;
+        unset($expected['path']['to']);
+        $this->assertEquals($expected, $this->readAttribute($config, 'storage'));
     }
 
     /**
@@ -81,31 +94,35 @@ class ConfigTest extends PHPUnit_Framework_TestCase
         $this->assertTrue(isset($config[$this->pathToProp]));
     }
 
-    /**
-     * @depends testSet
-     */
-    public function testOffsetGet($config)
+    public function testOffsetGet()
     {
+        $config = $this->getMock('Gears\Config\Config', array('get'));
+        $config->expects($this->once())
+            ->method('get')
+            ->with($this->equalTo($this->pathToProp))
+            ->will($this->returnValue($this->value));
         $this->assertEquals($this->value, $config[$this->pathToProp]);
     }
 
     public function testOffsetSet()
     {
-        $config = new Config();
+        $config = $this->getMock('Gears\Config\Config', array('set'));
+        $config->expects($this->once())
+            ->method('set')
+            ->with(
+                $this->equalTo($this->pathToProp),
+                $this->equalTo($this->value)
+            );
         $config[$this->pathToProp] = $this->value;
-        $actual = $this->readAttribute($config, 'storage');
-        $this->assertEquals($this->storage, $actual);
     }
 
-    /**
-     * @depends testSet
-     */
-    public function testOffsetUnset($config)
+    public function testOffsetUnset()
     {
+        $config = $this->getMock('Gears\Config\Config', array('del'));
+        $config->expects($this->once())
+            ->method('del')
+            ->with($this->equalTo($this->pathTo));
         unset($config[$this->pathTo]);
-        $expected = $this->storage;
-        unset($expected['path']['to']);
-        $this->assertEquals($expected, $this->readAttribute($config, 'storage'));
     }
 
     public function testSetReader()
@@ -134,5 +151,13 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 
     public function testReadObj()
     {
+        $config = $this->getMock('Gears\Config\Config', array('read'));
+        $config->expects($this->once())
+            ->method('read')
+            ->with(
+                $this->equalTo($this->filePath),
+                $this->equalTo(null)
+            );
+        $this->assertInstanceOf('Gears\Config\Config', $config->readObj($this->filePath));
     }
 }
