@@ -19,7 +19,7 @@ Autoloader::registerNamespaces([
     'Gears\Framework' => __DIR__,
     // external components
     'Gears\Config' => __DIR__ . '/../component/config/src',
-    'Gears\Db' => __DIR__ . '/../component/db'
+    'Gears\Db' => __DIR__ . '/../component/db/src'
 ]);
 
 if (is_file(APP_PATH . 'Bootstrap.php')) {
