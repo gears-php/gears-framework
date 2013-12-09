@@ -1,8 +1,11 @@
 <?php
 
-use Gears\Config\Config;
+namespace Gears\Config\Tests;
 
-class ConfigTest extends PHPUnit_Framework_TestCase
+use Gears\Config\Config;
+use Gears\Config\Reader\Yaml;
+
+class ConfigTest extends \PHPUnit_Framework_TestCase
 {
     protected $pathToProp = 'path.to.prop';
     protected $pathTo = 'path.to';
@@ -43,14 +46,14 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 
     public function testGetObj()
     {
-        $config = $this->getMock('Gears\Config\Config', array('get'));
+        $config = $this->getMock(Config::class, array('get'));
         $config->expects($this->once())
             ->method('get')
             ->with(
                 $this->equalTo($this->pathTo),
                 $this->equalTo(null)
             );
-        $this->assertInstanceOf('Gears\Config\Config', $config->getObj($this->pathTo));
+        $this->assertInstanceOf(Config::class, $config->getObj($this->pathTo));
     }
 
     /**
@@ -63,7 +66,7 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 
     public function testGetAsAProperty()
     {
-        $config = $this->getMock('Gears\Config\Config', array('get'));
+        $config = $this->getMock(Config::class, array('get'));
         $config->expects($this->once())
             ->method('get')
             ->with($this->equalTo('path'))
@@ -96,7 +99,7 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 
     public function testOffsetGet()
     {
-        $config = $this->getMock('Gears\Config\Config', array('get'));
+        $config = $this->getMock(Config::class, array('get'));
         $config->expects($this->once())
             ->method('get')
             ->with($this->equalTo($this->pathToProp))
@@ -106,7 +109,7 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 
     public function testOffsetSet()
     {
-        $config = $this->getMock('Gears\Config\Config', array('set'));
+        $config = $this->getMock(Config::class, array('set'));
         $config->expects($this->once())
             ->method('set')
             ->with(
@@ -118,7 +121,7 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 
     public function testOffsetUnset()
     {
-        $config = $this->getMock('Gears\Config\Config', array('del'));
+        $config = $this->getMock(Config::class, array('del'));
         $config->expects($this->once())
             ->method('del')
             ->with($this->equalTo($this->pathTo));
@@ -128,7 +131,7 @@ class ConfigTest extends PHPUnit_Framework_TestCase
     public function testSetReader()
     {
         $config = new Config();
-        $yamlReader = new Gears\Config\Reader\Yaml;
+        $yamlReader = new Yaml;
         $config->setReader($yamlReader);
         $actual = $this->readAttribute($config, 'reader');
         $this->assertInstanceOf('Gears\Config\Reader\Yaml', $actual);
@@ -138,26 +141,71 @@ class ConfigTest extends PHPUnit_Framework_TestCase
     public function testGetReader()
     {
         $config = new Config();
-        $this->assertInstanceOf('Gears\Config\Reader\Yaml', $config->getReader());
+        $this->assertInstanceOf(Yaml::class, $config->getReader());
     }
 
     public function testLoad()
     {
+        $config = $this->getMock(Config::class, array('read', 'set'));
+
+        $config->expects($this->exactly(2))
+            ->method('read')
+            ->with($this->equalTo($this->filePath))
+            ->will($this->returnValue($this->storage));
+
+        $config->expects($this->at(2))
+            ->method('set')
+            ->with(
+                $this->equalTo($this->pathTo),
+                $this->equalTo($this->storage)
+            );
+
+        $this->assertEquals($this->storage, $config->load($this->filePath));
+        $this->assertEquals($this->storage, $config->load($this->filePath, $this->pathTo));
     }
 
     public function testRead()
     {
+        $readerMock = $this->getMock(Yaml::class);
+        $readerMock->expects($this->at(0))
+            ->method('read')
+            ->with($this->equalTo($this->filePath))
+            ->will($this->returnValue($this->storage));
+
+        $readerMock->expects($this->at(2))
+            ->method('read')
+            ->with($this->equalTo($this->filePath))
+            ->will($this->returnValue([]));
+
+        $readerMock->expects($this->exactly(2))
+            ->method('getFileExt')
+            ->will($this->returnValue('.yml'));
+
+        $config = $this->getMock(Config::class, array('get'));
+        $config->setReader($readerMock);
+
+        $config->expects($this->once())
+            ->method('get')
+            ->with(
+                $this->equalTo($this->pathTo),
+                $this->equalTo($this->storage)
+            )
+            ->will($this->returnValue($this->propStorage));
+
+        $this->assertEquals($this->propStorage, $config->read($this->filePath, $this->pathTo));
+        $this->assertEquals([], $config->read($this->filePath));
+
     }
 
     public function testReadObj()
     {
-        $config = $this->getMock('Gears\Config\Config', array('read'));
+        $config = $this->getMock(Config::class, array('read'));
         $config->expects($this->once())
             ->method('read')
             ->with(
                 $this->equalTo($this->filePath),
                 $this->equalTo(null)
             );
-        $this->assertInstanceOf('Gears\Config\Config', $config->readObj($this->filePath));
+        $this->assertInstanceOf(Config::class, $config->readObj($this->filePath));
     }
 }

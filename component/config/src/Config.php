@@ -101,9 +101,9 @@ class Config implements \ArrayAccess
         $tree = $this->getReader()->read($file);
 
         // load sub files, if any
-        $fileExtLength = strlen($this->getReader()->getFileExt());
-        array_walk_recursive($tree, function (&$item) use ($file, $fileExtLength) {
-            if (is_string($item) && substr($item, -$fileExtLength) == $this->getReader()->getFileExt()) {
+        $fileExtLength = strlen($fileExt = $this->getReader()->getFileExt());
+        array_walk_recursive($tree, function (&$item) use ($file, $fileExt, $fileExtLength) {
+            if (is_string($item) && substr($item, -$fileExtLength) == $fileExt) {
                 $item = $this->read(dirname($file) . DS . $item);
             }
         });

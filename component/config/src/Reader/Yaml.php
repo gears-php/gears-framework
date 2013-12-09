@@ -10,13 +10,13 @@ namespace Gears\Config\Reader;
  */
 class Yaml extends ReaderAbstract
 {
-    public function parseFile($file)
-    {
-        return \Spyc::YAMLLoad($file);
-    }
-
     public function getFileExt()
     {
         return '.yml';
+    }
+
+    protected function parseFile($file)
+    {
+        return \Spyc::YAMLLoad($file);
     }
 }
