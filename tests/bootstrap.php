@@ -1,4 +1,5 @@
 <?php
-require_once __DIR__ . '/../Reader/IReader.php';
-require_once __DIR__ . '/../Reader/Yaml.php';
-require_once __DIR__ . '/../Config.php';
+require_once __DIR__ . '/../src/Reader/Exception/FileNotFound.php';
+require_once __DIR__ . '/../src/Reader/ReaderAbstract.php';
+require_once __DIR__ . '/../src/Reader/Yaml.php';
+require_once __DIR__ . '/../src/Config.php';
