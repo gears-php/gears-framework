@@ -34,7 +34,7 @@ class Session
     private static $_namespace = 'Gears\Framework';
 
     /**
-     * Prevent class instantinating
+     * Prevent class instantiating
      */
     private function __construct()
     {
