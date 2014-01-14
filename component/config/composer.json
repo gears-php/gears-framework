@@ -14,5 +14,10 @@
     "require": {
         "php": ">=5.4.0",
         "mustangostang/spyc": "0.5.*@dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "Gears\\Config\\": "src/"
+        }
     }
 }

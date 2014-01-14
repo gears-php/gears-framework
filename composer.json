@@ -17,5 +17,12 @@
     "replace": {
         "gears-php/config": "self.version",
         "gears-php/db": "self.version"
+    },
+    "autoload": {
+        "psr-4": {
+        	"Gears\\Framework\\": "src/",
+        	"Gears\\Config\\": "component/config/src/",
+            "Gears\\Db\\": "component/db/src/"
+        }
     }
 }
