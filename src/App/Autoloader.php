@@ -3,8 +3,7 @@
 namespace Gears\Framework\App;
 
 /**
- * Provides classes autoload functionality. Follows to yet non accepted PSR-4 proposal
- * (https://github.com/php-fig/fig-standards/blob/master/proposed/psr-4-autoloader/psr-4-autolader.md)
+ * Provides classes autoload functionality by implementing PSR-4 autoloading standard
  * @package    Gears\Framework
  * @subpackage App
  */
