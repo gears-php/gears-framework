@@ -20,8 +20,8 @@
     },
     "autoload": {
         "psr-4": {
-        	"Gears\\Framework\\": "src/",
-        	"Gears\\Config\\": "component/config/src/",
+            "Gears\\Framework\\": "src/",
+            "Gears\\Config\\": "component/config/src/",
             "Gears\\Db\\": "component/db/src/"
         }
     }
