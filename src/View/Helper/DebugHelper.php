@@ -21,7 +21,7 @@ class DebugHelper extends Helper
     {
         if (Debug::enabled()) {
             Debug::add('-- $_GET:', $_GET, '-- $_POST:', $_POST);
-            Debug::add('-- QX_SESSION:', Session::get(null));
+            Debug::add('-- Gears\Framework\Session:', Session::get(null));
 
             return sprintf('%s<br />script <b>mem usage</b> %s<br />script <b>time</b> %s sec<br />',
                 Debug::get(), Debug::getMemoryUsage(), Debug::scriptTime());
@@ -54,8 +54,8 @@ class DebugHelper extends Helper
                 }
 
                 #debug-body pre {
-                    font: normal 11pt consolas, "courier new", courier, monospace;
-                    color: #cc5;
+                    font: normal 10pt consolas, "courier new", courier, monospace;
+                    color: #eee;
                     text-align: left;
                     margin: 5px 7px;
                 }
