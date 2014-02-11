@@ -344,7 +344,7 @@ class App extends Dispatcher
     {
         // per each route
         foreach ($routes as $route) {
-            $route['params'] = [];
+            isset($route['params']) || $route['params'] = [];
 
             // current route pattern used for matching
             $routePattern = $route['route'];
