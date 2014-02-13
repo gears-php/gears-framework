@@ -20,7 +20,7 @@ class View
 {
     /**
      * Stores paths where to search for template files
-     * @var string
+     * @var array
      */
     protected $templatePaths = [];
 
@@ -123,6 +123,7 @@ class View
 
         // whether template object is already stored under alias name
         if (!isset($this->templates[$alias])) {
+
             // search for template file within template paths and store it using alias name
             foreach ($this->templatePaths as $path) {
                 $path = (0 === strpos($fileName, APP_PATH)) ? $fileName : $path . DS . $fileName;
