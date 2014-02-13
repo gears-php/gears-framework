@@ -139,8 +139,6 @@ abstract class Table
             foreach ($this->tableFields as $fieldKey => $fieldValue) {
                 $row[is_string($fieldKey) ? $fieldKey : $fieldValue] = null;
             }
-            // prevent processing relations
-            $relations = false;
         }
 
         // load relation table rows
