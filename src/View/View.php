@@ -65,8 +65,8 @@ class View
 
         // setup cache storage
         if (isset($options['cache'])) {
-            if (($cache = $options['cache']) instanceof ICache) {
-                $this->cache = $cache;
+            if ($options['cache'] instanceof ICache) {
+                $this->setCache($options['cache']);
             }
         }
     }
@@ -81,6 +81,24 @@ class View
     public function __call($method, $args)
     {
         return $this->helper($method, $args);
+    }
+
+    /**
+     * Set cache storage
+     * @param ICache $cache
+     */
+    public function setCache(ICache $cache)
+    {
+        $this->cache = $cache;
+    }
+
+    /**
+     * Get cache storage
+     * @return ICache
+     */
+    public function getCache()
+    {
+        return $this->cache;
     }
 
     /**
@@ -129,7 +147,7 @@ class View
                 $path = (0 === strpos($fileName, APP_PATH)) ? $fileName : $path . DS . $fileName;
 
                 if (is_file($path)) {
-                    $tpl = new Template($path, $this, $this->cache);
+                    $tpl = new Template($path, $this);
                     break;
                 }
             }

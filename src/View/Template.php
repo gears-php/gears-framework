@@ -1,10 +1,8 @@
 <?php
 namespace Gears\Framework\View;
 
-use Gears\Framework\Cache\ICache;
 use Gears\Framework\View\Parser;
 use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
-use Gears\Framework\View\View;
 
 /**
  * Template class instantiated per each specific template file
@@ -28,10 +26,9 @@ class Template
      * Process template file
      * @param string $filePath Full path to a template file
      * @param View $view
-     * @param ICache (optional) $cache Cache storage instance to be used for storing compiled templates
      * @throws \Exception If template file not found
      */
-    public function __construct($filePath, View $view, ICache $cache = null)
+    public function __construct($filePath, View $view)
     {
         $this->path = str_replace('/', DS, dirname($filePath));
         $this->name = basename($filePath);
@@ -40,6 +37,7 @@ class Template
         $templateKey = md5($filePath);
 
         // try to use non-outdated processed template from cache
+        $cache = $view->getCache();
         if ($cache && $cache->getTime($templateKey) > filemtime($filePath)) {
             $this->content = $cache->get($templateKey);
         }
