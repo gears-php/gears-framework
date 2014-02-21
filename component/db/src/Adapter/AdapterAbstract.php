@@ -4,6 +4,7 @@
  */
 namespace Gears\Db\Adapter;
 
+use PDO;
 use Gears\Db\Query;
 use Gears\Db\Query\WhereAbstract;
 use Gears\Db\Query\WhereAnd;
@@ -24,7 +25,7 @@ abstract class AdapterAbstract implements \ArrayAccess
 
     /**
      * Active database connection
-     * @var \PDO
+     * @var PDO
      */
     protected $connection = null;
 
@@ -42,8 +43,8 @@ abstract class AdapterAbstract implements \ArrayAccess
     public function __construct(array $config, array $options = array())
     {
         $dsn = $this->getConnectionString($config);
-        $this->connection = new \PDO($dsn, $config['user'], $config['pass'], $options);
-        $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $this->connection = new PDO($dsn, $config['user'], $config['pass'], $options);
+        $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
     /**
@@ -78,7 +79,7 @@ abstract class AdapterAbstract implements \ArrayAccess
     {
         $this->prepare($query)->execute($params);
         // by default each fetched row will be return as an associative array
-        $this->statement->setFetchMode(\PDO::FETCH_ASSOC);
+        $this->statement->setFetchMode(PDO::FETCH_ASSOC);
         return $this;
     }
 
@@ -92,21 +93,13 @@ abstract class AdapterAbstract implements \ArrayAccess
     }
 
     /**
-     * Fetch multiple rows using the given field as an array key for each fetched row
+     * Fetch multiple rows grouped by the specific column
      * @return array Array of rows
-     * @todo use fetchAll() instead (with PDO::FETCH_COLUMN | PDO::FETCH_GROUP ?)
      */
-    public function fetchAssoc($key = 'id')
+    public function fetchAssoc()
     {
-        $rows = [];
-        while ($row = $this->statement->fetch()) {
-            if (isset($row[$key])) {
-                $rows[$row[$key]] = $row;
-            } else {
-                $rows[] = $row;
-            }
-        }
-        return $rows;
+        $rows = $this->statement->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_ASSOC);
+        return array_map('reset', $rows);
     }
 
     /**
@@ -133,7 +126,7 @@ abstract class AdapterAbstract implements \ArrayAccess
      */
     public function fetchCol()
     {
-        return $this->statement->fetchAll(\PDO::FETCH_COLUMN);
+        return $this->statement->fetchAll(PDO::FETCH_COLUMN);
     }
 
     /**
@@ -142,7 +135,7 @@ abstract class AdapterAbstract implements \ArrayAccess
      */
     public function fetchPairs()
     {
-        return $this->statement->fetchAll(\PDO::FETCH_KEY_PAIR);
+        return $this->statement->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 
     /**
