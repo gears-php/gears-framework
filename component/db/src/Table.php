@@ -120,17 +120,22 @@ abstract class Table
      * For each specific table field, a field alias (if defined in table metadata) is used as an object
      * property name under which to store the field value. Db field name itself used otherwise.
      * By default replaces table foreign key fields with actual row data from relative tables accessed by relation name
-     * @param integer $rowId
+     * @param int|array $idOrWhere Row id or Where clause array to find row by
      * @param array|string|bool $relations (optional) List by which to limit loaded relations. <i>false</i> to not load them at all
      * @return object Simple property-value object
      */
-    public function fetchRow($rowId, $relations = true)
+    public function fetchRow($idOrWhere, $relations = true)
     {
-        // yank db only if positive row id number given
-        if (intval($rowId)) {
+        // primary key value given
+        if (is_scalar($idOrWhere)) {
+            $idOrWhere = [$this->primaryKey => intval($idOrWhere)];
+        }
+
+        // yank db only if where parameters present
+        if ($idOrWhere && count($idOrWhere)) {
             // fetch all own table row data
             $q = $this->getQuery()->select($this->tableFields, null, $this->getTableName());
-            $q->getWhere()->eq($this->primaryKey, $rowId);
+            $q->getWhere()->fromArray($idOrWhere);
             $row = $q->exec()->fetchRow();
         }
 
