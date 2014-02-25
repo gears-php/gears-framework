@@ -127,12 +127,12 @@ abstract class Table
     public function fetchRow($idOrWhere, $relations = true)
     {
         // primary key value given
-        if (is_scalar($idOrWhere)) {
+        if ($idOrWhere && is_scalar($idOrWhere)) {
             $idOrWhere = [$this->primaryKey => intval($idOrWhere)];
         }
 
-        // yank db only if where parameters present
-        if ($idOrWhere && count($idOrWhere)) {
+        // yank db only if where present
+        if (is_array($idOrWhere)) {
             // fetch all own table row data
             $q = $this->getQuery()->select($this->tableFields, null, $this->getTableName());
             $q->getWhere()->fromArray($idOrWhere);
