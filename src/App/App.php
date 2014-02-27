@@ -361,7 +361,7 @@ class App extends Dispatcher
 
             // try to match uri string with current uri rule pattern
             // (query parameters are filtered out so not taken into account)
-            if (preg_match('/^' . $uriPattern . '(?:\/)?(?:\?.*)?$/', $uri, $params)) {
+            if (preg_match('#^' . $uriPattern . '(?:/)?(?:\?.*)?$#', $uri, $params)) {
                 // request method limitation
                 if (isset($route['methods']) && count($route['methods'])) {
                     // first check for REST pseudo method
@@ -415,13 +415,10 @@ class App extends Dispatcher
     {
         return [
             # /content/:id
-            '/\/:\w+/',
+            '#/:\w+#',
 
             # /content*
-            '/\*/',
-
-            # url slashes
-            '/\//'
+            '/\*/'
         ];
     }
 
@@ -437,9 +434,7 @@ class App extends Dispatcher
             '/([\w-]+)',
 
             # /content([/]anything[/]else[/]here)
-            '(.*)',
-
-            '\/'
+            '(.*)'
         ];
     }
 
@@ -450,12 +445,12 @@ class App extends Dispatcher
     {
         return [
             # /:(id) => /id/3
-            '/\/:(\w+)/' => function ($value, &$route) {
+            '#/:(\w+)#' => function ($value, &$route) {
                 $route['params'] += $value;
             },
 
             # /(*) => /anything/else/here
-            '/(\*)/' => function ($value, &$route) {
+            '#(\*)#' => function ($value, &$route) {
                 $route['to'] .= $value['*'];
             }
         ];
