@@ -7,7 +7,6 @@ namespace Gears\Framework\App;
 
 /**
  * Request
- *
  * @package    Gears\Framework
  * @subpackage App
  */
@@ -53,31 +52,21 @@ class Request
     private $params = [];
 
     /**
-     * Extracting controller, action and parameters from the given route information
+     * Parse the given route info in order to get controller, action and parameters
      * @param array $route
      */
-    public function __construct(array $route)
+    public function parseRoute(array $route)
     {
-        $route = (object) $route;
-        // remember url matching pattern
-        $this->pattern = $route->route;
-        // construct full path to MVC folder
-        $this->mvcPath = rtrim(APP_PATH . $route->base, DS) . DS;
-        
-        preg_match('/\/(?P<class>[\w-]+)?(?:\/(?P<method>[\w-]+))?(?P<params>(?:\/[\w-]+)*)/', $route->to, $uri);
-        
-        // requested controller name part
-        $this->controllerName = $uri['class'] ? : 'index';
-        // requested action name part
-        $this->actionName = $uri['method'] ? : 'index';
-        // remember url placeholder params
-        $this->params = $route->params;
-        
-        // extract "/name/value" url params
-        $params = explode('/', $uri['params']);
-        
+        $route = (object)$route;
+        $this->pattern = $route->route; // remember url matching pattern
+        $this->mvcPath = rtrim(APP_PATH . $route->base, DS) . DS; // construct full path to MVC folder
+        preg_match('/\/(?P<class>[\w-]+)?(?:\/(?P<method>[\w-]+))?(?P<params>(?:\/[\w-]+)*)/', $route->to, $matched);
+        $this->controllerName = $matched['class'] ? : 'index';
+        $this->actionName = $matched['method'] ? : 'index';
+        $this->params = $route->params; // remember url placeholder params
+        $params = explode('/', $matched['params']); // extract "/name/value" url params
         array_shift($params);
-        
+
         foreach (array_chunk($params, 2) as $pair) {
             @list($key, $value) = $pair;
             if (!isset($this->params[$key])) {

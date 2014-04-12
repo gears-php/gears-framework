@@ -400,7 +400,10 @@ class App extends Dispatcher
                     }
                 }
 
-                return new Request($route);
+                $request = new Request();
+                $request->parseRoute($route);
+
+                return $request;
             } // uri was matched
         } // route
 
@@ -446,13 +449,13 @@ class App extends Dispatcher
         return [
             # /:(id) => /id/3
             '#/:(\w+)#' => function ($value, &$route) {
-                $route['params'] += $value;
-            },
+                    $route['params'] += $value;
+                },
 
             # /(*) => /anything/else/here
             '#(\*)#' => function ($value, &$route) {
-                $route['to'] .= $value['*'];
-            }
+                    $route['to'] .= $value['*'];
+                }
         ];
     }
 
