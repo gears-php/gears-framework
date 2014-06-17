@@ -5,9 +5,13 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
-namespace Gears\Db;
+namespace Gears\Db\Table;
 
+use Gears\Db\Table\Relation\Through as ThroughRelation;
+use Gears\Db\Table\Relation\ForeignKey as ForeignKeyRelation;
+use Gears\Db\Table\Relation\RelationAbstract;
 use Gears\Db\Adapter\AdapterAbstract;
+use Gears\Db\Query;
 use Gears\Db\Query\WhereAnd;
 
 /**
@@ -15,7 +19,7 @@ use Gears\Db\Query\WhereAnd;
  * @package    Gears\Db
  * @subpackage Database
  */
-abstract class Table
+abstract class TableAbstract
 {
     /**
      * Table name
@@ -37,7 +41,7 @@ abstract class Table
 
     /**
      * Default ORDER BY clause field set
-     * @var Query
+     * @var array
      */
     protected $defaultOrderBy = [null];
 
@@ -161,17 +165,13 @@ abstract class Table
                 $relations = array_intersect_key($this->relations, array_flip($relations));
             }
 
+            // add data of relations
             foreach ($relations as $relationName => $relation) {
-                // make sure we have a relation object
-                $relation = $this->getRelation($relationName);
-                // add relative table row to current table row
-                $foreignName = $relation->getForeignName();
-                // add relation table row data
-                $row[$relationName] = $relation->getTable()->fetchRow($row[$foreignName]);
-                // remove original table foreign field
-                unset($row[$foreignName]);
+                $relation = $this->getRelationObject($relationName);
+                $relation->addData($row);
             }
         }
+
         return (object)$row;
     }
 
@@ -224,13 +224,14 @@ abstract class Table
     public function insert($row)
     {
         $this->getDb()->insert($this->tableName, [$row]);
+
         return $this->getDb()->getLastInsertId();
     }
 
     /**
      * Update table record matched by id
      * @param array $data New data
-     * @param integer $id Record id
+     * @param integer $rowId Record id
      */
     public function update($data, $rowId)
     {
@@ -277,19 +278,8 @@ abstract class Table
     public function with($relationName, $relationFields = true)
     {
         if (isset($this->relations[$relationName])) {
-            $relation = $this->getRelation($relationName);
-
-            // add join condition to link current table with the relation one
-            $this->getQuery()->join(
-                // alias => name of joined table
-                [$relationName => $relation->getTable()->getTableName()],
-                // relation table field used for linking
-                $relation->getFieldName(),
-                // current table used for linking
-                $this->getTableName(),
-                // current table field
-                $relation->getForeignName()
-            );
+            $relation = $this->getRelationObject($relationName);
+            $relation->addTo($this);
 
             // we need to select some fields from the joined table
             if ($relationFields) {
@@ -315,6 +305,7 @@ abstract class Table
     }
 
     /**
+     * Get db adapter used by the table
      * @return AdapterAbstract
      */
     public function getDb()
@@ -324,6 +315,7 @@ abstract class Table
 
     /**
      * Get table name
+     * @return string
      */
     public function getTableName()
     {
@@ -331,7 +323,17 @@ abstract class Table
     }
 
     /**
+     * Get primary key name
+     * @return string
+     */
+    public function getPrimaryKey()
+    {
+        return $this->primaryKey;
+    }
+
+    /**
      * Get default field set
+     * @return array
      */
     public function getDefaultFields()
     {
@@ -340,6 +342,7 @@ abstract class Table
 
     /**
      * Get table inner query instance
+     * @return Query
      */
     public function getQuery()
     {
@@ -366,16 +369,32 @@ abstract class Table
 
     /**
      * Create and return relation object from metadata (if it is not created yet)
-     * @param string $relation Table relation name
-     * @return TableRelation
+     * @param string $relationName Table relation name
+     * @return RelationAbstract
+     * @throws \LogicException
+     * @throws \InvalidArgumentException
      */
-    private function getRelation($relation)
+    private function getRelationObject($relationName)
     {
-        // relation metadata
-        if (!is_object($this->relations[$relation])) {
-            $this->relations[$relation] = new TableRelation($this, $this->relations[$relation]);
-        }
+        if (isset($this->relations[$relationName])) {
+            $rel = & $this->relations[$relationName];
 
-        return $this->relations[$relation];
+            if (is_array($rel)) { // create relation for the first time
+                if (isset($rel['foreign'])) {
+                    $rel = new ForeignKeyRelation($this, $this->relations[$relationName]);
+                } elseif (isset($rel['through'])) {
+                    $rel = new ThroughRelation($this, $this->relations[$relationName]);
+                } else {
+                    $msg = 'The "%s" relation definition is missing one of supported relation types: %s';
+                    throw new \LogicException(sprintf($msg, $relationName, implode(', ', ['foreign', 'through'])));
+                }
+
+                $rel->setName($relationName);
+            }
+
+            return $rel;
+        } else {
+            throw new \InvalidArgumentException(sprintf('Relation with the "%s" name was not founded', $relationName));
+        }
     }
 }

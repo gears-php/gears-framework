@@ -104,6 +104,7 @@ class Query
      * @param string $field
      * @param string $alias
      * @param string $table
+     * @return $this
      */
     public function selectCount($field, $alias = null, $table = null)
     {
@@ -121,15 +122,19 @@ class Query
     public function selectSingle($field, $alias = null, $table = null)
     {
         $fn = '%s';
+
         if (is_array($field)) { // function => field
             $key = key($field);
+
             if (!is_numeric($key)) {
                 $fn = strtoupper($key) . '(%s)';
             }
+
             $field = current($field);
         }
 
-        $field = $this->db->escapeIdentifier($field);
+        $field = $field == '*' ? $field : $this->db->escapeIdentifier($field);
+
         if (!empty($table)) {
             $field = $this->db->escapeIdentifier($table) . '.' . $field;
         }
@@ -141,6 +146,7 @@ class Query
         }
 
         $this->select[$field] = $field;
+
         return $this;
     }
 
@@ -299,7 +305,7 @@ class Query
      */
     public function limit($offset, $rowCount)
     {
-        // @todo take the limit clause from specific db adapter implementation
+        // @todo move the limit clause to each specific db adapter implementation: $db->getLimitClause()
         $this->limit = sprintf('LIMIT %d,%d', $offset, $rowCount);
         return $this;
     }
@@ -345,6 +351,7 @@ class Query
 
     /**
      * Build the query as a string
+     * @param string $sep Query chunks separator
      * @return string
      */
     public function glue($sep = ' ')

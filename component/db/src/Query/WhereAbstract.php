@@ -113,10 +113,10 @@ abstract class WhereAbstract
     /**
      * Add field IN (val, val2, ...) condition
      * @param string $field
-     * @param array $value
+     * @param array $values
      * @return $this
      */
-    public function in($field, $values)
+    public function in($field, array $values)
     {
         foreach ($values as &$value) {
             $value = $this->db->escape($value);

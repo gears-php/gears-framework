@@ -158,6 +158,7 @@ abstract class AdapterAbstract implements \ArrayAccess
     /**
      * Db driver specific method which allows to get the total row count of the latest performed select query
      * @return integer
+     * @throws \Exception
      */
     public function getLastRowCount()
     {
