@@ -4,14 +4,16 @@ namespace Gears\Form\Element;
 
 class Checkbox extends ElementAbstract
 {
+    /**
+     * {@inheritdoc}
+     */
     public function render()
     {
-        $attrs = (object)$this->attributes;
         $html = $this->renderLabel();
         $html .= sprintf(
-            '<input type="checkbox" %s value="%s" />',
+            '<input type="checkbox" %s%s value="1" />',
             $this->getAttributesString(),
-            !!$this->form->getData($attrs->name)
+            !!$this->getValue() ? ' checked="checked"' : ''
         );
         return $html;
     }

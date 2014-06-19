@@ -46,7 +46,6 @@ class Through extends RelationAbstract
      */
     public function addData(array &$row)
     {
-        $row[$this->name] = ['test'];
         $query = new Query($this->getTable()->getDb());
         $tableName = $this->getTable()->getTableName();
         $query->select('*', null, $tableName)
