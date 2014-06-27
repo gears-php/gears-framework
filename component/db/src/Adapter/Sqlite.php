@@ -2,6 +2,8 @@
 
 namespace Gears\Db\Adapter;
 
+use PDO;
+
 /**
  * SQLite db adapter
  * @package Gears\Db\Adapter
@@ -13,9 +15,10 @@ class Sqlite extends AdapterAbstract
      */
     protected $patterns = [
         'create_table' => [
-            ' pk ' => ' INTEGER PRIMARY KEY ',
-            ' string ' => ' TEXT ',
-            ' float ' => ' REAL '
+            ' pk ' => ' INTEGER PRIMARY KEY NOT NULL ',
+            ' string ' => ' VARCHAR ',
+            ' float ' => ' REAL ',
+            ' bool ' => ' BOOL ',
         ]
     ];
 
@@ -29,13 +32,20 @@ class Sqlite extends AdapterAbstract
 
     /**
      * Override parent since SQLite does not support a single statement multiple row insert
-     * @param string $tableName
-     * @param array $rows
+     * {@inheritdoc}
      */
     public function insert($tableName, $rows)
     {
         foreach ($rows as $row) {
             parent::insert($tableName, [$row]);
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function createConnection(array $config, $options = [])
+    {
+        return new PDO("{$config['driver']}:{$config['file']}");
     }
 }

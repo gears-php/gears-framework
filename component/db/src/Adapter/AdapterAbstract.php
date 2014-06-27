@@ -40,10 +40,9 @@ abstract class AdapterAbstract implements \ArrayAccess
      * @param array $config Connection properties
      * @param array $options Additional connection options
      */
-    public function __construct(array $config, array $options = array())
+    public function __construct(array $config, array $options = [])
     {
-        $dsn = $this->getConnectionString($config);
-        $this->connection = new PDO($dsn, $config['user'], $config['pass'], $options);
+        $this->connection = $this->createConnection($config, $options);
         $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
@@ -75,7 +74,7 @@ abstract class AdapterAbstract implements \ArrayAccess
      * @param array $params
      * @return $this
      */
-    public function query($query, array $params = array())
+    public function query($query, array $params = [])
     {
         $this->prepare($query)->execute($params);
         // by default each fetched row will be return as an associative array
@@ -202,7 +201,7 @@ abstract class AdapterAbstract implements \ArrayAccess
     /**
      * Insert multiple table rows
      * @param string $tableName
-     * @param array $rows Collection of row hashes
+     * @param array $rows Collection of row data
      * @return integer|boolean Number of inserted rows or false
      */
     public function insert($tableName, $rows)
@@ -314,12 +313,14 @@ abstract class AdapterAbstract implements \ArrayAccess
     }
 
     /**
-     * Build and return db connection string based on given connection parameters
+     * Create new db connection based on given connection config parameters and additional options
      * @param array $config
-     * @return string
+     * @param array (optional) $options
+     * @return PDO
      */
-    protected function getConnectionString(array $config)
+    protected function createConnection(array $config, $options = [])
     {
-        return "{$config['driver']}:host={$config['host']};dbname={$config['dbname']}";
+        $dsn = "{$config['driver']}:host={$config['host']};dbname={$config['dbname']}";
+        return new PDO($dsn, $config['user'], $config['pass'], $options);
     }
 }

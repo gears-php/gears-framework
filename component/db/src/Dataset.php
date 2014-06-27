@@ -49,11 +49,22 @@ class Dataset
     }
 
     /**
-     * Insert one or more rows into table
+     * Insert one or more rows into table.
+     * Each row should be a separate input parameter
      */
     public function insert()
     {
         $this->db->insert($this->tableName, func_get_args());
+    }
+
+    /**
+     * Update db table row(s) with given data
+     * @param array $data New data to be put
+     * @param array $where Where condition to match the rows for update
+     */
+    public function update(array $data, array $where = [])
+    {
+        $this->db->update($this->tableName, $data, $where);
     }
 
     /**
@@ -186,5 +197,39 @@ class Dataset
     public function fetchPairs()
     {
         return $this->query->exec()->fetchPairs();
+    }
+
+    /**
+     * Find and return the row(s) by the given filters
+     * @param array $where
+     * @return array
+     */
+    public function find(array $where)
+    {
+        $fields = $values =[];
+
+        foreach ($where as $field => $value) {
+            $fields[] = sprintf('%s = ?', $this->db->escapeIdentifier($field));
+            $values[] = $value;
+        }
+
+        $sql = sprintf('SELECT * FROM %s WHERE %s',
+            $this->db->escapeIdentifier($this->tableName),
+            implode(' AND ', $fields)
+        );
+
+        return $this->db->query($sql, $values)->fetchAll();
+    }
+
+    /**
+     * Order the dataset selection by specified column(s). Default sorting is ASC
+     * @param string|null $field
+     * @param string $sort Sorting direction
+     * @return $this
+     */
+    public function order($field, $sort = Query::ASC)
+    {
+        $this->query->order($field, $sort);
+        return $this;
     }
 }

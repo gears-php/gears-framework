@@ -17,8 +17,8 @@ use Gears\Db\Query\WhereAbstract;
 class Query
 {
     # sort direction constants
-    const ASC = 'asc';
-    const DESC = 'desc';
+    const ASC = 'ASC';
+    const DESC = 'DESC';
 
     /**
      * @var AdapterAbstract
@@ -267,14 +267,14 @@ class Query
     /**
      * Add a single field or array of fields to the ORDER BY clause. Example:
      * <code>
-     * $query->order('lastName', Query::SORT_ASC);
-     * $query->order(['lastName', 'firstName' => Query::SORT_DESC]);
+     * $query->order('lastName', Query::ASC);
+     * $query->order(['lastName', 'firstName' => Query::DESC]);
      * </code>
-     * @param string|array $field Field name or array of fields ot order
+     * @param string|array $field Field name or array of fields to order
      * @param string $sort (optional) Sort direction
      * @return Query
      */
-    public function order($field, $sort = '')
+    public function order($field, $sort = self::ASC)
     {
         if (is_array($field)) { // array of order-by fields
             foreach ($field as $fieldKey => $fieldValue) {
