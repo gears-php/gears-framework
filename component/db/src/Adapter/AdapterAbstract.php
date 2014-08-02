@@ -4,7 +4,10 @@
  */
 namespace Gears\Db\Adapter;
 
+use ArrayAccess;
 use PDO;
+use PDOException;
+use PDOStatement;
 use Gears\Db\Query;
 use Gears\Db\Query\WhereAbstract;
 use Gears\Db\Query\WhereAnd;
@@ -14,14 +17,14 @@ use Gears\Db\Dataset;
  * Abstract db adapter is a PDO wrapper bringing more handy and laconic functionality over the last one
  * @package Gears\Db\Adapter
  */
-abstract class AdapterAbstract implements \ArrayAccess
+abstract class AdapterAbstract implements ArrayAccess
 {
     /**
      * Search/replace patterns collection for various SQL statements building.
      * Defined in each specific db adapter
      * @var array
      */
-    protected $patterns = array();
+    protected $patterns = [];
 
     /**
      * Active database connection
@@ -31,9 +34,15 @@ abstract class AdapterAbstract implements \ArrayAccess
 
     /**
      * Active PDO query result statement
-     * @var \PDOStatement
+     * @var PDOStatement
      */
-    private $statement = null;
+    protected $statement = null;
+
+    /**
+     * Hold the very last query being executed with adapter
+     * @var string|Query
+     */
+    protected $lastQuery = null;
 
     /**
      * Create PDO database connection using the given connection parameters
@@ -53,7 +62,7 @@ abstract class AdapterAbstract implements \ArrayAccess
      */
     public function prepare($query)
     {
-        $this->statement = $this->connection->prepare($query . '');
+        $this->statement = $this->connection->prepare(($this->lastQuery = $query) . '');
         return $this;
     }
 
@@ -64,7 +73,11 @@ abstract class AdapterAbstract implements \ArrayAccess
      */
     public function execute($params)
     {
-        $this->statement->execute($params);
+        try {
+            $this->statement->execute($params);
+        } catch (PDOException $e) {
+            throw new \Exception('Error executing the query: ' . $this->lastQuery, 0, $e);
+        }
         return $this;
     }
 
@@ -144,7 +157,7 @@ abstract class AdapterAbstract implements \ArrayAccess
      */
     public function escape($value)
     {
-        return is_scalar($value) ? $this->connection->quote($value) : 'DB_ERROR_VALUE_NOT_SCALAR';
+        return $this->connection->quote($value);
     }
 
     /**
