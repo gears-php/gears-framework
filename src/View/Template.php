@@ -395,6 +395,6 @@ class Template
      */
     private function exception(\Exception $e)
     {
-        throw new \Exception(sprintf('%s in %s template', $e->getMessage(), $this->getFilePath()));
+        throw new \Exception(sprintf('%s template rendering error', $this->getFilePath()), 0, $e);
     }
 }
