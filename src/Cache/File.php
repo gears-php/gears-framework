@@ -12,7 +12,7 @@ namespace Gears\Framework\Cache;
  * @package    Gears\Framework
  * @subpackage Cache
  */
-class File implements ICache
+class File implements CacheInterface
 {
     /**
      * Cache expiration time

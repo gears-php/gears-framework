@@ -12,7 +12,7 @@ namespace Gears\Framework\Cache;
  * @package    Gears\Framework
  * @subpackage Cache
  */
-interface ICache
+interface CacheInterface
 {
     public function __construct($cachePath, $cacheParams = []);
     public function isValid($cacheKey = false);
