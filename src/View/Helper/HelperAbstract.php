@@ -5,7 +5,7 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
-namespace Gears\Framework\View;
+namespace Gears\Framework\View\Helper;
 
 use Gears\Framework\View\View;
 
@@ -16,28 +16,28 @@ use Gears\Framework\View\View;
  * @subpackage View
  * @abstract
  */
-abstract class Helper
+abstract class HelperAbstract
 {
     /**
      * View instance holder
      *
      * @var View
      */
-    private $_view = null;
+    protected $view = null;
 
     /**
      * Storage for generated html
      *
      * @var string
      */
-    protected $_html = '';
+    protected $html = '';
 
     /**
      * Helper constructor. Requires {@link View} class instance to be passed
      */
     public function __construct(View $view)
     {
-        $this->_view = $view;
+        $this->view = $view;
         $this->init();
     }
 
@@ -51,7 +51,7 @@ abstract class Helper
     /**
      * The entry point for any helper class
      * @param array|null $params
-     * @return Helper class instance
+     * @return HelperAbstract class instance
      */
     public function __invoke($params = null)
     {
@@ -65,14 +65,14 @@ abstract class Helper
      */
     public function get()
     {
-        return $this->_html;
+        return $this->html;
     }
 
     /**
      * @return View
      */
-    public function view()
+    protected function view()
     {
-        return $this->_view;
+        return $this->view;
     }
 }

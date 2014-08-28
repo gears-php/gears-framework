@@ -1,16 +1,15 @@
 <?php
 namespace Gears\Framework\View\Helper;
 
-use Gears\Framework\Debug;
+use Gears\Framework\Debug as DebugInfo;
 use Gears\Framework\Session;
-use Gears\Framework\View\Helper;
 
 /**
  * Class DebugHelper
  * @package Gears\Framework\View\Helper
  * TODO: refactoring
  */
-class DebugHelper extends Helper
+class Debug extends HelperAbstract
 {
     /**
      * Returns various system debug info
@@ -19,12 +18,12 @@ class DebugHelper extends Helper
      */
     public function get()
     {
-        if (Debug::enabled()) {
-            Debug::add('-- $_GET:', $_GET, '-- $_POST:', $_POST);
-            Debug::add('-- Gears\Framework\Session:', Session::get(null));
+        if (DebugInfo::enabled()) {
+            DebugInfo::add('-- $_GET:', $_GET, '-- $_POST:', $_POST);
+            DebugInfo::add('-- Gears\Framework\Session:', Session::get(null));
 
             return sprintf('%s<br />script <b>mem usage</b> %s<br />script <b>time</b> %s sec<br />',
-                Debug::get(), Debug::getMemoryUsage(), Debug::scriptTime());
+                DebugInfo::get(), DebugInfo::getMemoryUsage(), DebugInfo::scriptTime());
         }
     }
 
@@ -33,7 +32,7 @@ class DebugHelper extends Helper
      */
     public function console($opened = false)
     {
-        if (Debug::enabled()):
+        if (DebugInfo::enabled()):
 
             ob_start();
 
@@ -81,12 +80,9 @@ class DebugHelper extends Helper
                             }
                         };
 
-                        <?php
-                        if (!$opened):
-                            ?>toggle(div);
-                        <?php
-                                            endif;
-                                            ?>
+                        <?php if (!$opened): ?>
+                        toggle(div);
+                        <?php endif; ?>
                     }, false);
                 })();
             </script>

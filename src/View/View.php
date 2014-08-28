@@ -7,8 +7,9 @@
  */
 namespace Gears\Framework\View;
 
-use Gears\Framework\Cache\ICache;
-use Gears\Framework\View\Template;
+use Gears\Framework\Cache\CacheInterface;
+
+defined('DS') || define('DS', DIRECTORY_SEPARATOR);
 
 /**
  * View
@@ -23,6 +24,12 @@ class View
      * @var array
      */
     protected $templatePaths = [];
+
+    /**
+     * Stores helper class directory paths to their namespace prefixes
+     * @var array
+     */
+    protected $helperMappings = [];
 
     /**
      * Collection of all currently loaded templates
@@ -44,7 +51,7 @@ class View
 
     /**
      * Cache implementation instance
-     * @var ICache
+     * @var CacheInterface
      */
     protected $cache = null;
 
@@ -65,10 +72,12 @@ class View
 
         // setup cache storage
         if (isset($options['cache'])) {
-            if ($options['cache'] instanceof ICache) {
+            if ($options['cache'] instanceof CacheInterface) {
                 $this->setCache($options['cache']);
             }
         }
+
+        $this->helperMappings[__DIR__ . '/Helper'] = __NAMESPACE__ . 'Helper';
     }
 
     /**
@@ -85,16 +94,16 @@ class View
 
     /**
      * Set cache storage
-     * @param ICache $cache
+     * @param CacheInterface $cache
      */
-    public function setCache(ICache $cache)
+    public function setCache(CacheInterface $cache)
     {
         $this->cache = $cache;
     }
 
     /**
      * Get cache storage
-     * @return ICache
+     * @return CacheInterface
      */
     public function getCache()
     {
@@ -111,12 +120,22 @@ class View
     }
 
     /**
-     * Add a single template path
+     * Add a single templates directory path
      * @param string $path
      */
     public function addTemplatePath($path)
     {
         $this->templatePaths[] = $path;
+    }
+
+    /**
+     * Add a helpers directory path and corresponding namespace prefix
+     * @param string $path
+     * @param string $namespace
+     */
+    public function addHelperMapping($path, $namespace)
+    {
+        $this->helperMappings[$path] = $namespace;
     }
 
     /**
@@ -164,21 +183,26 @@ class View
 
     /**
      * Call a helper with a given name and parameters
-     * @param string $name Helper name
+     * @param string $helperName Helper name
      * @param array (optional) $params Helper parameters
      * @return string Helper execution result
      * @throws \Exception
      */
-    public function helper($name, $params = [])
+    public function helper($helperName, $params = [])
     {
-        // calling some helper for the first time
-        if (!isset($this->helpers[$name])) {
-            $className = 'Gears\Framework\View\Helper\\' . ucfirst($name) . 'Helper';
-            // store helper for future calls
-            $this->helpers[$name] = new $className($this);
+        if (!isset($this->helpers[$helperName])) { // calling some helper for the first time
+            foreach ($this->helperMappings as $path => $namespace) {
+                $filePath = $path . DS . ucfirst($helperName) . '.php';
+
+                if (is_file($filePath)) {
+                    $className = $namespace . '\\' . ucfirst($helperName);
+                    // store helper for future calls
+                    $this->helpers[$helperName] = new $className($this);
+                }
+            }
         }
 
         // finally return helper instance
-        return call_user_func_array($this->helpers[$name], $params);
+        return call_user_func_array($this->helpers[$helperName], $params);
     }
 }
