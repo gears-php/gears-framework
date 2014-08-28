@@ -29,7 +29,6 @@ class Through extends RelationAbstract
             self::$tables[$throughTableClassName] = new $throughTableClassName($owner->getDb());
         }
 
-//        $this->owner = $owner;
         $this->throughTable = self::$tables[$throughTableClassName];
     }
 
@@ -46,10 +45,9 @@ class Through extends RelationAbstract
      */
     public function addData(array &$row)
     {
-        $query = new Query($this->getTable()->getDb());
         $tableName = $this->getTable()->getTableName();
-        $query->select('*', null, $tableName)
-            ->from($tableName)
+        $query = $this->getTable()
+            ->createQuery()
             ->join(
                 $this->throughTable->getTableName(),
                 $tableName . '_id',
@@ -57,7 +55,6 @@ class Through extends RelationAbstract
                 $this->getTable()->getPrimaryKey()
             );
 
-        $query->where(new Query\WhereAnd($this->getTable()->getDb()));
         $query->getWhere()->eq($this->owner->getTableName() . '_id', $row[$this->owner->getPrimaryKey()]);
         $row[$this->name] = $query->exec()->fetchAll();
     }

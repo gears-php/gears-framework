@@ -54,7 +54,7 @@ abstract class WhereAbstract
      * $whereAnd->toString(); # (1=1 AND (num > '3' OR sum BETWEEN '4.8' AND '7.2'))
      * </code>
      *
-     * @return $this
+     * @return WhereAbstract
      * @throws \Exception
      */
     public function add()
@@ -89,7 +89,7 @@ abstract class WhereAbstract
      * Add strict filed-value equality condition
      * @param string|array $field Field or [table => field] pair
      * @param string $value (optional) Field value
-     * @return $this;
+     * @return WhereAbstract
      */
     public function eq($field, $value = '?')
     {
@@ -114,13 +114,14 @@ abstract class WhereAbstract
      * Add field IN (val, val2, ...) condition
      * @param string $field
      * @param array $values
-     * @return $this
+     * @return WhereAbstract
      */
     public function in($field, array $values)
     {
         foreach ($values as &$value) {
             $value = $this->db->escape($value);
         }
+
         $this->conditions[] = sprintf('%s IN (%s)', $this->db->escapeIdentifier($field), join(',', $values));
         return $this;
     }
@@ -128,13 +129,14 @@ abstract class WhereAbstract
     /**
      * Add a set of equality conditions from the given field => value pairs array
      * @param array $fieldValues
-     * @return $this
+     * @return WhereAbstract
      */
     public function fromArray(array $fieldValues)
     {
         foreach ($fieldValues as $field => $value) {
             $this->eq($field, $value);
         }
+
         return $this;
     }
 

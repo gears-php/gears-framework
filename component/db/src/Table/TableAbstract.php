@@ -43,7 +43,7 @@ abstract class TableAbstract
      * Default ORDER BY clause field set
      * @var array
      */
-    protected $defaultOrderBy = [null];
+    protected $orderBy = [null];
 
     /**
      * Stores objects of all table relations to other tables
@@ -69,21 +69,12 @@ abstract class TableAbstract
      */
     public function __construct(AdapterAbstract $db)
     {
-        // init table db adapter
-        $this->db = $db;
-
         if (is_null($this->tableName)) {
             throw new \Exception(get_called_class() . ' - table name is not specified');
         }
 
-        // build default query
-        $this->query = (new Query($db))
-            ->select($this->getDefaultFields(), null, $this->getTableName())
-            ->from($this->getTableName())
-            ->where(new WhereAnd($db))
-            ->order($this->defaultOrderBy);
-
-        // do custom preparations
+        $this->db = $db;
+        $this->resetQuery();
         $this->init();
     }
 
@@ -138,7 +129,7 @@ abstract class TableAbstract
         // yank db only if where present
         if (is_array($idOrWhere)) {
             // fetch all own table row data
-            $q = $this->getQuery()->select($this->tableFields, null, $this->getTableName());
+            $q = $this->createQuery()->select($this->tableFields, null, $this->getTableName());
             $q->getWhere()->fromArray($idOrWhere);
             $row = $q->exec()->fetchRow();
         }
@@ -288,7 +279,7 @@ abstract class TableAbstract
                 }
 
                 // add all default fields from joined table to current table selection query
-                foreach ($relation->getTable()->getDefaultFields() as $fieldAlias => $fieldName) {
+                foreach ($relation->getTable()->getFields() as $fieldAlias => $fieldName) {
                     if (is_numeric($fieldAlias)) {
                         $fieldAlias = $fieldName;
                     }
@@ -335,7 +326,7 @@ abstract class TableAbstract
      * Get default field set
      * @return array
      */
-    public function getDefaultFields()
+    public function getFields()
     {
         return $this->tableFields;
     }
@@ -347,6 +338,36 @@ abstract class TableAbstract
     public function getQuery()
     {
         return $this->query;
+    }
+
+    /**
+     * Get table order by fields
+     * @return array
+     */
+    public function getOrderBy()
+    {
+        return $this->orderBy;
+    }
+
+    /**
+     * Create new table query instance
+     * @return Query
+     */
+    public function createQuery()
+    {
+        return (new Query($this->db))
+            ->select($this->getFields(), null, $this->getTableName())
+            ->from($this->getTableName())
+            ->where(new WhereAnd($this->db))
+            ->order($this->orderBy);
+    }
+
+    /**
+     * Reset table inner query to default
+     */
+    public function resetQuery()
+    {
+        $this->query = $this->createQuery();
     }
 
     /**
