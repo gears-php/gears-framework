@@ -150,14 +150,20 @@ abstract class WhereAbstract
     }
 
     /**
-     * Build and return conditions SQL string
+     * Wrapper for the {@see __toString()}
+     * @return string
      */
     public function toString()
     {
-        $this->conditions = array_map(function ($condition) {
-            return ($condition instanceof WhereAbstract) ? $condition->toString() : $condition;
-        }, $this->conditions);
+        return $this->__toString();
+    }
 
+    /**
+     * Build and return conditions SQL string
+     * @return string
+     */
+    public function __toString()
+    {
         return '(' . implode(' ' . strtoupper($this->joinOperator) . ' ', $this->conditions) . ')';
     }
 }
