@@ -88,6 +88,15 @@ abstract class TableAbstract
     }
 
     /**
+     * Fetch multiple rows grouped by the first selection column
+     * @return array
+     */
+    public function fetchAssoc()
+    {
+        return $this->getQuery()->exec()->fetchAssoc();
+    }
+
+    /**
      * Fetch and return limited rows number. Uses current query configuration
      * @param integer $pageNumber
      * @param integer $rowsPerPage
