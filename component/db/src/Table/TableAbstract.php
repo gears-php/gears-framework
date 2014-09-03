@@ -79,16 +79,6 @@ abstract class TableAbstract
     }
 
     /**
-     * Add table own field to the selection query
-     * @param string $field Table field name or alias
-     * @param string (optional) $alias Alias name for selection
-     */
-    public function select($field, $alias = null)
-    {
-        $this->getQuery()->select($this->getFieldName($field), $alias, $this->getTableName());
-    }
-
-    /**
      * Fetch rows using current query configuration
      * @return array Result row set
      */
@@ -241,10 +231,23 @@ abstract class TableAbstract
     }
 
     /**
+     * Add table own field to the selection query
+     * @param string $field Table field name or alias
+     * @param string (optional) $alias Alias name for selection
+     * @return TableAbstract
+     */
+    public function select($field, $alias = null)
+    {
+        $this->getQuery()->select($this->getFieldName($field), $alias, $this->getTableName());
+        return $this;
+    }
+
+    /**
      * Filter table data by given field value
      * @param string|array $field Field name/alias or [table => field] pair
      * @param mixed $value Value by which to filter
      * @param boolean $allowEmpty Whether to apply filter if empty/zero field value was passed
+     * @return TableAbstract
      */
     public function filter($field, $value, $allowEmpty = true)
     {
@@ -256,6 +259,8 @@ abstract class TableAbstract
             }
             $this->getQuery()->getWhere()->eq($field, $value);
         }
+
+        return $this;
     }
 
     /**
@@ -265,6 +270,7 @@ abstract class TableAbstract
      * @param string $relationName Name of the relation to be applied
      * @param array|string|bool $relationFields (optional) List of fields to be selected from the relative table
      * @throws \Exception Basic exception in case relation is not found
+     * @return TableAbstract
      */
     public function with($relationName, $relationFields = true)
     {
@@ -293,6 +299,8 @@ abstract class TableAbstract
         } else {
             throw new \Exception(sprintf(get_called_class() . '::with() - no "%s" relation has been found', $relationName));
         }
+
+        return $this;
     }
 
     /**
