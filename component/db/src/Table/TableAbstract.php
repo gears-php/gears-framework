@@ -31,7 +31,7 @@ abstract class TableAbstract
      * Table field set
      * @var array
      */
-    protected $tableFields = ['*'];
+    protected $tableFields = [];
 
     /**
      * Table primary key
@@ -268,36 +268,39 @@ abstract class TableAbstract
      * the joined table are selected but this can be limited using second parameter
      * (passing <i>false</i> will exclude all of joined fields)
      * @param string $relationName Name of the relation to be applied
-     * @param array|string|bool $relationFields (optional) List of fields to be selected from the relative table
+     * @param array|string|bool $withFields (optional) List of fields to be selected from the relative table
      * @throws \Exception Basic exception in case relation is not found
      * @return TableAbstract
      */
-    public function with($relationName, $relationFields = true)
+    public function with($relationName, $withFields = true)
     {
         if (isset($this->relations[$relationName])) {
             $relation = $this->getRelationObject($relationName);
             $relation->addTo($this);
 
             // we need to select some fields from the joined table
-            if ($relationFields) {
-                if (is_string($relationFields)) {
-                    $relationFields = explode(',', $relationFields);
+            if ($withFields) {
+                if (is_string($withFields)) {
+                    $withFields = explode(',', $withFields);
                 }
 
-                // add all default fields from joined table to current table selection query
-                foreach ($relation->getTable()->getFields() as $fieldAlias => $fieldName) {
-                    if (is_numeric($fieldAlias)) {
-                        $fieldAlias = $fieldName;
-                    }
+                if ($relationFields = $relation->getTable()->getFields()) {
+                    // add all default fields from joined table to current table selection query
+                    foreach ($relationFields as $fieldAlias => $fieldName) {
+                        if (is_numeric($fieldAlias)) {
+                            $fieldAlias = $fieldName;
+                        }
 
-                    // restrict fields we are selecting from joined table
-                    if (!is_array($relationFields) || in_array($fieldAlias, $relationFields)) {
-                        $this->getQuery()->select(
-                            $fieldName,
-                            $fieldAlias == '*' ? null : $relationName . '_' . $fieldAlias,
-                            $relationName
-                        );
+                        // restrict fields we are selecting from joined table
+                        if (!is_array($withFields) || in_array($fieldAlias, $withFields)) {
+                            $this->getQuery()->select($fieldName, $relationName . '_' . $fieldAlias, $relationName);
+                        }
                     }
+                } elseif (is_array($withFields)) {
+                    throw new \Exception(sprintf(get_called_class() . '::with() - The "%s" relation table has no fields defined', $relationName));
+                } else {
+                    // if no relation table fields set explicitly select all
+                    $this->getQuery()->select('*', null, $relationName);
                 }
             }
         } else {
