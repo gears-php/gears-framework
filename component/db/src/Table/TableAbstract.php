@@ -292,7 +292,11 @@ abstract class TableAbstract
 
                     // restrict fields we are selecting from joined table
                     if (!is_array($relationFields) || in_array($fieldAlias, $relationFields)) {
-                        $this->getQuery()->select($fieldName, $relationName . '_' . $fieldAlias, $relationName);
+                        $this->getQuery()->select(
+                            $fieldName,
+                            $fieldAlias == '*' ? null : $relationName . '_' . $fieldAlias,
+                            $relationName
+                        );
                     }
                 }
             }
