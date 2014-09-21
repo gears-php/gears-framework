@@ -99,9 +99,8 @@ class Config implements \ArrayAccess
     public function read($file, $path = null)
     {
         $tree = $this->getReader()->read($file);
+        $fileExtLength = strlen($fileExt = $this->getReader()->getFileExt()); // load sub files, if any
 
-        // load sub files, if any
-        $fileExtLength = strlen($fileExt = $this->getReader()->getFileExt());
         array_walk_recursive($tree, function (&$item) use ($file, $fileExt, $fileExtLength) {
             if (is_string($item) && substr($item, -$fileExtLength) == $fileExt) {
                 $item = $this->read(dirname($file) . DS . $item);
@@ -112,7 +111,26 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Same as {@link get()} but returns a new Config instance 
+     * Merge current configuration with the given one
+     * @param array|string|Config Configuration array or config file name or Config entity to be merged
+     */
+    public function merge($config)
+    {
+        $node = [];
+
+        if (is_array($config)) {
+            $node = $config;
+        } elseif (is_string($config)) {
+            $node = $this->read($config);
+        } elseif($config instanceof Config) {
+            $node = $config->get();
+        }
+
+        $this->storage = array_merge_recursive($this->storage, $node);
+    }
+
+    /**
+     * Same as {@link get()} but returns a new Config instance
      * @param string $path
      * @param array (optional) $storage
      * @return Config
@@ -144,7 +162,6 @@ class Config implements \ArrayAccess
         } else {
             $p = & $storage;
             $p = (array)$p;
-
             $path = explode('.', $path);
 
             foreach ($path as $node) {
@@ -184,7 +201,6 @@ class Config implements \ArrayAccess
         if (trim($path)) {
             $p = & $this->storage;
             $p = (array)$p;
-
             $path = explode('.', $path);
 
             foreach ($path as $node) {
@@ -204,12 +220,12 @@ class Config implements \ArrayAccess
     {
         $p = & $this->storage;
         $p = (array)$p;
-
         $path = explode('.', $path);
-
         $nodeCount = count($path);
+
         while (--$nodeCount) {
             $node = array_shift($path);
+
             if (isset($p[$node])) {
                 $p = & $p[$node];
             }
@@ -218,6 +234,16 @@ class Config implements \ArrayAccess
         if (is_array($p)) {
             unset($p[array_shift($path)]);
         }
+    }
+
+    /**
+     * Wrapper for the {@see del()}
+     * @param string $path
+     * @return void
+     */
+    public function rem($path)
+    {
+        $this->del($path);
     }
 
     /**
