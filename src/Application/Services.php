@@ -1,9 +1,9 @@
 <?php
-namespace Gears\Framework\App;
+namespace Gears\Framework\Application;
 
 /**
  * Simple DIC implementation for various application services
- * @package Gears\Framework\App
+ * @package Gears\Framework\Application
  */
 class Services
 {

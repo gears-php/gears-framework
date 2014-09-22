@@ -5,7 +5,7 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
-namespace Gears\Framework\App;
+namespace Gears\Framework\Application;
 
 /**
  * Response

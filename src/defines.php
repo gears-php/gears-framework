@@ -18,8 +18,3 @@ define('APP_PATH', ROOT_PATH . 'app' . DS);
  * Configuration files directory
  */
 define('CONF_PATH', APP_PATH . 'config' . DS);
-
-/**
- * Base project url
- */
-define('BASE_URL', isset($_SERVER['HTACCESS']) ? '/' : $_SERVER['SCRIPT_NAME']. '/') ;

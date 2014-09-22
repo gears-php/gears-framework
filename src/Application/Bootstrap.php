@@ -6,39 +6,40 @@
  * Time: 11:53 AM
  */
 
-namespace Gears\Framework\App;
+namespace Gears\Framework\Application;
 
 /**
  * Application bootstrapper
- * @package Gears\Framework\App
+ * @package Gears\Framework\Application
  */
 class Bootstrap
 {
     /**
-     * @var App
+     * @var Application
      */
     protected $app = null;
 
     /**
      * Bootstrap need just an application
-     * @param App $app
+     * @param Application $app
      */
-    public function __construct(App $app)
+    public function __construct(Application $app)
     {
         $this->app = $app;
     }
 
     /**
      * Do all necessary initializations and run application
-     * @param string $configFile
+     * @param string $configName
      */
-    public function run($configFile = 'app')
+    public function run($configName = 'app')
     {
         // mandatory application basic initialization
-        $this->app->init($configFile);
+        $this->app->init($configName);
 
         // do all descendant initializations
         $methods = get_class_methods(get_called_class());
+
         foreach ($methods as $method) {
             if (0 === strpos($method, 'init')) {
                 call_user_func([$this, $method]);
@@ -50,7 +51,7 @@ class Bootstrap
 
     /**
      * Get application
-     * @return App
+     * @return Application
      */
     public function getApp()
     {

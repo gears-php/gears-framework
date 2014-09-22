@@ -3,7 +3,7 @@
  * @package   Gears\Framework
  * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  */
-namespace Gears\Framework\App;
+namespace Gears\Framework\Application;
 
 /**
  * Abstract controller
@@ -26,7 +26,7 @@ abstract class Controller
      * @param Response $response
      * @param Services $services
      */
-    public function __construct(App $app)
+    public function __construct(Application $app)
     {
         $this->app = $app;
         $this->services = $app->getServices();
@@ -35,7 +35,7 @@ abstract class Controller
 
     /**
      * Get application instance
-     * @return App
+     * @return Application
      */
     public function getApp()
     {
@@ -69,7 +69,7 @@ abstract class Controller
     {
         $this->getResponse()
             ->setCode($code)
-            ->setHeader('Location', BASE_URL . trim($uri, ' /') . '/')
+            ->setHeader('Location', $this->getRequest()->getBaseUri() . '/' . trim($uri, ' /') . '/')
             ->flush();
     }
 

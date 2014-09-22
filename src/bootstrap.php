@@ -1,6 +1,8 @@
 <?php
 
-use Gears\Framework\App\App;
+use Gears\Framework\Application\Application;
+use Gears\Framework\Application\Bootstrap as DefaultBootstrap;
+use Gears\Framework\Application\Request;
 
 error_reporting(E_ALL);
 
@@ -12,10 +14,11 @@ mb_internal_encoding("UTF-8");
 
 require_once 'defines.php';
 
+$application = new Application(new Request);
+
 if (is_file(APP_PATH . 'Bootstrap.php')) {
     require_once APP_PATH . 'Bootstrap.php';
-    return new Bootstrap(new App());
+    return new Bootstrap($application);
 } else {
-    return new \Gears\Framework\App\Bootstrap(new App());
+    return new DefaultBootstrap($application);
 }
-

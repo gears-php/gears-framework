@@ -2,11 +2,11 @@
 /**
  * @author deniskrasilnikov86@gmail.com
  */
-namespace Gears\Framework\App;
+namespace Gears\Framework\Application;
 
 /**
  * Provides functionality for services management
- * @package Gears\Framework\App
+ * @package Gears\Framework\Application
  */
 trait ServiceProvider
 {

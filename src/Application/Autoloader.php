@@ -1,6 +1,6 @@
 <?php
 
-namespace Gears\Framework\App;
+namespace Gears\Framework\Application;
 
 /**
  * Provides classes autoload functionality by implementing PSR-4 autoloading standard
