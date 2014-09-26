@@ -31,15 +31,22 @@ class Request
     protected $params = [];
 
     /**
-     * Return the uri part relative to the base uri
+     * Initialize all necessary properties
+     */
+    public function init()
+    {
+        $requestUri = explode('/', preg_replace('/(\?.*)/', '', $_SERVER['REQUEST_URI']));
+        $scriptName = explode('/', $_SERVER['SCRIPT_NAME']);
+        $this->baseUri = implode('/', array_intersect_assoc($requestUri, $scriptName));
+        $this->pathUri = '/' . implode('/', array_diff($requestUri, $scriptName));
+    }
+
+    /**
+     * Return the request uri part relative to the base uri and ending before query parameters string
      * @return string
      */
     public function getPathUri()
     {
-        if (null === $this->pathUri) {
-            $this->pathUri = str_replace($this->getBaseUri(), '', $_SERVER['REQUEST_URI']);
-        }
-
         return $this->pathUri;
     }
 
@@ -49,10 +56,6 @@ class Request
      */
     public function getBaseUri()
     {
-        if (null === $this->baseUri) {
-            $this->baseUri = isset($_SERVER['HTACCESS']) ? '' : $_SERVER['SCRIPT_NAME'];
-        }
-
         return $this->baseUri;
     }
 

@@ -58,24 +58,20 @@ class Application extends Dispatcher
     public function __construct(Request $request)
     {
         $this->request = $request;
-        $this->handleErrors();
-        $this->handleExceptions();
-        $this->services = new Services;
-        $this->config = new Config;
     }
 
     /**
      * Return app config instance or config node value if node is given
      * @param string $node Dot-separated node to get the config value
-     * @return Config
+     * @return mixed
      */
     public function getConfig($node = null)
     {
-        if (trim($node)) {
-            return $this->config->get($node);
+        if (null === $node) {
+            return $this->config;
         }
 
-        return $this->config;
+        return $this->config->get($node);
     }
 
     /**
@@ -112,18 +108,23 @@ class Application extends Dispatcher
      */
     public function init($configName = 'app')
     {
+        $this->handleErrors();
+        $this->handleExceptions();
+        $this->services = new Services;
+        $this->config = new Config;
         $fileExt = $this->config->getReader()->getFileExt();
         $this->config->load(CONF_PATH . basename($configName, $fileExt) . $fileExt);
-        $moduleConfigFiles = glob(APP_PATH . $this->config['module_config_path'] . $this->config->getReader()->getFileExt());
 
-        foreach ($moduleConfigFiles as $moduleConfigFile) {
-            $config = $this->config->read($moduleConfigFile);
+        foreach (explode(';', $this->config['module_config_paths']) as $configPath) {
+            foreach (glob(APP_PATH . $configPath . '/config/module' . $fileExt) as $moduleConfigFile) {
+                $config = $this->config->read($moduleConfigFile);
 
-            if (isset($config['autoload'])) {
-                $this->setAutoloadMappings($config['autoload'], dirname($moduleConfigFile));
+                if (isset($config['autoload'])) {
+                    $this->setAutoloadMappings($config['autoload'], dirname($moduleConfigFile));
+                }
+
+                $this->config->merge($moduleConfigFile);
             }
-
-            $this->config->merge($moduleConfigFile);
         }
 
         $this->router = new Router;
@@ -132,6 +133,7 @@ class Application extends Dispatcher
             $this->router->addRoutingConfiguration($routing);
         }
 
+        $this->request->init();
         return $this;
     }
 
@@ -184,7 +186,6 @@ class Application extends Dispatcher
         }
 
         echo sprintf('<pre>%s</pre>', $e . '');
-        die();
     }
 
     /**

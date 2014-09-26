@@ -1,7 +1,7 @@
 <?php
-use Gears\Framework\App\Autoloader;
+use Gears\Framework\Application\Autoloader;
 
-require_once __DIR__ . '/../src/App/Autoloader.php';
+require_once __DIR__ . '/../src/Application/Autoloader.php';
 
 Autoloader::registerNamespaces([
     'Gears\Framework' => __DIR__,

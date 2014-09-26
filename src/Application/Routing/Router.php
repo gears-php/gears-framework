@@ -61,8 +61,7 @@ class Router
             $regexPattern = preg_replace($this->getPatterns(), $this->getMatchers(), $route->getMatchPattern());
 
             // try to match request path uri with current regex routing pattern
-            // (query parameters are filtered out so not taken into account)
-            if (preg_match('#^' . $regexPattern . '(?:/)?(?:\?.*)?$#', $request->getPathUri(), $params)) {
+            if (preg_match("#^$regexPattern(?:/)?$#", $request->getPathUri(), $params)) {
                 array_shift($params);
 
                 // we have placeholders values
