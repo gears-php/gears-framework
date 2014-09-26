@@ -157,9 +157,7 @@ class Config implements \ArrayAccess
     {
         $storage = $storage ? : $this->storage;
 
-        if ('' == trim($path)) {
-            return $storage;
-        } else {
+        if (trim($path)) {
             $p = & $storage;
             $p = (array)$p;
             $path = explode('.', $path);
@@ -172,6 +170,8 @@ class Config implements \ArrayAccess
 
             return $p;
         }
+
+        return $storage;
     }
 
     /**
