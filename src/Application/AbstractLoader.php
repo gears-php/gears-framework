@@ -32,13 +32,4 @@ abstract class AbstractLoader
         $app->load($this->getAppDir());
         return $app;
     }
-
-    /**
-     * Load and return main app configuration depending on environment
-     * @return Config
-     */
-    public function loadAppConfig()
-    {
-
-    }
 }
