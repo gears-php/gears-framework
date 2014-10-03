@@ -32,6 +32,7 @@ class Request
 
     /**
      * Initialize all necessary properties
+     * @return $this
      */
     public function init()
     {
@@ -39,6 +40,7 @@ class Request
         $scriptName = explode('/', $_SERVER['SCRIPT_NAME']);
         $this->baseUri = implode('/', array_intersect_assoc($requestUri, $scriptName));
         $this->pathUri = '/' . implode('/', array_diff($requestUri, $scriptName));
+        return $this;
     }
 
     /**

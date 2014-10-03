@@ -125,17 +125,18 @@ class View
      */
     public function addTemplatePath($path)
     {
-        $this->templatePaths[] = $path;
+        $this->templatePaths[] = realpath($path);
     }
 
     /**
-     * Add a helpers directory path and corresponding namespace prefix
-     * @param string $path
+     * Map the helper class namespace to the helper name
      * @param string $namespace
+     * @param string $helperName
      */
-    public function addHelperMapping($path, $namespace)
+    public function addHelperMapping($namespace, $helperName)
     {
-        $this->helperMappings[$path] = $namespace;
+        var_dump($namespace);
+        $this->helperMappings[$namespace] = $helperName;
     }
 
     /**
@@ -200,9 +201,11 @@ class View
                     $this->helpers[$helperName] = new $className($this);
                 }
             }
+        } else {
+            // finally return helper instance
+            return call_user_func_array($this->helpers[$helperName], $params);
         }
 
-        // finally return helper instance
-        return call_user_func_array($this->helpers[$helperName], $params);
+        return null;
     }
 }

@@ -53,11 +53,13 @@ class Application extends Dispatcher
     private $router = null;
 
     /**
-     * @param Request $request
+     * @param Config $config
+     * @param Services $services
      */
-    public function __construct(Request $request)
+    public function __construct(Config $config, Services $services)
     {
-        $this->request = $request;
+        $this->config = $config;
+        $this->services = $services;
     }
 
     /**
@@ -103,27 +105,26 @@ class Application extends Dispatcher
 
     /**
      * Setup main application services and load modules
-     * @param string $configName Name of the app configuration file
+     * @param string $appDir Application dir
      * @return $this
      */
-    public function init($configName = 'app')
+    public function load($appDir)
     {
         $this->handleErrors();
         $this->handleExceptions();
-        $this->services = new Services;
-        $this->config = new Config;
-        $fileExt = $this->config->getReader()->getFileExt();
-        $this->config->load(CONF_PATH . basename($configName, $fileExt) . $fileExt);
 
-        foreach (explode(';', $this->config['module_config_paths']) as $configPath) {
-            foreach (glob(APP_PATH . $configPath . '/config/module' . $fileExt) as $moduleConfigFile) {
-                $config = $this->config->read($moduleConfigFile);
+        foreach ($this->config['modules'] as $moduleName) {
+            $moduleClassName = $moduleName . '\\Module';
+            $moduleFile = $appDir . DS . 'modules' . DS . str_replace('\\', DS, $moduleClassName) . '.php';
 
-                if (isset($config['autoload'])) {
-                    $this->setAutoloadMappings($config['autoload'], dirname($moduleConfigFile));
-                }
-
-                $this->config->merge($moduleConfigFile);
+            if (is_file($moduleFile)) {
+                require_once $moduleFile;
+                /** @var AbstractModule $module */
+                $module = new $moduleClassName($this);
+                $this->config->merge($module->getConfigFile());
+                $module->register()->load();
+            } else {
+                throw new \Exception(sprintf('Module file can not be found at %s', $moduleFile));
             }
         }
 
@@ -133,7 +134,6 @@ class Application extends Dispatcher
             $this->router->addRoutingConfiguration($routing);
         }
 
-        $this->request->init();
         return $this;
     }
 
@@ -141,9 +141,9 @@ class Application extends Dispatcher
      * Handle the income request, dispatch it to specific controller action and return the response
      * @throws RouteNotFound
      */
-    public function run()
+    public function handle(Request $request)
     {
-        if ($route = $this->router->match($this->request)) {
+        if ($route = $this->router->match($this->request = $request->init())) {
             $this->response = new Response;
 
             ob_start();
@@ -224,21 +224,5 @@ class Application extends Dispatcher
     {
         $this->ignoreErrorReporting = $ignore;
         return set_error_handler([$this, 'errorHandler']);
-    }
-
-    /**
-     * Register new autoload mappings
-     * @param array $mappings Mappings list in [namespacePrefix => includePath] format
-     * @param string $basePath The full path relatively to which the given mappings are defined
-     */
-    private function setAutoloadMappings(array $mappings, $basePath)
-    {
-        foreach ($mappings as $namespacePrefix => $path) {
-            $includePath = realpath(rtrim($basePath, DS) . DS . trim(str_replace('/', DS, $path), DS));
-
-            if ($includePath) {
-                (new Autoloader($namespacePrefix, $includePath))->register();
-            }
-        }
     }
 }

@@ -3,14 +3,20 @@
  * @package   Gears\Framework
  * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  */
-namespace Gears\Framework\Application;
+namespace Gears\Framework\Application\Controller;
+
+use Gears\Framework\Application\Application;
+use Gears\Framework\Application\Request;
+use Gears\Framework\Application\Response;
+use Gears\Framework\Application\ServiceProvider;
+use Gears\Framework\Application\Services;
 
 /**
  * Abstract controller
  * @package    Gears\Framework
  * @subpackage App
  */
-abstract class Controller
+abstract class AbstractController
 {
     use ServiceProvider;
 
