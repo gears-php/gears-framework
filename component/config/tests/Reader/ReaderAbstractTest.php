@@ -16,7 +16,7 @@ class ReaderAbstractTest extends \PHPUnit_Framework_TestCase
     /**
      * @expectedException \Gears\Config\Reader\Exception\FileNotFound
      */
-    public function testReadThrowsExceptionWhenNoFileFound()
+    public function testReadThrowsExceptionWhenFileNotFound()
     {
         $reader = $this->getMockForAbstractClass(ReaderAbstract::class);
         $reader->read('path/to/file');
