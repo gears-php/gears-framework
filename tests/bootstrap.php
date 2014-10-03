@@ -1,9 +1,9 @@
 <?php
-use Gears\Framework\Application\Autoloader;
+use Gears\Framework\Application\ClassLoader;
 
-require_once __DIR__ . '/../src/Application/Autoloader.php';
+require_once __DIR__ . '/../src/Application/ClassLoader.php';
 
-Autoloader::registerNamespaces([
+ClassLoader::registerNamespaces([
     'Gears\Framework' => __DIR__,
     'Gears\Config' => __DIR__ . '/../component/config/src',
     'Gears\Db' => __DIR__ . '/../component/db/src'
