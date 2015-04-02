@@ -20,28 +20,28 @@ defined('DS') || define('DS', DIRECTORY_SEPARATOR);
 class View
 {
     /**
-     * Stores paths where to search for template files
+     * Stores all possible helper class namespaces
      * @var array
      */
-    protected $templatePaths = [];
-
-    /**
-     * Stores helper class directory paths to their namespace prefixes
-     * @var array
-     */
-    protected $helperMappings = [];
-
-    /**
-     * Collection of all currently loaded templates
-     * @var array
-     */
-    protected $templates = [];
+    protected $helperNamespaces = [];
 
     /**
      * Collection of all currently called helpers
      * @var array
      */
     protected $helpers = [];
+
+    /**
+     * Stores paths where to search for template files
+     * @var array
+     */
+    protected $templatePaths = [];
+
+    /**
+     * Collection of all currently loaded templates
+     * @var array
+     */
+    protected $templates = [];
 
     /**
      * Template files extension
@@ -77,19 +77,7 @@ class View
             }
         }
 
-        $this->helperMappings[__DIR__ . '/Helper'] = __NAMESPACE__ . 'Helper';
-    }
-
-    /**
-     * Magic method used to catch non-existent view method which is
-     * treated as some helper class call
-     * @param $method
-     * @param $args
-     * @return string
-     */
-    public function __call($method, $args)
-    {
-        return $this->helper($method, $args);
+        $this->addHelperNamespace(__NAMESPACE__ . '\\Helper');
     }
 
     /**
@@ -126,17 +114,17 @@ class View
     public function addTemplatePath($path)
     {
         $this->templatePaths[] = realpath($path);
+        return $this;
     }
 
     /**
-     * Map the helper class namespace to the helper name
+     * Added helper classes namespace
      * @param string $namespace
-     * @param string $helperName
      */
-    public function addHelperMapping($namespace, $helperName)
+    public function addHelperNamespace($namespace)
     {
-        var_dump($namespace);
-        $this->helperMappings[$namespace] = $helperName;
+        $this->helperNamespaces[] = $namespace;
+        return $this;
     }
 
     /**
@@ -157,17 +145,17 @@ class View
         $fileName = str_replace($this->templateFileExt, '', $name) . $this->templateFileExt;
 
         // if no template alias name given use file name
-        $alias = $alias ? : $fileName;
+        $alias = $alias ?: $fileName;
 
         // whether template object is already stored under alias name
         if (!isset($this->templates[$alias])) {
 
             // search for template file within template paths and store it using alias name
-            foreach ($this->templatePaths as $path) {
-                $path = (0 === strpos($fileName, APP_PATH)) ? $fileName : $path . DS . $fileName;
+            foreach ($this->templatePaths as $filePath) {
+                $filePath = $filePath . DS . $fileName;
 
-                if (is_file($path)) {
-                    $tpl = new Template($path, $this);
+                if (is_file($filePath)) {
+                    $tpl = new Template($filePath, $this);
                     break;
                 }
             }
@@ -191,21 +179,22 @@ class View
      */
     public function helper($helperName, $params = [])
     {
-        if (!isset($this->helpers[$helperName])) { // calling some helper for the first time
-            foreach ($this->helperMappings as $path => $namespace) {
-                $filePath = $path . DS . ucfirst($helperName) . '.php';
+        if (!isset($this->helpers[$helperName])) {
+            // try to find helper within all registered namespaces and instantiate it
+            foreach ($this->helperNamespaces as $namespace) {
+                $className = $namespace . '\\' . ucfirst($helperName);
 
-                if (is_file($filePath)) {
-                    $className = $namespace . '\\' . ucfirst($helperName);
-                    // store helper for future calls
+                if (class_exists($className)) {
                     $this->helpers[$helperName] = new $className($this);
+                    break;
                 }
             }
-        } else {
-            // finally return helper instance
-            return call_user_func_array($this->helpers[$helperName], $params);
+
+            if (!isset($this->helpers[$helperName])) {
+                throw new \RuntimeException(sprintf('No helper class found for "%s" helper', $helperName));
+            }
         }
 
-        return null;
+        return call_user_func_array($this->helpers[$helperName], $params);
     }
 }
