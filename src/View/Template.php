@@ -334,7 +334,7 @@ class Template
                 return '/img/' . $path;
             // just some url
             default:
-                return \BASE_URL . $path;
+                return $path;
         }
     }
 
@@ -345,7 +345,7 @@ class Template
     private function appJs()
     {
         return sprintf('<script type="text/javascript">var app = app || {};%s</script>',
-            $this->jsVars(['uri' => \BASE_URL, 'img_uri' => '/img/'], 'app')
+            $this->jsVars(['uri' => '', 'img_uri' => '/img/'], 'app')
         );
     }
 
