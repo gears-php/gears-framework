@@ -13,6 +13,7 @@ defined('DS') || define('DS', DIRECTORY_SEPARATOR);
 abstract class AbstractLoader
 {
     /**
+     * Return application directory
      * @return string
      */
     abstract protected function getAppDir();
@@ -26,10 +27,8 @@ abstract class AbstractLoader
     {
         $config = new Config;
         $fileExt = $config->getReader()->getFileExt();
-        $configFile = 'app' . rtrim('_'. $env, '_') . $fileExt;
+        $configFile = 'app' . rtrim('_' . $env, '_') . $fileExt;
         $config->load($this->getAppDir() . '/config/' . $configFile);
-        $app = new Application($config, new Services);
-        $app->load($this->getAppDir());
-        return $app;
+        return (new Application($config, new Services))->load();
     }
 }

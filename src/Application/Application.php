@@ -105,27 +105,19 @@ class Application extends Dispatcher
 
     /**
      * Setup main application services and load modules
-     * @param string $appDir Application dir
      * @return $this
      */
-    public function load($appDir)
+    public function load()
     {
         $this->handleErrors();
         $this->handleExceptions();
 
         foreach ($this->config['modules'] as $moduleName) {
             $moduleClassName = $moduleName . '\\Module';
-            $moduleFile = $appDir . DS . 'modules' . DS . str_replace('\\', DS, $moduleClassName) . '.php';
-
-            if (is_file($moduleFile)) {
-                require_once $moduleFile;
-                /** @var AbstractModule $module */
-                $module = new $moduleClassName($this);
-                $this->config->merge($module->getConfigFile());
-                $module->register()->load();
-            } else {
-                throw new \Exception(sprintf('Module file can not be found at %s', $moduleFile));
-            }
+            /** @var AbstractModule $module */
+            $module = new $moduleClassName($this);
+            $this->config->merge($module->getConfigFile());
+            $module->register()->load();
         }
 
         $this->router = new Router;
