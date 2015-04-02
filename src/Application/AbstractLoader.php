@@ -16,7 +16,7 @@ abstract class AbstractLoader
      * Return application directory
      * @return string
      */
-    abstract protected function getAppDir();
+    abstract public function getAppDir();
 
     /**
      * Prepare application environment and return it
@@ -29,6 +29,8 @@ abstract class AbstractLoader
         $fileExt = $config->getReader()->getFileExt();
         $configFile = 'app' . rtrim('_' . $env, '_') . $fileExt;
         $config->load($this->getAppDir() . '/config/' . $configFile);
-        return (new Application($config, new Services))->load();
+        $services = new Services;
+        $services->set('app.loader', $this);
+        return (new Application($config, $services))->load();
     }
 }
