@@ -2,32 +2,31 @@
 /**
  * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  */
-namespace Gears\Config;
+namespace Gears\Storage;
 
-use Gears\Config\Reader\ReaderAbstract;
-use Gears\Config\Reader\Yaml;
+use Gears\Storage\Reader\ReaderAbstract;
+use Gears\Storage\Reader\Yaml;
 
 /**
- * Storage for various configuration tree nodes used by core app and other services
- * @package    Gears\Config
+ * A general-purpose runtime storage solution
+ * @package    Gears\Storage
  */
-class Config implements \ArrayAccess
+class Storage implements \ArrayAccess
 {
     /**
-     * Configuration internal storage
+     * Internal storage
      * @var array
      */
-    protected $storage = null;
+    protected $storage;
 
     /**
-     * Configuration file reader instance
+     * File reader instance
      * @var ReaderAbstract
      */
-    protected $reader = null;
+    protected $reader;
 
     /**
-     * Config can be initialized with a given tree configuration array
-     * for further manipulations
+     * Storage can be initialized with a given tree data structure
      * @param array (optional) $tree
      */
     public function __construct($tree = null)
@@ -36,7 +35,7 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Set config files reader
+     * Set file reader
      * @param ReaderAbstract $reader
      */
     public function setReader(ReaderAbstract $reader)
@@ -46,24 +45,23 @@ class Config implements \ArrayAccess
 
     /**
      * Get reader instance. Creates default reader if none exists
-     * @return ReaderAbstract Config reader object
+     * @return ReaderAbstract File reader object
      */
     public function getReader()
     {
         if (null === $this->reader) {
-            // support yaml configuration files by default
+            // support yaml files by default
             $this->reader = new Yaml();
         }
         return $this->reader;
     }
 
     /**
-     * Load some configuration tree from file and store it internally for future usage. Optionally
-     * put it into sub-node defined by second parameter. Otherwise it will fully replace existing
-     * internal storage
+     * Load some data tree from file and store it internally for future usage. Optionally put it into
+     * sub-node defined by second parameter. Otherwise it will fully replace existing internal storage
      * @param string $file
-     * @param string (optional) $path Dot separated path of the node under which to store the loaded config
-     * @return array Loaded configuration tree
+     * @param string (optional) $path Dot separated path of the node under which to store the loaded data
+     * @return array Loaded data tree
      */
     public function load($file, $path = null)
     {
@@ -79,22 +77,22 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Same as {@see read()} but returns a Config instance
+     * Same as {@see read()} but returns a storage instance
      * @param string $file
      * @param string (optional) $node
-     * @return Config
+     * @return Storage
      */
     public function readObj($file, $node = null)
     {
-        return new Config($this->read($file, $node));
+        return new Storage($this->read($file, $node));
     }
 
     /**
-     * Read and return the full file configuration tree or its sub-node. Please note that this function
-     * does not save the loaded config / sub-node internally. Use {@link load()} for this
+     * Read and return the full file data tree or its sub-node. Please note that this function
+     * does not save the loaded data node internally. Use {@link load()} for this.
      * @param string $file Path to the file
      * @param string (optional) $path Dot separated path to the sub-node to be returned
-     * @return array Configuration tree
+     * @return array Data tree
      */
     public function read($file, $path = null)
     {
@@ -111,61 +109,63 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Merge current configuration with the given one
-     * @param array|string|Config Configuration array or config file name or Config entity to be merged
+     * Merge current storage data with the given one
+     * @param array|string|Storage $mixed Data tree | data tree file name | Storage entity to be merged
      */
-    public function merge($config)
+    public function merge($mixed)
     {
         $node = [];
 
-        if (is_array($config)) {
-            $node = $config;
-        } elseif (is_string($config)) {
-            $node = $this->read($config);
-        } elseif($config instanceof Config) {
-            $node = $config->get();
+        if (is_array($mixed)) {
+            $node = $mixed;
+        } elseif (is_string($mixed)) {
+            $node = $this->read($mixed);
+        } elseif ($mixed instanceof Storage) {
+            $node = $mixed->get();
         }
 
         $this->storage = array_merge_recursive($this->storage, $node);
     }
 
     /**
-     * Same as {@link get()} but returns a new Config instance
+     * Same as {@link get()} but returns a new storage instance
      * @param string $path
      * @param array (optional) $storage
-     * @return Config
+     * @return Storage
      */
     public function getObj($path, $storage = null)
     {
-        return new Config($this->get($path, $storage));
+        return new Storage($this->get($path, $storage));
     }
 
     /**
-     * Get some configuration property. If nothing passed returns full configuration tree.
+     * Get storage node value. If nothing passed returns full storage data tree.
      * If no property found returns NULL. Example:
      * <code>
-     * $dbUsername = $cfg->get('server.db.username');
+     * $dbUsername = $storage->get('server.db.username');
      * # which equals to:
-     * $cfg = $cfg->get();
+     * $cfg = $storage->get();
      * $dbUsername = $cfg['server']['db']['username'];
      * </code>
-     * @param string (optional) $path Path to the property inside configuration tree, separated by dots
-     * @param array (optional) $storage Storage from where to get property. Inner class storage by default
-     * @return array|mixed|NULL Full configuration tree | found configuration property value | NULL if nothing is found
+     * @param string (optional) $path Path to the node separated by dots
+     * @param array (optional) $storage Custom storage tree to get value from. Inner storage is used by default
+     * @return array|mixed|NULL Full storage data tree | found storage node value | NULL if nothing is found
      */
     public function get($path = null, $storage = null)
     {
-        $storage = $storage ? : $this->storage;
+        $storage = $storage ?: $this->storage;
 
         if (trim($path)) {
-            $p = & $storage;
+            $p = &$storage;
             $p = (array)$p;
             $path = explode('.', $path);
 
             foreach ($path as $node) {
                 if (isset($p[$node])) {
-                    $p = & $p[$node];
-                } else $p = null;
+                    $p = &$p[$node];
+                } else {
+                    $p = null;
+                };
             }
 
             return $p;
@@ -175,7 +175,7 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Return a first-level node value from current configuration
+     * Return a first-level node value
      * @param string $prop
      * @return mixed
      */
@@ -185,26 +185,26 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Set some configuration property (new or overwrite existent). Example:
+     * Set storage node value (new or overwrite existent). Example:
      * <code>
-     * $cfg->set('server.db.username', 'john doe');
+     * $storage->set('server.db.username', 'john doe');
      * # which equals to:
-     * $cfg = $cfg->get();
+     * $cfg = $storage->get();
      * $cfg['server']['db']['username'] = 'john doe';
      * </code>
-     * @param string $path Path to the property inside configuration tree, separated by dots
+     * @param string $path Path to the data tree node separated by dots
      * @param mixed $value
      * @return void
      */
     public function set($path, $value)
     {
         if (trim($path)) {
-            $p = & $this->storage;
+            $p = &$this->storage;
             $p = (array)$p;
             $path = explode('.', $path);
 
             foreach ($path as $node) {
-                $p = & $p[$node];
+                $p = &$p[$node];
             }
 
             $p = $value;
@@ -212,13 +212,13 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Remove configuration tree node
+     * Remove node from storage
      * @param string $path
      * @return void
      */
     public function del($path)
     {
-        $p = & $this->storage;
+        $p = &$this->storage;
         $p = (array)$p;
         $path = explode('.', $path);
         $nodeCount = count($path);
@@ -227,7 +227,7 @@ class Config implements \ArrayAccess
             $node = array_shift($path);
 
             if (isset($p[$node])) {
-                $p = & $p[$node];
+                $p = &$p[$node];
             }
         }
 
@@ -247,20 +247,20 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Check whether the configuration tree property exists
-     * @param string $path Dot separated path to the property inside configuration tree
+     * Check whether the storage node exists
+     * @param string $path Dot separated path to the node inside the storage data tree
      * @return boolean
      */
     public function offsetExists($path)
     {
-        $p = & $this->storage;
+        $p = &$this->storage;
         $p = (array)$p;
 
         $path = explode('.', $path);
 
         foreach ($path as $node) {
             if (isset($p[$node])) {
-                $p = & $p[$node];
+                $p = &$p[$node];
             } else {
                 return false;
             }
@@ -270,7 +270,7 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Get configuration property. See {@see get()}
+     * Get storage node value. See {@see get()}
      * @param string $path
      * @return mixed
      */
@@ -280,7 +280,7 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Set configuration property. See {@see set()}
+     * Set storage node value. See {@see set()}
      * @param string $path
      * @param mixed $value
      * @return void
@@ -291,7 +291,7 @@ class Config implements \ArrayAccess
     }
 
     /**
-     * Remove configuration tree node. See {@see delete()}
+     * Remove storage node. See {@see del()}
      * @param string $path
      * @return void
      */

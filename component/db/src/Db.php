@@ -22,7 +22,7 @@ class Db
      * @param array $options Additional connection options
      * @return AdapterAbstract
      */
-    public static function connect(array $config, array $options = array())
+    public static function connect(array $config, array $options = [])
     {
         $driver = $config['driver'];
         $className = __NAMESPACE__ . '\\Adapter\\' . ucfirst(strtolower($driver));

@@ -1,6 +1,6 @@
 <?php
-namespace Gears\Config\Tests\Reader;
-use Gears\Config\Reader\ReaderAbstract;
+namespace Gears\Storage\Tests\Reader;
+use Gears\Storage\Reader\ReaderAbstract;
 
 class ReaderAbstractTest extends \PHPUnit_Framework_TestCase
 {
@@ -9,12 +9,12 @@ class ReaderAbstractTest extends \PHPUnit_Framework_TestCase
         $reader = $this->getMockForAbstractClass(ReaderAbstract::class);
         $reader->expects($this->once())
             ->method('parseFile')
-            ->will($this->returnValue(array()));
-        $this->assertEquals(array(), $reader->read(__DIR__ . '/ReaderAbstractTest.yml'));
+            ->will($this->returnValue([]));
+        $this->assertEquals([], $reader->read(__DIR__ . '/ReaderAbstractTest.yml'));
     }
 
     /**
-     * @expectedException \Gears\Config\Reader\Exception\FileNotFound
+     * @expectedException \Gears\Storage\Reader\Exception\FileNotFound
      */
     public function testReadThrowsExceptionWhenFileNotFound()
     {

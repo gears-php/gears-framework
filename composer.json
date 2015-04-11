@@ -11,17 +11,17 @@
         }
     ],
     "require": {
-        "php": ">=5.4.0",
+        "php": ">=5.5.0",
         "mustangostang/spyc": "0.5.*@dev"
     },
     "replace": {
-        "gears-php/config": "self.version",
+        "gears-php/storage": "self.version",
         "gears-php/db": "self.version"
     },
     "autoload": {
         "psr-4": {
             "Gears\\Framework\\": "src/",
-            "Gears\\Config\\": "component/config/src/",
+            "Gears\\Storage\\": "component/storage/src/",
             "Gears\\Db\\": "component/db/src/"
         }
     }

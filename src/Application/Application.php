@@ -7,7 +7,7 @@
  */
 namespace Gears\Framework\Application;
 
-use Gears\Config\Config;
+use Gears\Storage\Storage;
 use Gears\Framework\Event\Dispatcher;
 use Gears\Framework\Application\Routing\Router;
 use Gears\Framework\Application\Routing\Exception\RouteNotFound;
@@ -26,13 +26,13 @@ class Application extends Dispatcher
      * Request instance
      * @var Request
      */
-    private $request = null;
+    private $request;
 
     /**
      * Response instance
      * @var Response
      */
-    private $response = null;
+    private $response;
 
     /**
      * If to ignore error_reporting() level (so @ error suppression symbol
@@ -42,21 +42,21 @@ class Application extends Dispatcher
     private $ignoreErrorReporting;
 
     /**
-     * Config instance
-     * @var Config
+     * Storage instance
+     * @var Storage
      */
-    private $config = null;
+    private $config;
 
     /**
      * @var Router
      */
-    private $router = null;
+    private $router;
 
     /**
-     * @param Config $config
+     * @param Storage $config
      * @param Services $services
      */
-    public function __construct(Config $config, Services $services)
+    public function __construct(Storage $config, Services $services)
     {
         $this->config = $config;
         $this->services = $services;
@@ -64,7 +64,7 @@ class Application extends Dispatcher
 
     /**
      * Return app config instance or config node value if node is given
-     * @param string $node Dot-separated node to get the config value
+     * @param string $node Dot-separated node to get the config storage value
      * @return mixed
      */
     public function getConfig($node = null)

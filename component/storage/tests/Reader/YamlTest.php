@@ -1,8 +1,8 @@
 <?php
 
-namespace Gears\Config\Tests\Reader;
+namespace Gears\Storage\Tests\Reader;
 
-use Gears\Config\Reader\Yaml;
+use Gears\Storage\Reader\Yaml;
 
 class YamlTest extends \PHPUnit_Framework_TestCase
 {
@@ -18,7 +18,7 @@ class YamlTest extends \PHPUnit_Framework_TestCase
         $parseFile = new \ReflectionMethod($yaml, 'parseFile');
         $parseFile->setAccessible(true);
         require 'Spyc.php'; // Spyc stub
-        $this->assertEquals(array(), $parseFile->invoke($yaml, $file = 'path/to/file'));
+        $this->assertEquals([], $parseFile->invoke($yaml, $file = 'path/to/file'));
         $this->assertEquals($file, \Spyc::getLoadedFilename());
     }
 }

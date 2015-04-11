@@ -2,11 +2,11 @@
 /**
  * @author deniskrasilnikov86@gmail.com
  */
-namespace Gears\Config\Reader;
+namespace Gears\Storage\Reader;
 
 /**
  * YAML markup files reader. Uses Spyc library for configuration files parsing
- * @package Gears\Config\Reader
+ * @package Gears\Storage\Reader
  */
 class Yaml extends ReaderAbstract
 {

@@ -2,7 +2,7 @@
 
 namespace Gears\Framework\Application;
 
-use Gears\Config\Config;
+use Gears\Storage\Storage;
 
 defined('DS') || define('DS', DIRECTORY_SEPARATOR);
 
@@ -25,7 +25,7 @@ abstract class AbstractLoader
      */
     public function load($env = '')
     {
-        $config = new Config;
+        $config = new Storage;
         $fileExt = $config->getReader()->getFileExt();
         $configFile = 'app' . rtrim('_' . $env, '_') . $fileExt;
         $config->load($this->getAppDir() . '/config/' . $configFile);

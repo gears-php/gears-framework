@@ -2,12 +2,12 @@
 /**
  * @author deniskrasilnikov86@gmail.com
  */
-namespace Gears\Config\Reader;
-use Gears\Config\Reader\Exception\FileNotFound;
+namespace Gears\Storage\Reader;
+use Gears\Storage\Reader\Exception\FileNotFound;
 
 /**
  * Abstract reader which should be extended by any concrete configuration file reader
- * @package Gears\Config
+ * @package Gears\Storage
  */
 abstract class ReaderAbstract
 {

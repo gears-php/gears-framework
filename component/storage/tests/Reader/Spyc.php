@@ -11,7 +11,7 @@ class Spyc
     {
         if (!empty($file)) {
             self::$loadedFilename = $file;
-            return array();
+            return [];
         }
     }
 
