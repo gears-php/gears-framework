@@ -16,8 +16,8 @@ class Template
     protected $path = '';
     protected $content = '';
     protected $vars = [];
-    protected $parent = null;
-    protected $view = null;
+    protected $parent;
+    protected $view;
     protected $blocks = [];
     protected $blocksOpened = [];
     protected $disabled = false;
@@ -26,7 +26,7 @@ class Template
      * Process template file
      * @param string $filePath Full path to a template file
      * @param View $view
-     * @throws \Exception If template file not found
+     * @throws \RuntimeException If template file not found
      */
     public function __construct($filePath, View $view)
     {
@@ -51,7 +51,7 @@ class Template
                     $cache->set($this->content, $templateKey);
                 }
             } else {
-                throw new \Exception('Template file not found: ' . $filePath);
+                throw new \RuntimeException('Template file not found: ' . $filePath);
             }
         }
     }
@@ -120,7 +120,7 @@ class Template
      * Set template blocks content
      * @return Template
      */
-    public function blocks(array $blocks)
+    public function setBlocks(array $blocks)
     {
         $this->blocks = $blocks + $this->blocks;
         return $this;
@@ -149,17 +149,20 @@ class Template
      * @param array $vars Template variables
      * @return string Rendered template content
      */
-    public function render($vars = [])
+    public function render(array $vars = [])
     {
         if (!$this->disabled) {
             $processed = $this->process($this->vars + $vars);
+
             // we have decorator parent template
             if ($this->parent()) {
-                return $this->parent()->blocks($this->blocks)->render();
+                return $this->parent()->setBlocks($this->blocks)->render();
             } else {
                 return $processed;
             }
         }
+
+        return '';
     }
 
     /**
@@ -187,13 +190,17 @@ class Template
     private function tEndblock()
     {
         $currentBlock = array_pop($this->blocksOpened);
+
         if (!$currentBlock) {
-            throw new \Exception('&lt;/block&gt; used without opening counterpart');
+            throw new \RuntimeException('&lt;/block&gt; used without opening counterpart');
         }
+
         $block_content = ob_get_clean();
+
         if (!isset($this->blocks[$currentBlock])) {
             $this->blocks[$currentBlock] = $block_content;
         }
+
         echo $this->blocks[$currentBlock];
     }
 
@@ -259,19 +266,23 @@ class Template
     {
         // partial template variables collection
         $collection = $this->vars[ltrim($args['source'], '$')];
-        if (!empty($collection)) {
+
+        if (count($collection)) {
             $tpl = $this->view->load($args['name']);
             $html = '';
-            $collection = array_values($collection);
-            foreach ($collection as $index => &$vars) {
+
+            foreach (array_values($collection) as $index => &$vars) {
                 $vars['_TPL_INDEX_'] = $index;
                 $tpl->assign($vars);
                 $html .= $tpl->render();
             }
+
             return $html;
         } elseif (isset($args['alt'])) {
             return $args['alt'];
         }
+
+        return '';
     }
 
     /**
@@ -306,6 +317,8 @@ class Template
         } catch (\Exception $e) {
             $this->exception($e);
         }
+
+        return '';
     }
 
     /**
@@ -313,9 +326,11 @@ class Template
      */
     private function url($path)
     {
-		if (0 === strpos($path, '/')) return $path;
+        if (0 === strpos($path, '/')) {
+            return $path;
+        }
 
-		$path = ltrim($path, '/');
+        $path = ltrim($path, '/');
         // probably we have asset (img/js/css) path given
         // find out this by extension
         $ext = substr($path, strrpos($path, '.') + 1);
@@ -357,14 +372,16 @@ class Template
      * @return string
      * @throws \Exception
      */
-    private function jsVars($vars, $namespace = null, $exceptions = [])
+    private function jsVars($vars, $namespace = null, array $exceptions = [])
     {
         $script = '';
+
         foreach ($vars as $name => $value) {
             if (!in_array($name, $exceptions)) {
                 $script .= sprintf('%s%s = %s;', $namespace . '.', $name, $this->jsEncode($value));
             }
         }
+
         return $script;
     }
 
@@ -377,24 +394,24 @@ class Template
     {
         if (is_numeric($var) || is_bool($var)) {
             // prepare numeric
-            return floatval($var);
+            return (float)($var);
         } elseif (is_string($var)) {
             // prepare string
             return '"' . preg_replace("/\r?\n/", "\\n", addslashes($var)) . '"';
         } elseif (is_array($var)) {
             // prepare array
             return json_encode($var);
-        } else {
-            // if do something here?
         }
+
+        return var_export($var, true);
     }
 
     /**
      * Process the given exception by adding more info
-     * @throw \Exception More detailed template exception
+     * @throw \RuntimeException More detailed template exception
      */
     private function exception(\Exception $e)
     {
-        throw new \Exception(sprintf('%s template rendering error', $this->getFilePath()), 0, $e);
+        throw new \RuntimeException(sprintf('%s template rendering error', $this->getFilePath()), 0, $e);
     }
 }

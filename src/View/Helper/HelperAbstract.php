@@ -23,7 +23,7 @@ abstract class HelperAbstract
      *
      * @var View
      */
-    protected $view = null;
+    protected $view;
 
     /**
      * Storage for generated html

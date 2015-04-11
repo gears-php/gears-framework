@@ -23,7 +23,7 @@ class Query
     /**
      * @var AdapterAbstract
      */
-    private $db = null;
+    private $db;
 
     /**
      * @var string
@@ -48,7 +48,7 @@ class Query
     /**
      * @var WhereAbstract
      */
-    private $where = null;
+    private $where;
 
     /**
      * @var array
@@ -63,7 +63,7 @@ class Query
     /**
      * @var null
      */
-    private $limit = null;
+    private $limit;
 
     /**
      * Init query with the db adapter instance
@@ -163,16 +163,19 @@ class Query
     /**
      * Add FROM table
      * @param $table
-     * @param null $alias
+     * @param string $alias
      * @return Query
      */
     public function from($table, $alias = null)
     {
         $table = $this->db->escapeIdentifier($table);
+
         if (is_string($alias) && '' != $alias) {
             $table .= ' AS ' . $this->db->escapeIdentifier($alias);
         }
+
         $this->from[] = $table;
+        
         return $this;
     }
 
@@ -328,6 +331,7 @@ class Query
         if (!count($this->select)) {
             $this->selectAll();
         }
+
         return $this->db->query($this);
     }
 
@@ -381,7 +385,7 @@ class Query
         }
 
         // LIMIT condition
-        if (!empty($this->limit)) {
+        if ($this->limit) {
             $queryString .= $sep . $this->limit;
         }
 

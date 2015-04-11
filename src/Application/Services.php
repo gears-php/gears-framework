@@ -7,8 +7,17 @@ namespace Gears\Framework\Application;
  */
 class Services
 {
+    /**
+     * Internal services storage
+     * @var array
+     */
     protected $services = [];
-    protected $fallback = null;
+
+    /**
+     * Fallback service
+     * @var callable
+     */
+    protected $fallback;
 
     /**
      * Set fallback service factory which is called in case some specific

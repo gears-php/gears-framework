@@ -11,8 +11,8 @@ abstract class State
 {
     protected $buffer = '';
     protected $name = '';
-    protected $parser = null;
-    protected $prevState = null;
+    protected $parser;
+    protected $prevState;
 
     /**
      * Add character to the state buffer

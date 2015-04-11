@@ -27,7 +27,7 @@ abstract class WhereAbstract
      * Db adapter instance
      * @var AdapterAbstract
      */
-    private $db = null;
+    private $db;
 
     /**
      * @param AdapterAbstract $db
@@ -122,7 +122,7 @@ abstract class WhereAbstract
             $value = $this->db->escape($value);
         }
 
-        $this->conditions[] = sprintf('%s IN (%s)', $this->db->escapeIdentifier($field), join(',', $values));
+        $this->conditions[] = sprintf('%s IN (%s)', $this->db->escapeIdentifier($field), implode(',', $values));
         return $this;
     }
 

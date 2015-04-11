@@ -14,7 +14,7 @@ trait ServiceProvider
      * Services container instance
      * @var Services
      */
-    private $services = null;
+    protected $services;
 
     /**
      * Get application service

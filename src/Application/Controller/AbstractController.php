@@ -24,7 +24,7 @@ abstract class AbstractController
      * {@see App} instance holder
      * @var object
      */
-    private $app = null;
+    private $app;
 
     /**
      * Constructor

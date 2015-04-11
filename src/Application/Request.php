@@ -16,13 +16,13 @@ class Request
      * Base uri
      * @var string
      */
-    protected $baseUri = null;
+    protected $baseUri;
 
     /**
      * Request uri part relative to the base uri
      * @var string
      */
-    protected $pathUri = null;
+    protected $pathUri;
 
     /**
      * Request parameters

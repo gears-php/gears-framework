@@ -53,7 +53,7 @@ class View
      * Cache implementation instance
      * @var CacheInterface
      */
-    protected $cache = null;
+    protected $cache;
 
     /**
      * Constructor. Accepts array of supported options
@@ -71,10 +71,8 @@ class View
         }
 
         // setup cache storage
-        if (isset($options['cache'])) {
-            if ($options['cache'] instanceof CacheInterface) {
-                $this->setCache($options['cache']);
-            }
+        if (isset($options['cache']) && $options['cache'] instanceof CacheInterface) {
+            $this->setCache($options['cache']);
         }
 
         $this->addHelperNamespace(__NAMESPACE__ . '\\Helper');

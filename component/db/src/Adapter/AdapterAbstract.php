@@ -30,19 +30,19 @@ abstract class AdapterAbstract implements ArrayAccess
      * Active database connection
      * @var PDO
      */
-    protected $connection = null;
+    protected $connection;
 
     /**
      * Active PDO query result statement
      * @var PDOStatement
      */
-    protected $statement = null;
+    protected $statement;
 
     /**
      * Hold the very last query being executed with adapter
      * @var string|Query
      */
-    protected $lastQuery = null;
+    protected $lastQuery;
 
     /**
      * Create PDO database connection using the given connection parameters
@@ -197,7 +197,7 @@ abstract class AdapterAbstract implements ArrayAccess
         $fields = array_map(function ($field) use ($patterns) {
             return trim(str_replace(array_keys($patterns), array_values($patterns), $field . ' '));
         }, $fields);
-        $sql = sprintf('CREATE TABLE IF NOT EXISTS %s (%s)', $this->escapeIdentifier($tableName), implode(",", $fields));
+        $sql = sprintf('CREATE TABLE IF NOT EXISTS %s (%s)', $this->escapeIdentifier($tableName), implode(',', $fields));
         $this->connection->exec($sql);
     }
 

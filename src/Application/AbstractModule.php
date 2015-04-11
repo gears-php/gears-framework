@@ -14,7 +14,7 @@ class AbstractModule
     /**
      * @var ReflectionClass
      */
-    protected $classInfo = null;
+    protected $classInfo;
 
     /**
      * @param Application $app

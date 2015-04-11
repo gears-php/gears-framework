@@ -22,13 +22,13 @@ abstract class RelationAbstract
      * Relation table
      * @var TableAbstract
      */
-    protected $table = null;
+    protected $table;
 
     /**
      * Relation owner table
      * @var TableAbstract
      */
-    protected $owner = null;
+    protected $owner;
 
     /**
      * Name of the current relation

@@ -10,7 +10,7 @@ class Parser
     /**
      * Path to initial file
      */
-    protected $file = null;
+    protected $file;
 
     /**
      * Input stream
