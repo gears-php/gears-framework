@@ -9,7 +9,6 @@ use Gears\Framework\Application\Application;
 use Gears\Framework\Application\Request;
 use Gears\Framework\Application\Response;
 use Gears\Framework\Application\ServiceProvider;
-use Gears\Framework\Application\Services;
 
 /**
  * Abstract controller
@@ -28,9 +27,7 @@ abstract class AbstractController
 
     /**
      * Constructor
-     * @param Request $request
-     * @param Response $response
-     * @param Services $services
+     * @param Application $app
      */
     public function __construct(Application $app)
     {

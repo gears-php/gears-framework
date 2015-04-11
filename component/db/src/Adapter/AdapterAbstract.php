@@ -70,13 +70,14 @@ abstract class AdapterAbstract implements ArrayAccess
      * Execute query previously prepared with {@see prepare()}
      * @param array $params
      * @return $this
+     * @throws \RuntimeException
      */
     public function execute($params)
     {
         try {
             $this->statement->execute($params);
         } catch (PDOException $e) {
-            throw new \Exception('Error executing the query: ' . $this->lastQuery, 0, $e);
+            throw new \RuntimeException('Error executing the query: ' . $this->lastQuery, 0, $e);
         }
         return $this;
     }
@@ -169,12 +170,12 @@ abstract class AdapterAbstract implements ArrayAccess
 
     /**
      * Db driver specific method which allows to get the total row count of the latest performed select query
-     * @return integer
-     * @throws \Exception
+     * @return int
+     * @throws \RuntimeException
      */
     public function getLastRowCount()
     {
-        throw new \Exception(__METHOD__ . ' is not supported by current db driver');
+        throw new \RuntimeException(__METHOD__ . ' is not supported by current db driver');
     }
 
     /**
@@ -331,7 +332,7 @@ abstract class AdapterAbstract implements ArrayAccess
      * @param array (optional) $options
      * @return PDO
      */
-    protected function createConnection(array $config, $options = [])
+    protected function createConnection(array $config, array $options = [])
     {
         $dsn = "{$config['driver']}:host={$config['host']};dbname={$config['dbname']}";
         return new PDO($dsn, $config['user'], $config['pass'], $options);
