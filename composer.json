@@ -1,0 +1,23 @@
+{
+    "name": "gears-php/storage",
+    "type": "library",
+    "description": "A general-purpose runtime storage solution",
+    "keywords": ["storage", "configuration"],
+    "license": "MIT",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Denis Krasilnikov",
+            "email": "deniskrasilnikov86@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.5.0",
+        "mustangostang/spyc": "0.5.*@dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "Gears\\Storage\\": "src/"
+        }
+    }
+}
