@@ -27,7 +27,6 @@ abstract class AbstractController
     {
         return (new Response)
             ->setCode($code)
-            ->setHeader('Location', '/' . trim($uri, ' /') . '/')
-            ->flush();
+            ->setHeader('Location', '/' . trim($uri, ' /') . '/');
     }
 }
