@@ -27,6 +27,14 @@ class Response
     private $body = '';
 
     /**
+     * Initialize with response body
+     */
+    public function __construct($body = '')
+    {
+         $this->setBody($body);
+    }
+
+    /**
      * Set HTTP response code
      * @param int $code
      * @return $this

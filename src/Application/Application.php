@@ -20,19 +20,7 @@ use Gears\Framework\Application\Controller\ControllerResolver;
  */
 class Application extends Dispatcher
 {
-    use ServiceProvider;
-
-    /**
-     * Request instance
-     * @var Request
-     */
-    private $request;
-
-    /**
-     * Response instance
-     * @var Response
-     */
-    private $response;
+    use ServiceAware;
 
     /**
      * If to ignore error_reporting() level (so @ error suppression symbol
@@ -42,65 +30,19 @@ class Application extends Dispatcher
     private $ignoreErrorReporting;
 
     /**
-     * Storage instance
+     * Configuration storage
      * @var Storage
      */
     private $config;
 
     /**
-     * @var Router
-     */
-    private $router;
-
-    /**
-     * @param Storage $config
+     * @param Storage $config Configuration storage
      * @param Services $services
      */
     public function __construct(Storage $config, Services $services)
     {
         $this->config = $config;
         $this->services = $services;
-    }
-
-    /**
-     * Return app config instance or config node value if node is given
-     * @param string $node Dot-separated node to get the config storage value
-     * @return mixed
-     */
-    public function getConfig($node = null)
-    {
-        if (null === $node) {
-            return $this->config;
-        }
-
-        return $this->config->get($node);
-    }
-
-    /**
-     * Get request instance
-     * @return Request
-     */
-    public function getRequest()
-    {
-        return $this->request;
-    }
-
-    /**
-     * Get response instance
-     * @return Response
-     */
-    public function getResponse()
-    {
-        return $this->response;
-    }
-
-    /**
-     * Return services container
-     * @return Services
-     */
-    public function getServices()
-    {
-        return $this->services;
     }
 
     /**
@@ -115,15 +57,10 @@ class Application extends Dispatcher
         foreach ($this->config['modules'] as $moduleName) {
             $moduleClassName = $moduleName . '\\Module';
             /** @var AbstractModule $module */
-            $module = new $moduleClassName($this);
+            $module = new $moduleClassName;
+            $module->setServices($this->services);
             $this->config->merge($module->getConfigFile());
             $module->register()->load();
-        }
-
-        $this->router = new Router;
-
-        if ($routing = $this->config['routing']) {
-            $this->router->addRoutingConfiguration($routing);
         }
 
         return $this;
@@ -135,20 +72,23 @@ class Application extends Dispatcher
      */
     public function handle(Request $request)
     {
-        if ($route = $this->router->match($this->request = $request->init())) {
-            $this->response = new Response;
+        $router = new Router;
+        $router->addRoutingConfiguration($this->config['routing']);
+        $route = $router->match($request->init());
+        $controllerResolver = new ControllerResolver;
 
-            ob_start();
-
+        if ($route && $controllerResolver->resolve($route)) {
             // before requested action is invoked event
             $this->dispatch('beforeAction');
 
+            $controller = $controllerResolver->getController();
+            $controller->setServices($this->services);
+            $controllerResult = call_user_func_array([$controller, $controllerResolver->getAction()], [
+                $request->getParams()
+            ]);
+
             // after requested action is invoked event
             $this->dispatch('afterAction');
-
-            $controllerResolver = new ControllerResolver($this);
-            $controller = $controllerResolver->getController($route);
-            $controllerResult = call_user_func_array($controller, [$this->request->getParams()]);
 
             // special event for rendering step
             $this->dispatch('render', [$controllerResult]);
@@ -156,14 +96,12 @@ class Application extends Dispatcher
             // before HTTP response event
             $this->dispatch('beforeResponse');
 
-            $this->getResponse()->appendBody(ob_get_clean());
-            $this->getResponse()->flush();
+            $controllerResult->flush();
 
             // after response is done
             $this->dispatch('afterResponse');
-
         } else {
-            throw new RouteNotFound($this->request->getHttpMethod() . ' ' . $this->request->getPathUri());
+            throw new RouteNotFound($request->getHttpMethod() . ' ' . $request->getPathUri());
         }
     }
 
@@ -215,6 +153,7 @@ class Application extends Dispatcher
     private function handleErrors($ignore = false)
     {
         $this->ignoreErrorReporting = $ignore;
+
         return set_error_handler([$this, 'errorHandler']);
     }
 }

@@ -19,18 +19,23 @@ abstract class AbstractLoader
     abstract public function getAppDir();
 
     /**
-     * Prepare application environment and return it
+     * Instantiate and load application including main services
      * @param string $env
      * @return Application
      */
     public function load($env = '')
     {
+        // service container
+        $services = new Services;
+        $services->set('app.loader', $this);
+
+        // configuration storage
         $config = new Storage;
         $fileExt = $config->getReader()->getFileExt();
         $configFile = 'app' . rtrim('_' . $env, '_') . $fileExt;
         $config->load($this->getAppDir() . '/config/' . $configFile);
-        $services = new Services;
-        $services->set('app.loader', $this);
+        $services->set('config', $config);
+
         return (new Application($config, $services))->load();
     }
 }

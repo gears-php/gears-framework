@@ -6,10 +6,7 @@ use ReflectionClass;
 
 class AbstractModule
 {
-    /**
-     * @var Application
-     */
-    protected $app;
+    use ServiceAware;
 
     /**
      * @var ReflectionClass
@@ -17,20 +14,12 @@ class AbstractModule
     protected $classInfo;
 
     /**
-     * @param Application $app
-     */
-    public function __construct(Application $app)
-    {
-        $this->app = $app;
-    }
-
-    /**
      * Get module configuration file
      * @return string
      */
     public function getConfigFile()
     {
-        $fileExt = $this->app->getConfig()->getReader()->getFileExt();
+        $fileExt = $this->get('config')->getReader()->getFileExt();
         return  $this->getModuleDir() . '/config/module' . $fileExt;
     }
 

@@ -1,6 +1,8 @@
 <?php
 namespace Gears\Framework;
 
+use Gears\Framework\Application\Response;
+
 class Ajax
 {
     const MSG_ERROR = 'error';
@@ -54,11 +56,11 @@ class Ajax
     /**
      *
      */
-    public function sendResponse()
+    public function getResponse()
     {
-        echo json_encode([
+        return new Response(json_encode([
             'messages' => $this->messages,
             'data' => $this->data
-        ]);
+        ]));
     }
 }

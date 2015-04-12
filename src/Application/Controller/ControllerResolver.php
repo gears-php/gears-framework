@@ -2,37 +2,55 @@
 
 namespace Gears\Framework\Application\Controller;
 
-use Gears\Framework\Application\Application;
 use Gears\Framework\Application\Routing\Route;
 
 class ControllerResolver
 {
     /**
-     * @var Application
+     * Controller instance
+     * @var AbstractController
      */
-    protected $app;
+    private $controller;
 
     /**
-     * @param Application $app
+     * Action name
+     * @var string
      */
-    public function __construct(Application $app)
-    {
-        $this->app = $app;
-    }
+    private $action;
 
     /**
-     * Take the controller action definition from the route and resolve it into callable
+     * Take the controller action definition from the route and resolve it into controller instance and action name
      * @param Route $route
-     * @return array|bool
+     * @return bool Whether the given route was successfully resolved
      */
-    public function getController(Route $route)
+    public function resolve(Route $route)
     {
         if ($handler = $route->getHandlerDefinition()) {
             list($module, $controller, $action) = explode(':', $handler);
-            $className = implode('\\', [$module, 'Controller', $controller . 'Controller']);
-            return [new $className($this->app), "{$action}Action"];
+            $class = implode('\\', [$module, 'Controller', $controller . 'Controller']);
+            $this->controller = new $class;
+            $this->action = $action . 'Action';
+            return true;
         }
 
         return false;
+    }
+
+    /**
+     * Get controller instance
+     * @return AbstractController
+     */
+    public function getController()
+    {
+        return $this->controller;
+    }
+
+    /**
+     * Get action name
+     * @return string
+     */
+    public function getAction()
+    {
+        return $this->action;
     }
 }
