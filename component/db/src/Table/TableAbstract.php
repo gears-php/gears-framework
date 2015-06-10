@@ -7,8 +7,8 @@
  */
 namespace Gears\Db\Table;
 
-use Gears\Db\Table\Relation\Through as ThroughRelation;
-use Gears\Db\Table\Relation\ForeignKey as ForeignKeyRelation;
+use Gears\Db\Table\Relation\HasOneRelation;
+use Gears\Db\Table\Relation\HasManyRelation;
 use Gears\Db\Table\Relation\RelationAbstract;
 use Gears\Db\Adapter\AdapterAbstract;
 use Gears\Db\Query;
@@ -47,8 +47,7 @@ abstract class TableAbstract
 
     /**
      * Stores objects of all table relations to other tables
-     * @see TableRelation
-     * @var array
+     * @var RelationAbstract[]
      */
     protected $relations = [];
 
@@ -79,12 +78,58 @@ abstract class TableAbstract
     }
 
     /**
-     * Fetch rows using current query configuration
-     * @return array Result row set
+     * Get all table relations
+     * @return Relation\RelationAbstract[]
      */
-    public function fetchRows()
+    public function getRelations()
     {
-        return $this->getQuery()->exec()->fetchAll();
+        return $this->relations;
+    }
+
+    /**
+     * Return table relation object representation. Internally
+     * creates relation from metadata if not yet done
+     * @param string $relationName Table relation name
+     * @return RelationAbstract
+     * @throws \RuntimeException
+     * @throws \InvalidArgumentException
+     */
+    public function getRelation($relationName)
+    {
+        if (isset($this->relations[$relationName])) {
+            $rel = &$this->relations[$relationName];
+
+            if (is_array($rel)) { // create relation for the first time
+                switch ($rel['type']) {
+                    case 'hasOne':
+                        $rel = new HasOneRelation($relationName, $this, $this->relations[$relationName]);
+                        break;
+
+                    case 'hasMany':
+                        $rel = new HasManyRelation($relationName, $this, $this->relations[$relationName]);
+                        break;
+
+                    default:
+                        throw new \RuntimeException(sprintf('The type of "%s" relation is unrecognized or not set', $relationName));
+                }
+            }
+
+            return $rel;
+        } else {
+            throw new \InvalidArgumentException(sprintf('Relation with the "%s" name was not founded', $relationName));
+        }
+    }
+
+    /**
+     * Fetch all rows using current query configuration
+     * @param Query $query
+     * @return array
+     */
+    public function fetchAll(Query $query = null)
+    {
+        $query = $query ?: $this->getQuery();
+
+        return $query->exec()->fetchAll();
     }
 
     /**
@@ -106,7 +151,8 @@ abstract class TableAbstract
     {
         $this->getQuery()->limit(--$pageNumber * $rowsPerPage, $rowsPerPage);
         $this->getQuery()->calcFoundRows();
-        return $this->fetchRows();
+
+        return $this->fetchAll();
     }
 
     /**
@@ -157,7 +203,7 @@ abstract class TableAbstract
 
             // add data of relations
             foreach ($relations as $relationName => $relation) {
-                $relation = $this->getRelationObject($relationName);
+                $relation = $this->getRelation($relationName);
                 $relation->addData($row);
             }
         }
@@ -248,6 +294,7 @@ abstract class TableAbstract
     public function select($field, $alias = null)
     {
         $this->getQuery()->select($this->getFieldName($field), $alias, $this->getTableName());
+
         return $this;
     }
 
@@ -284,7 +331,7 @@ abstract class TableAbstract
     public function with($relationName, $withFields = true)
     {
         if (isset($this->relations[$relationName])) {
-            $relation = $this->getRelationObject($relationName);
+            $relation = $this->getRelation($relationName);
             $relation->addTo($this);
 
             // we need to select some fields from the joined table
@@ -410,36 +457,5 @@ abstract class TableAbstract
     private function getFieldName($alias)
     {
         return isset($this->tableFields[$alias]) ? $this->tableFields[$alias] : $alias;
-    }
-
-    /**
-     * Create and return relation object from metadata (if it is not created yet)
-     * @param string $relationName Table relation name
-     * @return RelationAbstract
-     * @throws \LogicException
-     * @throws \InvalidArgumentException
-     */
-    private function getRelationObject($relationName)
-    {
-        if (isset($this->relations[$relationName])) {
-            $rel = & $this->relations[$relationName];
-
-            if (is_array($rel)) { // create relation for the first time
-                if (isset($rel['foreign'])) {
-                    $rel = new ForeignKeyRelation($this, $this->relations[$relationName]);
-                } elseif (isset($rel['through'])) {
-                    $rel = new ThroughRelation($this, $this->relations[$relationName]);
-                } else {
-                    $msg = 'The "%s" relation definition is missing one of supported relation types: %s';
-                    throw new \LogicException(sprintf($msg, $relationName, implode(', ', ['foreign', 'through'])));
-                }
-
-                $rel->setName($relationName);
-            }
-
-            return $rel;
-        } else {
-            throw new \InvalidArgumentException(sprintf('Relation with the "%s" name was not founded', $relationName));
-        }
     }
 }

@@ -19,56 +19,49 @@ abstract class RelationAbstract
     protected static $tables = [];
 
     /**
-     * Relation table
+     * Relation referencing (target) table
      * @var TableAbstract
      */
     protected $table;
 
     /**
-     * Relation owner table
+     * Relation owner (master) table
      * @var TableAbstract
      */
-    protected $owner;
+    protected $ownerTable;
 
     /**
-     * Name of the current relation
+     * Relation name
      * @var string
      */
-    protected $name = '';
+    protected $name;
 
     /**
      * Construct table relation using the given metadata
+     * @param string $relationName
      * @param TableAbstract $owner Relation owning table
      * @param array $metadata
      */
-    public function __construct(TableAbstract $owner, array $metadata)
+    public function __construct($relationName, TableAbstract $owner, array $metadata)
     {
-        $tableClassName = $metadata['class'];
+        $this->name = $relationName;
 
-        // build full relation table class name using namespace of the relation owner table class
-        if (false === strpos($tableClassName, '\\')) {
-            $tableClassName = preg_replace('/(\w+)$/', ucfirst($tableClassName), get_class($owner));
+        if (!isset($metadata['class'])) {
+            throw new \RuntimeException(sprintf('Relation `class` property not found for "%s"', $this->name));
         }
+
+        $tableClassName = $metadata['class'];
 
         if (!isset(self::$tables[$tableClassName])) {
             self::$tables[$tableClassName] = new $tableClassName($owner->getDb());
         }
 
-        $this->owner = $owner;
         $this->table = self::$tables[$tableClassName];
+        $this->ownerTable = $owner;
     }
 
     /**
-     * Set relation name
-     * @param string $name
-     */
-    public function setName($name)
-    {
-        $this->name = $name;
-    }
-
-    /**
-     * Get the relation table
+     * Get the relation target table
      * @return TableAbstract
      */
     public function getTable()

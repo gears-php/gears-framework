@@ -10,14 +10,14 @@ namespace Gears\Db\Table\Relation;
 use Gears\Db\Table\TableAbstract;
 
 /**
- * Object relation of some particular table to another one through the foreign key field
+ * Object relation of some particular table to another one via the foreign key field
  * @package    Gears\Db
  * @subpackage Database
  */
-class ForeignKey extends RelationAbstract
+class HasOneRelation extends RelationAbstract
 {
     /**
-     * Primary key of the relation foreign table
+     * Primary key of the relation target table
      * @var string
      */
     protected $primaryKey = 'id';
@@ -26,19 +26,28 @@ class ForeignKey extends RelationAbstract
      * Foreign key of the relation owner table
      * @var string
      */
-    protected $foreignKey = '';
+    protected $foreignKey;
 
     /**
      * {@inheritdoc}
      */
-    public function __construct(TableAbstract $owner, array $metadata)
+    public function __construct($relationName, TableAbstract $owner, array $metadata)
     {
-        parent::__construct($owner, $metadata);
+        parent::__construct($relationName, $owner, $metadata);
         $this->foreignKey = $metadata['foreign'];
 
         if (isset($metadata['primary'])) {
             $this->primaryKey = $metadata['primary'];
         }
+    }
+
+    /**
+     * Get foreign key value
+     * @return string
+     */
+    public function getForeignKey()
+    {
+        return $this->foreignKey;
     }
 
     /**
