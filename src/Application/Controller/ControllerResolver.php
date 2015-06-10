@@ -30,6 +30,7 @@ class ControllerResolver
             $class = implode('\\', [$module, 'Controller', $controller . 'Controller']);
             $this->controller = new $class;
             $this->action = $action . 'Action';
+
             return true;
         }
 

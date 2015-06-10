@@ -4,7 +4,7 @@ namespace Gears\Framework\Application;
 
 use ReflectionClass;
 
-class AbstractModule
+abstract class AbstractModule
 {
     use ServiceAware;
 
@@ -20,7 +20,8 @@ class AbstractModule
     public function getConfigFile()
     {
         $fileExt = $this->get('config')->getReader()->getFileExt();
-        return  $this->getModuleDir() . '/config/module' . $fileExt;
+
+        return $this->getModuleDir() . '/config/module' . $fileExt;
     }
 
     /**
@@ -30,15 +31,15 @@ class AbstractModule
     public function register()
     {
         ClassLoader::register($this->getClassInfo()->getNamespaceName(), $this->getModuleDir() . '/src/');
+
         return $this;
     }
 
     /**
-     * Custom module loading code
+     * Concrete module loading. Register your module specific services
+     * and do other preparations in this method
      */
-    public function load()
-    {
-    }
+    abstract public function load();
 
     /**
      * Get module base directory
