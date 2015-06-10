@@ -91,8 +91,7 @@ class HasManyRelation extends RelationAbstract
 
     /**
      * Find hasOne relation by its target class inside joint table
-     * @param TableAbstract $table
-     * @param string $targetTable
+     * @param TableAbstract $targetTable
      * @return HasOneRelation
      */
     protected function getJointTableRelation($targetTable)
