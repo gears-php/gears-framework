@@ -95,6 +95,7 @@ class Query
         } else {
             $this->selectSingle($field, $alias, $table);
         }
+
         return $this;
     }
 
@@ -109,6 +110,7 @@ class Query
     public function selectCount($field, $alias = null, $table = null)
     {
         $this->selectSingle(['count' => $field], $alias, $table);
+
         return $this;
     }
 
@@ -157,6 +159,7 @@ class Query
     public function selectAll()
     {
         $this->select[] = '*';
+
         return $this;
     }
 
@@ -175,7 +178,7 @@ class Query
         }
 
         $this->from[] = $table;
-        
+
         return $this;
     }
 
@@ -207,6 +210,7 @@ class Query
             $this->db->escapeIdentifier($baseTable),
             $this->db->escapeIdentifier($baseField)
         );
+
         return $this;
     }
 
@@ -222,6 +226,7 @@ class Query
     public function leftJoin($joinTable, $joinField, $baseTable, $baseField)
     {
         $this->join($joinTable, $joinField, $baseTable, $baseField, 'left');
+
         return $this;
     }
 
@@ -233,6 +238,7 @@ class Query
     public function where(WhereAbstract $where)
     {
         $this->where = $where;
+
         return $this;
     }
 
@@ -264,6 +270,7 @@ class Query
             }
             $this->group[] = $field;
         }
+
         return $this;
     }
 
@@ -297,6 +304,7 @@ class Query
                 $this->order[] = rtrim($this->db->escapeIdentifier($field) . ' ' . strtoupper($sort));
             }
         }
+
         return $this;
     }
 
@@ -310,6 +318,7 @@ class Query
     {
         // @todo move the limit clause to each specific db adapter implementation: $db->getLimitClause()
         $this->limit = sprintf('LIMIT %d,%d', $offset, $rowCount);
+
         return $this;
     }
 
@@ -319,6 +328,7 @@ class Query
     public function calcFoundRows()
     {
         $this->selectOptions .= ' SQL_CALC_FOUND_ROWS ';
+
         return $this;
     }
 

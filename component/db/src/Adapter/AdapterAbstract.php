@@ -63,6 +63,7 @@ abstract class AdapterAbstract implements ArrayAccess
     public function prepare($query)
     {
         $this->statement = $this->connection->prepare(($this->lastQuery = $query) . '');
+
         return $this;
     }
 
@@ -79,6 +80,7 @@ abstract class AdapterAbstract implements ArrayAccess
         } catch (PDOException $e) {
             throw new \RuntimeException('Error executing the query: ' . $this->lastQuery, 0, $e);
         }
+
         return $this;
     }
 
@@ -91,46 +93,40 @@ abstract class AdapterAbstract implements ArrayAccess
     public function query($query, array $params = [])
     {
         $this->prepare($query)->execute($params);
-        // by default each fetched row will be return as an associative array
-        $this->statement->setFetchMode(PDO::FETCH_ASSOC);
+
         return $this;
     }
 
     /**
      * Fetch multiple rows
+     * @param int $fetchStyle
      * @return array Array of rows
      */
-    public function fetchAll()
+    public function fetchAll($fetchStyle = PDO::FETCH_ASSOC)
     {
-        return $this->statement->fetchAll();
+        return $this->statement->fetchAll($fetchStyle);
     }
 
     /**
      * Fetch multiple rows grouped by the specific column
+     * @param int $fetchStyle
      * @return array Array of rows
      */
-    public function fetchAssoc()
+    public function fetchAssoc($fetchStyle = PDO::FETCH_ASSOC)
     {
-        $rows = $this->statement->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_ASSOC);
+        $rows = $this->statement->fetchAll(PDO::FETCH_GROUP | $fetchStyle);
+
         return array_map('reset', $rows);
     }
 
     /**
-     * Fetch a single cell value from a first result row
-     * @return string Table cell value or false otherwise
-     */
-    public function fetchOne()
-    {
-        return $this->statement->fetchColumn();
-    }
-
-    /**
      * Fetch a first result row
+     * @param int $fetchStyle
      * @return array
      */
-    public function fetchRow()
+    public function fetchRow($fetchStyle = PDO::FETCH_ASSOC)
     {
-        return $this->statement->fetch();
+        return $this->statement->fetch($fetchStyle);
     }
 
     /**
@@ -149,6 +145,15 @@ abstract class AdapterAbstract implements ArrayAccess
     public function fetchPairs()
     {
         return $this->statement->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+
+    /**
+     * Fetch a single cell value from a first result row
+     * @return mixed Table cell value or false otherwise
+     */
+    public function fetchOne()
+    {
+        return $this->statement->fetchColumn();
     }
 
     /**
@@ -261,6 +266,7 @@ abstract class AdapterAbstract implements ArrayAccess
         });
 
         $sql = sprintf('UPDATE %s SET %s WHERE %s', $tableName, implode(',', $data), $where->toString());
+
         return $this->connection->exec($sql);
     }
 
@@ -276,6 +282,7 @@ abstract class AdapterAbstract implements ArrayAccess
             $where = (new WhereAnd($this))->fromArray($where);
         }
         $sql = sprintf('DELETE FROM %s WHERE %s', $tableName, $where->toString());
+
         return $this->connection->exec($sql);
     }
 
@@ -308,6 +315,7 @@ abstract class AdapterAbstract implements ArrayAccess
         if (is_string($offset)) {
             return $this->get($offset);
         }
+
         return null;
     }
 
@@ -335,6 +343,7 @@ abstract class AdapterAbstract implements ArrayAccess
     protected function createConnection(array $config, array $options = [])
     {
         $dsn = "{$config['driver']}:host={$config['host']};dbname={$config['dbname']}";
+
         return new PDO($dsn, $config['user'], $config['pass'], $options);
     }
 }
