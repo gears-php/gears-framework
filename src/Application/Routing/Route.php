@@ -99,6 +99,15 @@ class Route
     }
 
     /**
+     * Get all route parameters
+     * @return \stdClass
+     */
+    public function getParams()
+    {
+        return (object)$this->params;
+    }
+
+    /**
      * Process match pattern in order to get additional info like HTTP method limitation
      * @param string $matchPattern
      * @return string Final processed matching patter
