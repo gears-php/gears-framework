@@ -76,7 +76,8 @@ class Router
                         // remember matched placeholder names and their resolver functions
                         foreach ($matchedPlaceholders[1] as $placeholder) {
                             // remember placeholder by its position inside the route
-                            $placeholders[strpos($route->getMatchPattern(), $placeholder)] = ['name' => $placeholder, 'fn' => $fn];
+                            $placeholders[strpos($route->getMatchPattern(), $placeholder)]
+                                = ['name' => $placeholder, 'fn' => $fn];
                         }
                     }
 
@@ -115,8 +116,7 @@ class Router
     }
 
     /**
-     * Regexps to be put instead of route pattern placeholder in order to match
-     * real url values
+     * Regexps to be put instead of route pattern placeholder in order to match real url values
      * @return array
      */
     protected function getMatchers()
@@ -139,12 +139,12 @@ class Router
         return [
             # /:(id) => /123
             '#/:(\w+)#' => function ($name, $value, Route $route) {
-                    $route->addParam($name, $value);
-                },
+                $route->addParam($name, $value);
+            },
 
             # /(*) => /anything/else/here
             '#(\*)#' => function () {
-                }
+            }
         ];
     }
 }
