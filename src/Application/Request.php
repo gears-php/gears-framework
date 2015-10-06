@@ -94,9 +94,7 @@ class Request
      */
     public function getJson()
     {
-        $headers = getallheaders();
-
-        if (isset($headers['Content-Type']) && $headers['Content-Type'] == 'application/json') {
+        if (isset($_SERVER['CONTENT_TYPE']) && $_SERVER['CONTENT_TYPE'] == 'application/json') {
             $decoded = json_decode(file_get_contents('php://input'));
 
             if (json_last_error() != JSON_ERROR_NONE) {
