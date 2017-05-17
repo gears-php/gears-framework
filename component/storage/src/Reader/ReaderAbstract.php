@@ -3,18 +3,23 @@
  * @author deniskrasilnikov86@gmail.com
  */
 namespace Gears\Storage\Reader;
+
 use Gears\Storage\Reader\Exception\FileNotFound;
 
 /**
- * Abstract reader which should be extended by any concrete configuration file reader
+ * Abstract reader which should be extended by any concrete data file reader
+ *
  * @package Gears\Storage
  */
 abstract class ReaderAbstract
 {
     /**
-     * Take the file path and return configuration tree array
-     * @param string $file Configuration file full name
-     * @return array Configuration tree
+     * Take the file path and return data tree array
+     *
+     * @param string $file Data file full name
+     *
+     * @return array Storage data tree
+     *
      * @throws FileNotFound
      */
     public function read($file)
@@ -27,15 +32,18 @@ abstract class ReaderAbstract
     }
 
     /**
-     * Return configuration file extension
+     * Return data file extension
+     *
      * @return string
      */
     abstract public function getFileExt();
 
     /**
-     * Parse the given file and return configuration tree
-     * @param string $file Configuration file full name
-     * @return array Configuration tree
+     * Parse the given file and return data tree
+     *
+     * @param string $file Data file full name
+     *
+     * @return array Storage data tree
      */
     abstract protected function parseFile($file);
 }

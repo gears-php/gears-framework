@@ -8,25 +8,29 @@ use Gears\Storage\Reader\ReaderAbstract;
 use Gears\Storage\Reader\Yaml;
 
 /**
- * A general-purpose runtime storage solution
+ * Simple key-value runtime storage solution
+ *
  * @package    Gears\Storage
  */
 class Storage implements \ArrayAccess
 {
     /**
      * Internal storage
+     *
      * @var array
      */
     protected $storage;
 
     /**
      * File reader instance
+     *
      * @var ReaderAbstract
      */
     protected $reader;
 
     /**
      * Storage can be initialized with a given tree data structure
+     *
      * @param array (optional) $tree
      */
     public function __construct($tree = null)
@@ -36,6 +40,7 @@ class Storage implements \ArrayAccess
 
     /**
      * Set file reader
+     *
      * @param ReaderAbstract $reader
      */
     public function setReader(ReaderAbstract $reader)
@@ -45,6 +50,7 @@ class Storage implements \ArrayAccess
 
     /**
      * Get reader instance. Creates default reader if none exists
+     *
      * @return ReaderAbstract File reader object
      */
     public function getReader()
@@ -59,8 +65,10 @@ class Storage implements \ArrayAccess
     /**
      * Load some data tree from file and store it internally for future usage. Optionally put it into
      * sub-node defined by second parameter. Otherwise it will fully replace existing internal storage
+     *
      * @param string $file
      * @param string (optional) $path Dot separated path of the node under which to store the loaded data
+     *
      * @return array Loaded data tree
      */
     public function load($file, $path = null)
@@ -78,8 +86,10 @@ class Storage implements \ArrayAccess
 
     /**
      * Same as {@see read()} but returns a storage instance
+     *
      * @param string $file
      * @param string (optional) $node
+     *
      * @return Storage
      */
     public function readObj($file, $node = null)
@@ -90,8 +100,10 @@ class Storage implements \ArrayAccess
     /**
      * Read and return the full file data tree or its sub-node. Please note that this function
      * does not save the loaded data node internally. Use {@link load()} for this.
+     *
      * @param string $file Path to the file
      * @param string (optional) $path Dot separated path to the sub-node to be returned
+     *
      * @return array Data tree
      */
     public function read($file, $path = null)
@@ -110,6 +122,7 @@ class Storage implements \ArrayAccess
 
     /**
      * Merge current storage data with the given one
+     *
      * @param array|string|Storage $mixed Data tree | data tree file name | Storage entity to be merged
      */
     public function merge($mixed)
@@ -129,8 +142,10 @@ class Storage implements \ArrayAccess
 
     /**
      * Same as {@link get()} but returns a new storage instance
+     *
      * @param string $path
      * @param array (optional) $storage
+     *
      * @return Storage
      */
     public function getObj($path, $storage = null)
@@ -141,14 +156,17 @@ class Storage implements \ArrayAccess
     /**
      * Get storage node value. If nothing passed returns full storage data tree.
      * If no property found returns NULL. Example:
+     *
      * <code>
      * $dbUsername = $storage->get('server.db.username');
      * # which equals to:
      * $cfg = $storage->get();
      * $dbUsername = $cfg['server']['db']['username'];
      * </code>
+     *
      * @param string (optional) $path Path to the node separated by dots
      * @param array (optional) $storage Custom storage tree to get value from. Inner storage is used by default
+     *
      * @return array|mixed|NULL Full storage data tree | found storage node value | NULL if nothing is found
      */
     public function get($path = null, $storage = null)
@@ -176,7 +194,9 @@ class Storage implements \ArrayAccess
 
     /**
      * Return a first-level node value
+     *
      * @param string $prop
+     *
      * @return mixed
      */
     public function __get($prop)
@@ -186,14 +206,17 @@ class Storage implements \ArrayAccess
 
     /**
      * Set storage node value (new or overwrite existent). Example:
+     *
      * <code>
      * $storage->set('server.db.username', 'john doe');
      * # which equals to:
      * $cfg = $storage->get();
      * $cfg['server']['db']['username'] = 'john doe';
      * </code>
+     *
      * @param string $path Path to the data tree node separated by dots
      * @param mixed $value
+     *
      * @return void
      */
     public function set($path, $value)
@@ -213,7 +236,9 @@ class Storage implements \ArrayAccess
 
     /**
      * Remove node from storage
+     *
      * @param string $path
+     *
      * @return void
      */
     public function del($path)
@@ -238,7 +263,9 @@ class Storage implements \ArrayAccess
 
     /**
      * Wrapper for the {@see del()}
+     *
      * @param string $path
+     *
      * @return void
      */
     public function rem($path)
@@ -248,7 +275,9 @@ class Storage implements \ArrayAccess
 
     /**
      * Check whether the storage node exists
+     *
      * @param string $path Dot separated path to the node inside the storage data tree
+     *
      * @return boolean
      */
     public function offsetExists($path)
@@ -271,7 +300,9 @@ class Storage implements \ArrayAccess
 
     /**
      * Get storage node value. See {@see get()}
+     *
      * @param string $path
+     *
      * @return mixed
      */
     public function offsetGet($path)
@@ -281,8 +312,10 @@ class Storage implements \ArrayAccess
 
     /**
      * Set storage node value. See {@see set()}
+     *
      * @param string $path
      * @param mixed $value
+     *
      * @return void
      */
     public function offsetSet($path, $value)
@@ -292,7 +325,9 @@ class Storage implements \ArrayAccess
 
     /**
      * Remove storage node. See {@see del()}
+     *
      * @param string $path
+     *
      * @return void
      */
     public function offsetUnset($path)
