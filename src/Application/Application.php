@@ -72,6 +72,7 @@ class Application extends Dispatcher
      */
     public function handle(Request $request)
     {
+        $this->set('request', $request);
         $router = new Router;
         $router->addRoutingConfiguration($this->config['routing']);
         $route = $router->match($request->init());
@@ -83,20 +84,25 @@ class Application extends Dispatcher
 
             $controller = $controllerResolver->getController();
             $controller->setServices($this->services);
-            $controllerResult = call_user_func_array([$controller, $controllerResolver->getAction()], [
-                $request->getParams()
+            /** @var Response $response */
+            $response = call_user_func_array([$controller, $controllerResolver->getAction()], [
+                $route->getParams()
             ]);
+
+            if (!$response instanceof Response) {
+                throw new \RuntimeException('Controller action must return response');
+            }
 
             // after requested action is invoked event
             $this->dispatch('afterAction');
 
             // special event for rendering step
-            $this->dispatch('render', [$controllerResult]);
+            $this->dispatch('render', [$response]);
 
             // before HTTP response event
             $this->dispatch('beforeResponse');
 
-            $controllerResult->flush();
+            $response->flush();
 
             // after response is done
             $this->dispatch('afterResponse');
