@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gears\Framework\Application\Routing;
 
 /**
@@ -9,35 +11,37 @@ namespace Gears\Framework\Application\Routing;
  */
 class Route
 {
+    public const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
+
     /**
      * Route unique name
-     * @var string
      */
-    protected $name;
+    private string $name;
 
     /**
      * Route params parsed from the matched request uri
-     * @var array
      */
-    protected $params = [];
+    private array $params = [];
+
+    /**
+     * Additional attributes related to this route
+     */
+    private array $attributes = [];
 
     /**
      * Route pattern for request uri matching
-     * @var string
      */
-    protected $matchPattern;
+    private string $matchPattern;
 
     /**
-     * The definition of the handler which should dispatched for current route
-     * @var string
+     * The definition of the handler which should be dispatched for current route
      */
-    protected $handlerDefinition;
+    private string $handlerDefinition;
 
     /**
      * List of http methods route is restricted to
-     * @var array
      */
-    protected $httpMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
+    private array $httpMethods = [];
 
     /**
      * Initialize routing rule
@@ -81,46 +85,53 @@ class Route
 
     /**
      * Get list of allowed http methods
-     * @return array
      */
-    public function getHttpMethods()
+    public function getAllowedMethods(): array
     {
         return $this->httpMethods;
     }
 
     /**
-     * Add routing parameter
-     * @param string $name
-     * @param mixed $value
+     * Set routing url parameter
      */
-    public function addParam($name, $value)
+    public function setParam($name, $value)
     {
         $this->params[$name] = $value;
     }
 
     /**
-     * Get all route parameters
-     * @return \stdClass
+     * Get all route url parameters
      */
-    public function getParams()
+    public function getParams(): array
     {
-        return (object)$this->params;
+        return $this->params;
+    }
+
+    public function setAttribute(string $name, mixed $value)
+    {
+        $this->attributes[$name] = $value;
+    }
+
+    public function getAttribute(string $name): mixed
+    {
+        return $this->attributes[$name] ?? null;
     }
 
     /**
-     * Process match pattern in order to get additional info like HTTP method limitation
+     * Process match pattern in order to get additional info like HTTP methods limitation
+     *
      * @param string $matchPattern
      * @return string Final processed matching patter
      */
-    protected function processMatchPattern($matchPattern)
+    protected function processMatchPattern(string $matchPattern)
     {
         // matching allowed http methods (if any)
-        $methodsRegex = sprintf('/(\b(%s)\b)+/', implode('|', $this->httpMethods));
+        $methodsRegex = sprintf('/(\b(%s)\b)+/', implode('|', self::METHODS));
         preg_match_all($methodsRegex, $matchPattern, $methods);
 
         if (count($methods[0])) {
             // limit allowed methods
-            $this->httpMethods = array_intersect($this->httpMethods, $methods[0]);
+            $this->httpMethods = array_intersect(self::METHODS, $methods[0]);
             $matchPattern = trim(str_replace(implode(' ', $methods[0]), '', $matchPattern));
         }
 

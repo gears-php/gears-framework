@@ -5,6 +5,9 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
+
+declare(strict_types=1);
+
 namespace Gears\Db\Table;
 
 use Gears\Db\Table\Relation\HasOneRelation;
@@ -23,25 +26,21 @@ abstract class TableAbstract
 {
     /**
      * Table name
-     * @var string
      */
     protected $tableName;
 
     /**
      * Table field set
-     * @var array
      */
     protected $tableFields = [];
 
     /**
      * Table primary key
-     * @var string
      */
     protected $primaryKey = 'id';
 
     /**
      * Default ORDER BY clause field set
-     * @var array
      */
     protected $orderBy = [null];
 
@@ -53,15 +52,13 @@ abstract class TableAbstract
 
     /**
      * Db adapter instance holder
-     * @var AdapterAbstract
      */
-    private $db;
+    private AdapterAbstract $db;
 
     /**
      * Table query instance
-     * @var Query
      */
-    private $query;
+    private Query $query;
 
     /**
      * Constructor
@@ -156,51 +153,28 @@ abstract class TableAbstract
     }
 
     /**
-     * Fetch a single row data by a given row id. Returns a simple property-value fields object.
+     * Fetch a single row data by given where clauses array. Returns a simple property-value fields object.
      * For each specific table field, a field alias (if defined in table metadata) is used as an object
      * property name under which to store the field value. Db field name itself used otherwise.
-     * By default replaces table foreign key fields with actual row data from relative tables accessed by relation name
-     * @param int|array $idOrWhere Row id or Where clause array to find row by
-     * @param array|string|bool $relations (optional) List by which to limit loaded relations. <i>false</i> to not load them at all
+     *
+     * @param array $where Row id or Where clause array to find row by
+     * @param array $relations (optional) List by which to limit loaded relations
+     *
      * @return object Simple property-value object
      */
-    public function fetchRow($idOrWhere, $relations = true)
+    public function fetchRowWhere(array $where, array $relations = []): ?object
     {
-        // primary key value given
-        if ($idOrWhere && is_scalar($idOrWhere)) {
-            $idOrWhere = [$this->primaryKey => intval($idOrWhere)];
-        }
+        $q = $this->createQuery()->select($this->tableFields, null, $this->getTableName());
+        $q->getWhere()->fromArray($where);
 
-        // yank db only if where present
-        if (is_array($idOrWhere)) {
-            // fetch all own table row data
-            $q = $this->createQuery()->select($this->tableFields, null, $this->getTableName());
-            $q->getWhere()->fromArray($idOrWhere);
-            $row = $q->exec()->fetchRow();
-        }
-
-        // no row data fetched, fill all fields with NULL value
-        if (empty($row)) {
-            foreach ($this->tableFields as $fieldKey => $fieldValue) {
-                $row[is_string($fieldKey) ? $fieldKey : $fieldValue] = null;
-            }
+        if (!$row = $q->exec()->fetchRow()) {
+            return null;
         }
 
         // load relation table rows
         if ($relations && count($this->relations)) {
-            // explode coma separated relations string
-            if (is_string($relations)) {
-                $relations = explode(',', $relations);
-            }
-
-            // no limitation array, use all relations
-            if (!is_array($relations)) {
-                $relations = $this->relations;
-            } else {
-                // limit table relations to use by given ones
-                $relations = array_intersect_key($this->relations, array_flip($relations));
-            }
-
+            // limit table relations to use by given ones
+            $relations = array_intersect_key($this->relations, array_flip($relations));
             // add data of relations
             foreach ($relations as $relationName => $relation) {
                 $relation = $this->getRelation($relationName);
@@ -212,11 +186,30 @@ abstract class TableAbstract
     }
 
     /**
-     * Get empty (dummy) table row
+     * Wrapper over the {@link fetchRowWhere()} in order fetch row by given primary key value.
      */
-    public function newRow()
+    public function fetchRow(int|string $id, array $relations = []): ?object
     {
-        return $this->fetchRow(0);
+        return $this->fetchRowWhere([$this->primaryKey => $id], $relations);
+    }
+
+    /**
+     * Create new empty data
+     */
+    public function new(): ?object
+    {
+        $row = [];
+
+        foreach ($this->tableFields as $fieldKey => $fieldValue) {
+            $row[is_string($fieldKey) ? $fieldKey : $fieldValue] = null;
+        }
+
+        // add empty data of relations
+        foreach ($this->relations as $relationName => $relation) {
+            $row[$relationName] = $this->getRelation($relationName)->getTable()->new();
+        }
+
+        return (object)$row;
     }
 
     /**
@@ -271,18 +264,15 @@ abstract class TableAbstract
      */
     public function update($data, $rowId)
     {
-        $table = $this->getDb()->escapeIdentifier($this->getTableName());
-        $this->getDb()->update($table, $data, [$this->primaryKey => $rowId]);
+        $this->getDb()->update($this->tableName, $data, [$this->primaryKey => $rowId]);
     }
 
     /**
      * Delete table record by a given id
-     * @param integer $rowId
      */
-    public function delete($rowId)
+    public function delete(int|string $rowId)
     {
-        $table = $this->getDb()->escapeIdentifier($this->getTableName());
-        $this->getDb()->delete($table, [$this->primaryKey => $rowId]);
+        $this->getDb()->delete($this->tableName, [$this->primaryKey => $rowId]);
     }
 
     /**
@@ -323,10 +313,13 @@ abstract class TableAbstract
      * Join current table with the relative one. By default all fields from
      * the joined table are selected but this can be limited using second parameter
      * (passing <i>false</i> will exclude all of joined fields)
+     *
      * @param string $relationName Name of the relation to be applied
      * @param array|string|bool $withFields (optional) List of fields to be selected from the relative table
-     * @throws \Exception Basic exception in case relation is not found
+     *
      * @return TableAbstract
+     * @throws \Exception Basic exception in case relation is not found
+     *
      */
     public function with($relationName, $withFields = true)
     {
@@ -334,12 +327,12 @@ abstract class TableAbstract
             $relation = $this->getRelation($relationName);
             $relation->addTo($this);
 
+            if (is_string($withFields)) {
+                $withFields = explode(',', $withFields);
+            }
+
             // we need to select some fields from the joined table
             if ($withFields) {
-                if (is_string($withFields)) {
-                    $withFields = explode(',', $withFields);
-                }
-
                 if ($relationFields = $relation->getTable()->getFields()) {
                     // add all default fields from joined table to current table selection query
                     foreach ($relationFields as $fieldAlias => $fieldName) {
@@ -349,14 +342,17 @@ abstract class TableAbstract
 
                         // restrict fields we are selecting from joined table
                         if (!is_array($withFields) || in_array($fieldAlias, $withFields)) {
-                            $this->getQuery()->select($fieldName, $relationName . '_' . $fieldAlias, $relationName);
+                            if (in_array($fieldAlias, $this->getFields())) {
+                                throw new \RuntimeException(sprintf('Ambiguous field `%s` in relation `%s`', $fieldAlias, $relationName));
+                            }
+
+                            $this->getQuery()->select($fieldName, $fieldAlias, $relationName);
                         }
                     }
-                } elseif (is_array($withFields)) {
-                    throw new \Exception(sprintf(get_called_class() . '::with() - The "%s" relation table has no fields defined', $relationName));
                 } else {
-                    // if no relation table fields set explicitly select all
-                    $this->getQuery()->select('*', null, $relationName);
+                    throw new \Exception(
+                        sprintf(get_called_class() . '::with() - The "%s" relation table has no fields defined', $relationName)
+                    );
                 }
             }
         } else {
@@ -386,18 +382,16 @@ abstract class TableAbstract
 
     /**
      * Get primary key name
-     * @return string
      */
-    public function getPrimaryKey()
+    public function getPrimaryKey(): string
     {
         return $this->primaryKey;
     }
 
     /**
      * Get default field set
-     * @return array
      */
-    public function getFields()
+    public function getFields(): array
     {
         return $this->tableFields;
     }
@@ -442,8 +436,7 @@ abstract class TableAbstract
     }
 
     /**
-     * Method to be extended by descendant table classes
-     * in case they require some initial preparations
+     * Method to be extended by descendant table classes in case they require some initial preparations
      */
     protected function init()
     {

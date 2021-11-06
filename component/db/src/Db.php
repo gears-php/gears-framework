@@ -5,6 +5,8 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
+declare(strict_types=1);
+
 namespace Gears\Db;
 
 use Gears\Db\Adapter\AdapterAbstract;
@@ -22,10 +24,11 @@ class Db
      * @param array $options Additional connection options
      * @return AdapterAbstract
      */
-    public static function connect(array $config, array $options = [])
+    public static function connect(array $config, array $options = []): AdapterAbstract
     {
         $driver = $config['driver'];
         $className = __NAMESPACE__ . '\\Adapter\\' . ucfirst(strtolower($driver));
+
         return new $className($config, $options);
     }
 }

@@ -50,10 +50,10 @@ class HasManyRelation extends RelationAbstract
 
     /**
      * With current relation type we are not able to use joins for
-     * fetching relational data within a single query of owning table
+     * fetching relational data within a single query of owning table.
      * {@inheritdoc}
      */
-    public function addTo(TableAbstract $table)
+    public function addTo(TableAbstract $table): void
     {
         throw new \RuntimeException('You can not perform this operation with hasMany relation');
     }

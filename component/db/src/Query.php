@@ -23,7 +23,7 @@ class Query
     /**
      * @var AdapterAbstract
      */
-    private $db;
+    protected $db;
 
     /**
      * @var string
@@ -61,9 +61,15 @@ class Query
     private $order = [];
 
     /**
-     * @var null
+     * @var string
      */
     private $limit;
+
+    /**
+     * Query parameters
+     * @var array
+     */
+    private $params = [];
 
     /**
      * Init query with the db adapter instance
@@ -83,7 +89,7 @@ class Query
      * @param string|array $field Field name or array of fields
      * @param string $alias (optional) Field alias
      * @param string $table (optional) Table name
-     * @return Query
+     * @return $this
      */
     public function select($field, $alias = null, $table = '')
     {
@@ -119,7 +125,7 @@ class Query
      * @param string|array $field Field name or [aggregate_function => field] mapping
      * @param string $alias (optional) Field alias
      * @param string $table (optional) Table name
-     * @return Query
+     * @return $this
      */
     public function selectSingle($field, $alias = null, $table = null)
     {
@@ -147,7 +153,7 @@ class Query
             $field .= ' AS ' . $this->db->escapeIdentifier($alias);
         }
 
-        $this->select[$field] = $field;
+        $this->select[] = $field;
 
         return $this;
     }
@@ -164,10 +170,21 @@ class Query
     }
 
     /**
+     * Remove all SELECT clause fields
+     * @return $this
+     */
+    public function noSelect()
+    {
+        $this->select = [];
+
+        return $this;
+    }
+
+    /**
      * Add FROM table
      * @param $table
      * @param string $alias
-     * @return Query
+     * @return $this
      */
     public function from($table, $alias = null)
     {
@@ -183,6 +200,17 @@ class Query
     }
 
     /**
+     * Remove all FROM clause tables
+     * @return $this
+     */
+    public function noFrom()
+    {
+        $this->from = [];
+
+        return $this;
+    }
+
+    /**
      * Add JOIN clause. Note that $joinTable alias (if given) will be used to qualify $joinField.
      * Table name is used otherwise. By default INNER JOIN is applied
      * @param string|array $joinTable Joined table name or [alias => name]
@@ -190,7 +218,7 @@ class Query
      * @param string $baseTable Basic table to join with
      * @param string $baseField Basic table field to join on
      * @param string (optional) $type Join type
-     * @return Query
+     * @return $this
      */
     public function join($joinTable, $joinField, $baseTable, $baseField, $type = 'inner')
     {
@@ -201,7 +229,8 @@ class Query
             $joinAlias = $joinTable;
         }
 
-        $this->join[] = sprintf('%s JOIN %s AS %s ON %s.%s = %s.%s',
+        $this->join[] = sprintf(
+            '%s JOIN %s AS %s ON %s.%s = %s.%s',
             strtoupper($type),
             $this->db->escapeIdentifier($joinTable),
             $this->db->escapeIdentifier($joinAlias),
@@ -221,7 +250,7 @@ class Query
      * @param string $joinField Joined table field
      * @param string $baseTable Basic table to join with
      * @param string $baseField Basic table field to join on
-     * @return Query
+     * @return $this
      */
     public function leftJoin($joinTable, $joinField, $baseTable, $baseField)
     {
@@ -231,9 +260,20 @@ class Query
     }
 
     /**
+     * Remove all JOIN clauses
+     * @return $this
+     */
+    public function noJoins()
+    {
+        $this->join = [];
+
+        return $this;
+    }
+
+    /**
      * Add a {@see WhereAbstract} object of WHERE clause
      * @param WhereAbstract $where
-     * @return Query
+     * @return $this
      */
     public function where(WhereAbstract $where)
     {
@@ -249,6 +289,17 @@ class Query
     public function getWhere()
     {
         return $this->where;
+    }
+
+    /**
+     * Remove WHERE clause object
+     * @return $this
+     */
+    public function noWhere()
+    {
+        $this->where = null;
+
+        return $this;
     }
 
     /**
@@ -275,6 +326,17 @@ class Query
     }
 
     /**
+     * Remove all GROUP BY clause conditions
+     * @return $this
+     */
+    public function noGroup()
+    {
+        $this->group = [];
+
+        return $this;
+    }
+
+    /**
      * Add a single field or array of fields to the ORDER BY clause. Example:
      * <code>
      * $query->order('lastName', Query::ASC);
@@ -282,7 +344,7 @@ class Query
      * </code>
      * @param string|array $field Field name or array of fields to order
      * @param string $sort (optional) Sort direction
-     * @return Query
+     * @return $this
      */
     public function order($field, $sort = self::ASC)
     {
@@ -309,15 +371,37 @@ class Query
     }
 
     /**
-     * Add selection limit clause
-     * @param $offset
-     * @param $rowCount
-     * @return Query
+     * Remove all ORDER BY clause conditions
+     * @return $this
      */
-    public function limit($offset, $rowCount)
+    public function noOrder()
+    {
+        $this->order = [];
+
+        return $this;
+    }
+
+    /**
+     * Add selection limit clause
+     * @param int $offset
+     * @param int $rowCount
+     * @return $this
+     */
+    public function limit(int $offset, int $rowCount)
     {
         // @todo move the limit clause to each specific db adapter implementation: $db->getLimitClause()
         $this->limit = sprintf('LIMIT %d,%d', $offset, $rowCount);
+
+        return $this;
+    }
+
+    /**
+     * Remove LIMIT clause
+     * @return $this
+     */
+    public function noLimit()
+    {
+        $this->limit = null;
 
         return $this;
     }
@@ -333,6 +417,19 @@ class Query
     }
 
     /**
+     * Bind query parameter to a specific positional placeholder
+     * @param int $idx
+     * @param mixed $value
+     * @return $this
+     */
+    public function bind(int $idx, $value)
+    {
+        $this->params[$idx] = $value;
+
+        return $this;
+    }
+
+    /**
      * Execute query and return db adapter
      * @return AdapterAbstract
      */
@@ -342,7 +439,7 @@ class Query
             $this->selectAll();
         }
 
-        return $this->db->query($this);
+        return $this->db->query($this, $this->params);
     }
 
     /**

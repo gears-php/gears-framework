@@ -1,7 +1,6 @@
 <?php
 namespace Gears\Framework\View;
 
-use Gears\Framework\View\Parser;
 use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 
 /**
@@ -58,8 +57,13 @@ class Template
 
     /**
      * Nonexistent method call is treated as view helper method call
+     *
+     * @param string $method
+     * @param array $params
+     *
+     * @return string
      */
-    public function __call($method, $params)
+    public function __call(string $method, array $params)
     {
         return $this->view->helper($method, $params);
     }
@@ -75,17 +79,20 @@ class Template
 
     /**
      * Set path to the template file
+     *
+     * @param string $path
      */
-    public function setPath($path)
+    public function setPath(string $path)
     {
         $this->path = $path;
     }
 
     /**
      * Get template name
+     *
      * @return string
      */
-    public function getName()
+    public function getName(): string
     {
         return $this->name;
     }
@@ -177,8 +184,10 @@ class Template
 
     /**
      * Start template block
+     *
+     * @param array $args
      */
-    private function tBlock($args)
+    protected function tBlock(array $args)
     {
         $this->blocksOpened[] = $args['name'];
         ob_start();
@@ -187,7 +196,7 @@ class Template
     /**
      * Close template block
      */
-    private function tEndblock()
+    protected function tEndblock()
     {
         $currentBlock = array_pop($this->blocksOpened);
 
@@ -204,11 +213,16 @@ class Template
         echo $this->blocks[$currentBlock];
     }
 
+    protected function tCall(array $args)
+    {
+        echo $this->view->extension($args['name']);
+    }
+
     /**
      * Include another template into current template
      * @param array $args
      */
-    private function tInclude(array $args)
+    protected function tInclude(array $args)
     {
         echo $this->view->load($args['name'])->assign($this->vars)->render();
     }
@@ -217,7 +231,7 @@ class Template
      * Extend template with current one
      * @param array $args
      */
-    private function tExtends(array $args)
+    protected function tExtends(array $args)
     {
         $this->parent($this->view->load($args['name']));
     }
@@ -227,7 +241,7 @@ class Template
      * @param array $args
      * @return string
      */
-    private function tCss(array $args)
+    protected function tCss(array $args)
     {
         $args['href'] = $this->url($args['src']); // Style file web url
         unset($args['src']);
@@ -240,18 +254,18 @@ class Template
      * @param array $args
      * @return string
      */
-    private function tJs(array $args)
+    protected function tJs(array $args)
     {
         $args['src'] = $this->url($args['src']); // Script file web url
         return sprintf('<script type="text/javascript"%s></script>', $this->getTagAttributesString($args));
     }
 
     /**
-     * Invoke a specific partial template per each variables set inside collection
      * @param array $args
+     *
      * @return string
      */
-    private function tImage(array $args)
+    protected function tImage(array $args)
     {
         $args['src'] = $this->url($args['src']); // Image web url
         return sprintf('<img%s />', $this->getTagAttributesString($args));
@@ -262,7 +276,7 @@ class Template
      * @param array $args
      * @return string
      */
-    private function tRepeat($args)
+    protected function tRepeat($args)
     {
         // partial template variables collection
         $collection = $this->vars[ltrim($args['source'], '$')];
@@ -323,8 +337,12 @@ class Template
 
     /**
      * Return full url for a given path
+     *
+     * @param string $path
+     *
+     * @return string
      */
-    private function url($path)
+    private function url(string $path): string
     {
         if (0 === strpos($path, '/')) {
             return $path;
@@ -355,12 +373,14 @@ class Template
 
     /**
      * Return script with basic js application constants under 'app' namespace
+     *
      * @return string
      */
     private function appJs()
     {
+        # todo move to app level template (or block)
         return sprintf('<script type="text/javascript">var app = app || {};%s</script>',
-            $this->jsVars(['uri' => '', 'img_uri' => '/img/'], 'app')
+            $this->jsVars(['uri' => '', 'img_uri' => '/img'], 'app')
         );
     }
 
@@ -408,7 +428,10 @@ class Template
 
     /**
      * Process the given exception by adding more info
+     *
      * @throw \RuntimeException More detailed template exception
+     *
+     * @param \Exception $e
      */
     private function exception(\Exception $e)
     {

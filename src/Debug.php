@@ -5,6 +5,7 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
+
 namespace Gears\Framework;
 
 /**
@@ -15,14 +16,12 @@ namespace Gears\Framework;
  */
 class Debug
 {
-    const __SCRIPTTIME__ = '__SCRIPTTIME__';
+    private const SCRIPT_LABLE = '__SCRIPTTIME__';
 
     /**
      * Patterns for preg replacements
-     *
-     * @var array
      */
-    private static $_pattern = array(
+    private static array $pattern = array(
         "/<br\s?\/>/", // <br /> tag
         "/<\/?\w+>/i" // other tags
     );
@@ -32,35 +31,27 @@ class Debug
      *
      * default    - no cleaning of debug info
      * clean    - clean for `console`. All html tags are stripped while <br /> is replaced with "\n"
-     *
-     * @var array
      */
-    private static $_replacements = array(
+    private static array $replacements = array(
         'default' => [],
         'clean' => array("\n", ""),
     );
 
     /**
      * All debug messages are stored here
-     *
-     * @var string
      */
-    private static $_messages = '';
+    private static string $messages = '';
 
     /**
      * Determines whether debug is enabled or not
-     *
-     * @var boolean
      */
-    private static $_enabled = false;
+    private static bool $enabled = false;
 
     /**
      * Time labels storage. Timelabels are used to find execution time of
      * some code chunk
-     *
-     * @var array
      */
-    private static $_timeLabels = [];
+    private static array $timeLabels = [];
 
     /**
      * Private constructor prevents direct instantinating
@@ -70,18 +61,20 @@ class Debug
     }
 
     /**
-     * Enable or disable debugging
-     *
-     * @param bool $bool
+     * Enable debugging
      */
-    public static function enable($bool = true)
+    public static function enable()
     {
-        self::$_enabled = $bool;
+        self::$enabled = true;
+        self::timeStart(self::SCRIPT_LABLE);
+    }
 
-        // if we are enabling debugging first time start capturing total script time
-        if ($bool && !isset(self::$_timeLabels[self::__SCRIPTTIME__])) {
-            self::timeStart(self::__SCRIPTTIME__);
-        }
+    /**
+     * Disable debugging
+     */
+    public static function disable()
+    {
+        self::$enabled = false;
     }
 
     /**
@@ -89,7 +82,7 @@ class Debug
      */
     public static function enabled()
     {
-        return self::$_enabled;
+        return self::$enabled;
     }
 
     /**
@@ -98,17 +91,17 @@ class Debug
      */
     public static function add()
     {
-        if (self::$_enabled) {
+        if (self::$enabled) {
             $args = func_get_args();
             foreach ($args as $mixed) {
-                self::$_messages .= htmlentities(addslashes(is_scalar($mixed) ? $mixed : var_export($mixed, true))) . '<br/>';
+                self::$message .= htmlentities(addslashes(is_scalar($mixed) ? $mixed : var_export($mixed, true))) . '<br/>';
             }
         }
     }
 
     public static function get()
     {
-        return self::_getMessages('default');
+        return self::getMessages('default');
     }
 
     /**
@@ -117,31 +110,30 @@ class Debug
      */
     public static function getClean()
     {
-        return self::_getMessages('clean');
+        return self::getMessages('clean');
     }
 
     /**
      * Record a new time label
-     * @param string $label
      */
-    public static function timeStart($label = 'default')
+    public static function timeStart(string $label)
     {
-        if (self::$_enabled) {
-            self::$_timeLabels[$label] = microtime(1);
-            return self::$_timeLabels[$label];
+        if (self::$enabled && !isset(self::$timeLabels[$label])) {
+            self::$timeLabels[$label] = microtime(1);
+
+            return self::$timeLabels[$label];
         }
     }
 
     /**
-     * Close a given time label, calculate and return the difference.
-     * @param string $label
-     * @return mixed
+     * Close a given time label, calculate and return the time difference.
      */
-    public static function timeEnd($label = 'default')
+    public static function timeEnd(string $label)
     {
-        if (self::$_enabled) {
-            $time = microtime(1) - self::$_timeLabels[$label];
-            unset(self::$_timeLabels[$label]);
+        if (self::$enabled) {
+            $time = microtime(1) - self::$timeLabels[$label];
+            unset(self::$timeLabels[$label]);
+
             return $time;
         }
     }
@@ -150,7 +142,7 @@ class Debug
      * End time label and add the time value to debug
      * @param string $label
      */
-    public static function timeAdd($label = 'default')
+    public static function timeAdd($label)
     {
         self::add($label . "\n" . self::timeEnd($label));
     }
@@ -160,27 +152,25 @@ class Debug
      */
     public static function getMemoryUsage()
     {
-        $mem_usage = memory_get_usage(true);
+        $memUsage = memory_get_usage(true);
 
-        if ($mem_usage < 1024) {
-            $mem_usage .= ' bytes';
-        } elseif ($mem_usage < 1048576) {
-            $mem_usage = round($mem_usage / 1024, 2) . ' Kb';
+        if ($memUsage < 1024) {
+            $memUsage .= ' bytes';
+        } elseif ($memUsage < 1048576) {
+            $memUsage = round($memUsage / 1024, 2) . ' Kb';
         } else {
-            $mem_usage = round($mem_usage / 1048576, 2) . ' Mb';
+            $memUsage = round($memUsage / 1048576, 2) . ' Mb';
         }
 
-        return $mem_usage;
+        return $memUsage;
     }
 
     /**
      * Get script execution time
-     *
-     * @return integer
      */
-    public static function scriptTime()
+    public static function scriptTime(): float
     {
-        return self::timeEnd(self::__SCRIPTTIME__);
+        return round(self::timeEnd(self::SCRIPT_LABLE), 3);
     }
 
     /**
@@ -189,21 +179,23 @@ class Debug
      */
     public static function clean($str)
     {
-        return preg_replace(self::$_pattern, self::$_replacements['clean'], $str);
+        return preg_replace(self::$pattern, self::$replacements['clean'], $str);
     }
 
     /**
      * Get all debug messages
      */
-    private static function _getMessages($replacement)
+    private static function getMessages($replacement)
     {
-        if (self::$_enabled) {
-            if (!empty(self::$_replacements[$replacement])) {
-                $messages = preg_replace(self::$_pattern, self::$_replacements[$replacement], self::$_messages);
+        if (self::$enabled) {
+            if (!empty(self::$replacements[$replacement])) {
+                $messages = preg_replace(self::$pattern, self::$replacements[$replacement], self::$message);
+            } else {
+                $messages = self::$message;
+            }
 
-            } else $messages = self::$_messages;
+            self::$message = '';
 
-            self::$_messages = '';
             return $messages;
         }
     }

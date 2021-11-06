@@ -5,6 +5,9 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
+
+declare(strict_types=1);
+
 namespace Gears\Db\Table\Relation;
 
 use Gears\Db\Table\TableAbstract;
@@ -53,7 +56,7 @@ class HasOneRelation extends RelationAbstract
     /**
      * {@inheritdoc}
      */
-    public function addTo(TableAbstract $table)
+    public function addTo(TableAbstract $table): void
     {
         // add join condition to link relation table with the given one
         $table->getQuery()->join(

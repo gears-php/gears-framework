@@ -13,7 +13,7 @@ class Sqlite extends AdapterAbstract
     /**
      * {@inheritdoc}
      */
-    protected $patterns = [
+    protected array $patterns = [
         'create_table' => [
             ' pk ' => ' INTEGER PRIMARY KEY NOT NULL ',
             ' string ' => ' VARCHAR ',

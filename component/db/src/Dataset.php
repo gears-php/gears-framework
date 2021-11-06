@@ -49,40 +49,55 @@ class Dataset
     }
 
     /**
-     * Insert one or more rows into table.
-     * Each row should be a separate input parameter
+     * Insert one or more rows into table. Each row is passed as a function argument
+     * @param \array[] ...$rows
+     * @return int Number of inserted rows
      */
-    public function insert()
+    public function insert(array ...$rows): int
     {
-        $this->db->insert($this->tableName, func_get_args());
+        return (int)$this->db->insert($this->tableName, $rows);
     }
 
     /**
-     * Update db table row(s) with given data
+     * Update db table rows matching given `where` criteria with new data
      * @param array $data New data to be put
      * @param array $where Where condition to match the rows for update
+     * @return int Number of updated rows
      */
-    public function update(array $data, array $where = [])
+    public function update(array $data, array $where = []): int
     {
-        $this->db->update($this->tableName, $data, $where);
+        return (int)$this->db->update($this->tableName, $data, $where);
+    }
+
+    /**
+     * Delete db table rows which do match given `where` criteria
+     * @param array $where
+     * @return int Number of deleted rows
+     */
+    public function delete(array $where = []): int
+    {
+        return (int)$this->db->delete($this->tableName, $where);
     }
 
     /**
      * Return data set record count
+     * @return int
      */
-    public function count()
+    public function count(): int
     {
-
+        // todo write logic
     }
 
     /**
-     * Select some specific field(s) from one or more tables
-     * @param string|array $field
+     * Select some specific field(s)
+     * @param string|array $field Field name
+     * @param string $alias (optional) Field alias
      * @return $this
      */
-    public function select($field)
+    public function select($field, $alias = null)
     {
-        $this->query->select($field, $this->tableName . '_' . $field, $this->tableName);    
+        $this->query->select($field, $alias, $this->tableName);
+
         return $this;
     }
 
@@ -95,6 +110,7 @@ class Dataset
     public function filter($field, $value)
     {
         $this->query->getWhere()->eq($field, $value);
+
         return $this;
     }
 
@@ -106,6 +122,7 @@ class Dataset
     public function where()
     {
         call_user_func_array([$this->query->getWhere(), 'add'], func_get_args());
+
         return $this;
     }
 
@@ -113,7 +130,7 @@ class Dataset
      * Alias to the {@see fetchAll()}
      * @return array
      */
-    public function all()
+    public function all(): array
     {
         return $this->fetchAll();
     }
@@ -131,7 +148,7 @@ class Dataset
      * Alias to the {@see fetchRow()}
      * @return array
      */
-    public function row()
+    public function row(): array
     {
         return $this->fetchRow();
     }
@@ -140,7 +157,7 @@ class Dataset
      * Alias to the {@see fetchCol()}
      * @return array
      */
-    public function col()
+    public function col(): array
     {
         return $this->fetchCol();
     }
@@ -149,7 +166,7 @@ class Dataset
      * Alias to the {@see fetchPairs()}
      * @return array
      */
-    public function pairs()
+    public function pairs(): array
     {
         return $this->fetchPairs();
     }
@@ -158,7 +175,7 @@ class Dataset
      * Fetch all rows by executing current query
      * @return array Fetched records
      */
-    public function fetchAll()
+    public function fetchAll(): array
     {
         return $this->query->exec()->fetchAll();
     }
@@ -167,7 +184,7 @@ class Dataset
      * Fetch a single cell value from a first dataset row
      * @return mixed Table cell value or false otherwise
      */
-    public function fetchOne()
+    public function fetchOne(): array
     {
         return $this->query->exec()->fetchOne();
     }
@@ -176,7 +193,7 @@ class Dataset
      * Fetch a first dataset row
      * @return array
      */
-    public function fetchRow()
+    public function fetchRow(): array
     {
         return $this->query->exec()->fetchRow();
     }
@@ -185,7 +202,7 @@ class Dataset
      * Fetch single column data
      * @return array
      */
-    public function fetchCol()
+    public function fetchCol(): array
     {
         return $this->query->exec()->fetchCol();
     }
@@ -194,7 +211,7 @@ class Dataset
      * Fetch array with the first dataset column used for keys and second one - for the values
      * @return array
      */
-    public function fetchPairs()
+    public function fetchPairs(): array
     {
         return $this->query->exec()->fetchPairs();
     }
@@ -204,9 +221,9 @@ class Dataset
      * @param array $where
      * @return array
      */
-    public function find(array $where)
+    public function find(array $where): array
     {
-        $fields = $values =[];
+        $fields = $values = [];
 
         foreach ($where as $field => $value) {
             $fields[] = sprintf('%s = ?', $this->db->escapeIdentifier($field));
@@ -230,6 +247,7 @@ class Dataset
     public function order($field, $sort = Query::ASC)
     {
         $this->query->order($field, $sort);
+
         return $this;
     }
 }

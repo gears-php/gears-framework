@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gears\Framework\Application;
 
 use Gears\Storage\Storage;
@@ -25,15 +27,12 @@ abstract class AbstractLoader
      */
     public function load($env = '')
     {
-        // service container
-        $services = new Services;
-        $services->set('app.loader', $this);
-
-        // configuration storage
         $config = new Storage;
         $fileExt = $config->getReader()->getFileExt();
-        $configFile = 'app' . rtrim('_' . $env, '_') . $fileExt;
+        $configFile = 'config' . rtrim('_' . $env, '_') . $fileExt;
         $config->load($this->getAppDir() . '/config/' . $configFile);
+
+        $services = new Services;
         $services->set('config', $config);
 
         return (new Application($config, $services))->load();

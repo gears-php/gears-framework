@@ -1,7 +1,10 @@
 <?php
+
 /**
  * @author deniskrasilnikov86@gmail.com
  */
+declare(strict_types=1);
+
 namespace Gears\Db\Adapter;
 
 use ArrayAccess;
@@ -22,30 +25,27 @@ abstract class AdapterAbstract implements ArrayAccess
     /**
      * Search/replace patterns collection for various SQL statements building.
      * Defined in each specific db adapter
-     * @var array
      */
-    protected $patterns = [];
+    protected array $patterns = [];
 
     /**
      * Active database connection
-     * @var PDO
      */
-    protected $connection;
+    protected PDO $connection;
 
     /**
      * Active PDO query result statement
-     * @var PDOStatement
      */
-    protected $statement;
+    protected PDOStatement $statement;
 
     /**
      * Hold the very last query being executed with adapter
-     * @var string|Query
      */
-    protected $lastQuery;
+    protected string|Query $lastQuery;
 
     /**
      * Create PDO database connection using the given connection parameters
+     *
      * @param array $config Connection properties
      * @param array $options Additional connection options
      */
@@ -57,10 +57,8 @@ abstract class AdapterAbstract implements ArrayAccess
 
     /**
      * Prepare the given sql query
-     * @param string|Query $query
-     * @return $this
      */
-    public function prepare($query)
+    public function prepare(string|Query $query): self
     {
         $this->statement = $this->connection->prepare(($this->lastQuery = $query) . '');
 
@@ -69,11 +67,10 @@ abstract class AdapterAbstract implements ArrayAccess
 
     /**
      * Execute query previously prepared with {@see prepare()}
-     * @param array $params
-     * @return $this
+     *
      * @throws \RuntimeException
      */
-    public function execute($params)
+    public function execute(array $params): self
     {
         try {
             $this->statement->execute($params);
@@ -86,33 +83,31 @@ abstract class AdapterAbstract implements ArrayAccess
 
     /**
      * Prepare and execute the given query
-     * @param string|Query $query
-     * @param array $params
-     * @return $this
      */
-    public function query($query, array $params = [])
+    public function query(string|Query $query, array $params = []): self
     {
         $this->prepare($query)->execute($params);
 
         return $this;
     }
 
+    public function getStatement(): PDOStatement
+    {
+        return $this->statement;
+    }
+
     /**
      * Fetch multiple rows
-     * @param int $fetchStyle
-     * @return array Array of rows
      */
-    public function fetchAll($fetchStyle = PDO::FETCH_ASSOC)
+    public function fetchAll(int $fetchStyle = PDO::FETCH_ASSOC): array
     {
         return $this->statement->fetchAll($fetchStyle);
     }
 
     /**
      * Fetch multiple rows grouped by the specific column
-     * @param int $fetchStyle
-     * @return array Array of rows
      */
-    public function fetchAssoc($fetchStyle = PDO::FETCH_ASSOC)
+    public function fetchAssoc(int $fetchStyle = PDO::FETCH_ASSOC): array
     {
         $rows = $this->statement->fetchAll(PDO::FETCH_GROUP | $fetchStyle);
 
@@ -121,28 +116,24 @@ abstract class AdapterAbstract implements ArrayAccess
 
     /**
      * Fetch a first result row
-     * @param int $fetchStyle
-     * @return array
      */
-    public function fetchRow($fetchStyle = PDO::FETCH_ASSOC)
+    public function fetchRow(int $fetchStyle = PDO::FETCH_ASSOC): array|bool
     {
         return $this->statement->fetch($fetchStyle);
     }
 
     /**
      * Fetch a single result set column
-     * @return array
      */
-    public function fetchCol()
+    public function fetchCol(): array
     {
         return $this->statement->fetchAll(PDO::FETCH_COLUMN);
     }
 
     /**
      * Fetch array with the first query result column used for keys and second one - for the values
-     * @return array
      */
-    public function fetchPairs()
+    public function fetchPairs(): array
     {
         return $this->statement->fetchAll(PDO::FETCH_KEY_PAIR);
     }
@@ -158,18 +149,14 @@ abstract class AdapterAbstract implements ArrayAccess
 
     /**
      * Escape given value making it safe to be used in SQL query
-     * @param mixed $value Scalar
-     * @return string Safe value
      */
-    public function escape($value)
+    public function escape(mixed $value): mixed
     {
-        return $this->connection->quote($value);
+        return is_string($value) ? $this->connection->quote($value) : $value;
     }
 
     /**
      * Escape the given identifier (e.g. field name, table name)
-     * @param $identifier
-     * @return string
      */
     abstract public function escapeIdentifier($identifier);
 
@@ -200,10 +187,17 @@ abstract class AdapterAbstract implements ArrayAccess
     public function create($tableName, array $fields)
     {
         $patterns = $this->patterns['create_table'];
-        $fields = array_map(function ($field) use ($patterns) {
-            return trim(str_replace(array_keys($patterns), array_values($patterns), $field . ' '));
-        }, $fields);
-        $sql = sprintf('CREATE TABLE IF NOT EXISTS %s (%s)', $this->escapeIdentifier($tableName), implode(',', $fields));
+        $fields = array_map(
+            function ($field) use ($patterns) {
+                return trim(str_replace(array_keys($patterns), array_values($patterns), $field . ' '));
+            },
+            $fields
+        );
+        $sql = sprintf(
+            'CREATE TABLE IF NOT EXISTS %s (%s)',
+            $this->escapeIdentifier($tableName),
+            implode(',', $fields)
+        );
         $this->connection->exec($sql);
     }
 
@@ -225,21 +219,34 @@ abstract class AdapterAbstract implements ArrayAccess
      */
     public function insert($tableName, $rows)
     {
-        // build fields sql
+        // build fields for sql
         ksort($rows[0]);
-        $fields = array_map(function ($field) {
-            return $this->escapeIdentifier($field);
-        }, array_keys($rows[0]));
+        $fields = array_map(
+            function ($field) {
+                return $this->escapeIdentifier($field);
+            },
+            array_keys($rows[0])
+        );
 
-        // build values sql
+        // build values for sql
         foreach ($rows as &$row) {
             ksort($row); // make sure all rows follow same field values order
-            $row = sprintf('(%s)', implode(',', array_map(function ($value) {
-                return $this->escape($value);
-            }, $row)));
+            $row = sprintf(
+                '(%s)',
+                implode(
+                    ',',
+                    array_map(
+                        function ($value) {
+                            return $this->escape($value);
+                        },
+                        $row
+                    )
+                )
+            );
         }
 
-        $sql = sprintf('INSERT INTO %s (%s) VALUES %s',
+        $sql = sprintf(
+            'INSERT INTO %s (%s) VALUES %s',
             $this->escapeIdentifier($tableName),
             implode(',', $fields),
             implode(',', $rows)
@@ -261,29 +268,34 @@ abstract class AdapterAbstract implements ArrayAccess
             $where = (new WhereAnd($this))->fromArray($where);
         }
 
-        array_walk($data, function (&$value, $field) {
-            $value = $this->escapeIdentifier($field) . '=' . $this->escape($value);
-        });
+        array_walk(
+            $data,
+            function (&$value, $field) {
+                $value = $this->escapeIdentifier($field) . '=' . (is_bool($value) ? (int)$value : $this->escape($value));
+            }
+        );
 
-        $sql = sprintf('UPDATE %s SET %s WHERE %s', $tableName, implode(',', $data), $where->toString());
+        $sql = sprintf(
+            'UPDATE %s SET %s WHERE %s',
+            $this->escapeIdentifier($tableName),
+            implode(',', $data),
+            $where->toString()
+        );
 
         return $this->connection->exec($sql);
     }
 
     /**
      * Delete table record(s) matched by the given where clause
-     * @param string $tableName
-     * @param array|WhereAbstract $where
-     * @return integer|boolean Number of affected rows or false
      */
-    public function delete($tableName, $where)
+    public function delete(string $tableName, array|WhereAbstract $where): bool
     {
         if (is_array($where)) {
             $where = (new WhereAnd($this))->fromArray($where);
         }
-        $sql = sprintf('DELETE FROM %s WHERE %s', $tableName, $where->toString());
+        $sql = sprintf('DELETE FROM %s WHERE %s', $this->escapeIdentifier($tableName), $where->toString());
 
-        return $this->connection->exec($sql);
+        return (bool)$this->connection->exec($sql);
     }
 
     /**

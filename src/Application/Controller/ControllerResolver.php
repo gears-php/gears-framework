@@ -20,21 +20,24 @@ class ControllerResolver
 
     /**
      * Take the controller action definition from the route and resolve it into controller instance and action name
-     * @param Route $route
-     * @return bool Whether the given route was successfully resolved
      */
-    public function resolve(Route $route)
+    public function resolve(Route $route): self
     {
-        if ($handler = $route->getHandlerDefinition()) {
-            list($module, $controller, $action) = explode(':', $handler);
-            $class = implode('\\', [$module, 'Controller', $controller . 'Controller']);
-            $this->controller = new $class;
-            $this->action = $action . 'Action';
+        $handler = $route->getHandlerDefinition();
+        list($module, $class, $action) = explode(':', $handler);
 
-            return true;
+        if (!class_exists($class)) {
+            $class = implode('\\', [$module, 'Controller', $className . 'Controller']);
+        }
+        
+        $this->controller = new $class;
+        $this->action = $action;
+
+        if (!method_exists($this->controller, $this->action)) {
+            throw new ActionNotFoundException($this);
         }
 
-        return false;
+        return $this;
     }
 
     /**

@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Gears\Framework\Application;
 
 /**
@@ -64,11 +67,8 @@ class Services
 
     /**
      * Get service object instance
-     * @param string $name
-     * @return object
-     * @throws \Exception
      */
-    public function get($name)
+    public function get(string $name): object
     {
         // return existing service
         if (isset($this->services[$name])) {

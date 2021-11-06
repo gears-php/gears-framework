@@ -6,19 +6,23 @@ namespace Gears\Framework\Application;
 
 /**
  * Provides functionality for services management
+ *
  * @package Gears\Framework\Application
  */
 trait ServiceAware
 {
     /**
      * Services container instance
+     *
      * @var Services
      */
     protected $services;
 
     /**
      * Get application service
+     *
      * @param string $name
+     *
      * @return object
      */
     public function get()
@@ -28,38 +32,45 @@ trait ServiceAware
 
     /**
      * Set application service
+     *
      * @param string $name
-     * @param callable $callable
+     * @param callable|object $callable
      */
     public function set($name, $callable)
     {
         $this->services->set($name, $callable);
+
         return $this;
     }
 
     /**
      * Set a shared application service
+     *
      * @param string $name
      * @param callable $callable
      */
     public function setShared($name, $callable)
     {
         $this->services->setShared($name, $callable);
+
         return $this;
     }
 
     /**
      * Set fallback service
+     *
      * @param $callable
      */
     public function fallback($callable)
     {
         $this->services->fallback($callable);
+
         return $this;
     }
 
     /**
      * Set service container
+     *
      * @param Services $services
      */
     public function setServices(Services $services)

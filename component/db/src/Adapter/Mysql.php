@@ -13,7 +13,7 @@ class Mysql extends AdapterAbstract
     /**
      * {@inheritdoc}
      */
-    protected $patterns = [
+    protected array $patterns = [
         'create_table' => [
             ' pk ' => ' INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY ',
             ' string ' => ' TEXT ',

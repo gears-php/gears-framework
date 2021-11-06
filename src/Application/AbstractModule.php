@@ -38,6 +38,8 @@ abstract class AbstractModule
     /**
      * Concrete module loading. Register your module specific services
      * and do other preparations in this method
+     *
+     * @return void
      */
     abstract public function load();
 

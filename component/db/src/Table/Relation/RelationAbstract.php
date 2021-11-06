@@ -1,10 +1,6 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: denis
- * Date: 5/29/14
- * Time: 6:59 PM
- */
+
+declare(strict_types=1);
 
 namespace Gears\Db\Table\Relation;
 
@@ -14,27 +10,23 @@ abstract class RelationAbstract
 {
     /**
      * Static tables storage per all RelationAbstract instances
-     * @var array
      */
-    protected static $tables = [];
+    protected static array $tables = [];
 
     /**
      * Relation referencing (target) table
-     * @var TableAbstract
      */
-    protected $table;
+    protected TableAbstract $table;
 
     /**
      * Relation owner (master) table
-     * @var TableAbstract
      */
-    protected $ownerTable;
+    protected TableAbstract $ownerTable;
 
     /**
      * Relation name
-     * @var string
      */
-    protected $name;
+    protected string $name;
 
     /**
      * Construct table relation using the given metadata
@@ -42,7 +34,7 @@ abstract class RelationAbstract
      * @param TableAbstract $owner Relation owning table
      * @param array $metadata
      */
-    public function __construct($relationName, TableAbstract $owner, array $metadata)
+    public function __construct(string $relationName, TableAbstract $owner, array $metadata)
     {
         $this->name = $relationName;
 
@@ -62,23 +54,19 @@ abstract class RelationAbstract
 
     /**
      * Get the relation target table
-     * @return TableAbstract
      */
-    public function getTable()
+    public function getTable(): TableAbstract
     {
         return $this->table;
     }
 
     /**
      * Use the given table and add all necessary joins in order to fetch relational data
-     * @param TableAbstract $table
-     * @return void
      */
-    abstract public function addTo(TableAbstract $table);
+    abstract public function addTo(TableAbstract $table): void;
 
     /**
      * Add the relational row(s) data to the given data row
-     * @param array $row
      */
     abstract public function addData(array &$row);
 }

@@ -1,7 +1,7 @@
 <?php
 namespace Gears\Framework;
 
-use Gears\Framework\Application\Response;
+use Symfony\Component\HttpFoundation\Response
 
 class Ajax
 {

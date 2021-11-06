@@ -2,6 +2,7 @@
 /**
  * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  */
+
 namespace Gears\Storage;
 
 use Gears\Storage\Reader\ReaderAbstract;
@@ -59,6 +60,7 @@ class Storage implements \ArrayAccess
             // support yaml files by default
             $this->reader = new Yaml();
         }
+
         return $this->reader;
     }
 
@@ -111,11 +113,14 @@ class Storage implements \ArrayAccess
         $tree = $this->getReader()->read($file);
         $fileExtLength = strlen($fileExt = $this->getReader()->getFileExt()); // load sub files, if any
 
-        array_walk_recursive($tree, function (&$item) use ($file, $fileExt, $fileExtLength) {
-            if (is_string($item) && substr($item, -$fileExtLength) == $fileExt) {
-                $item = $this->read(dirname($file) . DS . $item);
+        array_walk_recursive(
+            $tree,
+            function (&$item) use ($file, $fileExt, $fileExtLength) {
+                if (is_string($item) && substr($item, -$fileExtLength) == $fileExt) {
+                    $item = $this->read(dirname($file) . DS . $item);
+                }
             }
-        });
+        );
 
         return $tree ? $this->get($path, $tree) : [];
     }
@@ -142,13 +147,8 @@ class Storage implements \ArrayAccess
 
     /**
      * Same as {@link get()} but returns a new storage instance
-     *
-     * @param string $path
-     * @param array (optional) $storage
-     *
-     * @return Storage
      */
-    public function getObj($path, $storage = null)
+    public function getObj(string $path = null, string $storage = null): Storage
     {
         return new Storage($this->get($path, $storage));
     }

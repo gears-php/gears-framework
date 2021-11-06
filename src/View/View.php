@@ -5,6 +5,9 @@
  * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
  * @license   http://url/license
  */
+
+declare(strict_types=1);
+
 namespace Gears\Framework\View;
 
 use Gears\Framework\Cache\CacheInterface;
@@ -23,43 +26,44 @@ class View
      * Stores all possible helper class namespaces
      * @var array
      */
-    protected $helperNamespaces = [];
+    private $helperNamespaces = [];
 
     /**
      * Collection of all currently called helpers
      * @var array
      */
-    protected $helpers = [];
+    private $helpers = [];
 
     /**
      * Stores paths where to search for template files
      * @var array
      */
-    protected $templatePaths = [];
+    private $templatePaths = [];
 
     /**
      * Collection of all currently loaded templates
      * @var array
      */
-    protected $templates = [];
+    private $templates = [];
 
     /**
      * Template files extension
      * @var string
      */
-    protected $templateFileExt = '.phtml';
+    private $templateFileExt = '.phtml';
 
     /**
      * Cache implementation instance
      * @var CacheInterface
      */
-    protected $cache;
+    private $cache;
 
     /**
-     * Constructor. Accepts array of supported options
-     * @param array $options
+     * View extensions
      */
-    public function __construct($options = [])
+    private $extensions;
+
+    public function __construct(array $options = [])
     {
         // setup template file path(s)
         if (isset($options['templates'])) {
@@ -112,6 +116,7 @@ class View
     public function addTemplatePath($path)
     {
         $this->templatePaths[] = realpath($path);
+
         return $this;
     }
 
@@ -127,12 +132,15 @@ class View
 
     /**
      * Get template by full or relative name OR alias name (for already stored templates)
+     *
      * @param string $name Template name to get the template. Extension is optional
-     * @param bool|string $alias (optional) Unique name under which to store and access template for future
+     * @param null|string $alias (optional) Unique name under which to store and access template for future
+     *
      * @throws \Exception
+     *
      * @return Template
      */
-    public function load($name, $alias = false)
+    public function load($name, $alias = null)
     {
         // possibly we are accessing already stored template
         if (!is_string($alias) && isset($this->templates[$name])) {
@@ -146,30 +154,36 @@ class View
         $alias = $alias ?: $fileName;
 
         // whether template object is already stored under alias name
-        if (!isset($this->templates[$alias])) {
+        if (isset($this->templates[$alias])) {
+            return $this->templates[$alias];
+        }
+        // search for template file within template paths and store it using alias name
+        foreach ($this->templatePaths as $filePath) {
+            $filePath = $filePath . DS . $fileName;
 
-            // search for template file within template paths and store it using alias name
-            foreach ($this->templatePaths as $filePath) {
-                $filePath = $filePath . DS . $fileName;
-
-                if (is_file($filePath)) {
-                    $tpl = new Template($filePath, $this);
-                    break;
-                }
+            if (is_file($filePath)) {
+                $tpl = new Template($filePath, $this);
+                break;
             }
-
-            if (!isset($tpl)) {
-                throw new \Exception('Template file not found: ' . $fileName);
-            }
-
-            $this->templates[$alias] = $tpl;
         }
 
-        return $this->templates[$alias];
+        if (!isset($tpl)) {
+            throw new \Exception('Template file not found: ' . $fileName);
+        }
+
+        return $this->templates[$alias] = $tpl;
     }
 
     /**
-     * Call a helper with a given name and parameters
+     * Render template and return its content.
+     */
+    public function render(string $template, array $vars = null): string
+    {
+        return $this->load($template)->assign($vars)->render();
+    }
+
+    /**
+     * Call a helper with a given name and parameters.
      * @param string $helperName Helper name
      * @param array (optional) $params Helper parameters
      * @return string Helper execution result
@@ -194,5 +208,48 @@ class View
         }
 
         return call_user_func_array($this->helpers[$helperName], $params);
+    }
+
+    /**
+     * @param $ext
+     */
+    public function addExtension($ext)
+    {
+        $this->extensions[] = $ext;
+    }
+
+    public function extension($name): string
+    {
+        foreach ($this->extensions as $extension) {
+            if (method_exists($extension, $name)) {
+                return (string)call_user_func([$extension, $name]);
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Resolve refs like `AdminModule@content:index` to real templates inside modules, e.g. AdminModule/templates/content/index[.phtml]
+     *
+     * @todo Not used atm. Think if it should be dropped in favor of more explicit and clear mehanism without refs.
+     */
+    private function parseTemplateReference(string $reference): string
+    {
+        if (false === strpos($reference, '@')) {
+            return $reference;
+        }
+
+        $chunks = explode('@', trim($reference, '@'));
+
+        $templateName = SRC_PATH;
+
+        if (count($chunks) == 2) {
+            $templateName .= array_shift($chunks) . DS;
+        }
+
+        $templateName .= 'templates' . DS . array_shift($chunks);
+
+        return $templateName;
     }
 }

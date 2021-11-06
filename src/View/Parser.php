@@ -56,7 +56,7 @@ class Parser
      * List of all special template language tags to be processed
      * @var string
      */
-    protected $tags = ['extends', 'block', 'include', 'repeat', 'js', 'css', 'image'];
+    protected $tags = ['extends', 'block', 'include', 'repeat', 'js', 'css', 'image', 'call'];
 
     /**
      * Initialize parser with a new stream
