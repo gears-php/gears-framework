@@ -1,62 +1,64 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gears\Framework\Application;
 
+use Gears\Framework\Application\Routing\Router;
+use Gears\Storage\Storage;
 use ReflectionClass;
 
 abstract class AbstractModule
 {
     use ServiceAware;
 
-    /**
-     * @var ReflectionClass
-     */
-    protected $classInfo;
+    protected ?ReflectionClass $classInfo = null;
 
     /**
-     * Get module configuration file
-     * @return string
+     * Register services and do other relevant preparations.
      */
-    public function getConfigFile()
+    abstract public function registerServices(Storage $config): void;
+
+    /**
+     * Setup module based on its configuration.
+     */
+    public function load(): void
     {
-        $fileExt = $this->get('config')->getReader()->getFileExt();
+        $config = (new Storage())->load($this->getModuleDir() . '/config/module.yaml');
+        $this->registerServices($config);
 
-        return $this->getModuleDir() . '/config/module' . $fileExt;
+        if (php_sapi_name() === 'cli') {
+            return;
+        }
+
+        // todo make config reading in OOP way with nodes validations
+        /** @var Router $router */
+        $router = $this->get('router');
+        $config['routing'] && $router->build($config['routing']);
+        $apiConfig = $config['api'];
+
+        foreach ($apiConfig['resources'] ?? [] as $resourceDefinition) {
+            $router->buildResourceRoutes(
+                $resourceDefinition['class'],
+                $resourceDefinition['endpoint'],
+                $apiConfig['handler'],
+                $apiConfig['prefix']
+            );
+        }
     }
-
-    /**
-     * Register all module class load mappings
-     * @return $this
-     */
-    public function register()
-    {
-        ClassLoader::register($this->getClassInfo()->getNamespaceName(), $this->getModuleDir() . '/src/');
-
-        return $this;
-    }
-
-    /**
-     * Concrete module loading. Register your module specific services
-     * and do other preparations in this method
-     *
-     * @return void
-     */
-    abstract public function load();
 
     /**
      * Get module base directory
-     * @return string
      */
-    protected function getModuleDir()
+    protected function getModuleDir(): string
     {
         return dirname($this->getClassInfo()->getFileName());
     }
 
     /**
      * Return the module class info
-     * @return ReflectionClass
      */
-    protected function getClassInfo()
+    protected function getClassInfo(): ReflectionClass
     {
         if (!$this->classInfo) {
             $this->classInfo = new ReflectionClass($this);

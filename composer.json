@@ -7,12 +7,12 @@
     "authors": [
         {
             "name": "Denis Krasilnikov",
-            "email": "deniskrasilnikov86@gmail.com"
+            "email": "denis.krasilnikov@gears.com"
         }
     ],
     "require": {
         "php": ">=8.0",
-        "symfony/http-foundation": "^5.1",
+        "symfony/http-foundation": "^6.0",
         "mustangostang/spyc": "0.5.*@dev"
     },
     "replace": {

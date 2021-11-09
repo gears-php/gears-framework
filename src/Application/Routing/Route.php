@@ -7,7 +7,7 @@ namespace Gears\Framework\Application\Routing;
 /**
  * Object representation of a single routing rule
  * @package Gears\Framework\Application\Routing
- * @author deniskrasilnikov86@gmail.com
+ * @author denis.krasilnikov@gears.com
  */
 class Route
 {
@@ -97,6 +97,8 @@ class Route
     public function setParam($name, $value)
     {
         $this->params[$name] = $value;
+
+        return $this;
     }
 
     /**
@@ -110,11 +112,31 @@ class Route
     public function setAttribute(string $name, mixed $value)
     {
         $this->attributes[$name] = $value;
+
+        return $this;
     }
 
-    public function getAttribute(string $name): mixed
+    public function getAttribute(string $name)
     {
         return $this->attributes[$name] ?? null;
+    }
+
+    /**
+     * Set name of resource this route is targeted to.
+     */
+    public function setResource(string $resource)
+    {
+        $this->setAttribute('@resource', $resource);
+
+        return $this;
+    }
+
+    /**
+     * Get name of resource this route is targeted to.
+     */
+    public function getResource(): ?string
+    {
+        return $this->getAttribute('@resource');
     }
 
     /**

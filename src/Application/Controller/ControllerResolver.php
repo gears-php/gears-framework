@@ -2,21 +2,20 @@
 
 namespace Gears\Framework\Application\Controller;
 
+use Gears\Framework\Application\ResourceHandler\ResourceHandlerInterface;
 use Gears\Framework\Application\Routing\Route;
 
 class ControllerResolver
 {
     /**
      * Controller instance
-     * @var AbstractController
      */
-    private $controller;
+    private AbstractController|ResourceHandlerInterface $controller;
 
     /**
      * Action name
-     * @var string
      */
-    private $action;
+    private string $action;
 
     /**
      * Take the controller action definition from the route and resolve it into controller instance and action name
@@ -27,7 +26,7 @@ class ControllerResolver
         list($module, $class, $action) = explode(':', $handler);
 
         if (!class_exists($class)) {
-            $class = implode('\\', [$module, 'Controller', $className . 'Controller']);
+            $class = implode('\\', [$module, 'Controller', $class . 'Controller']);
         }
         
         $this->controller = new $class;
@@ -42,18 +41,16 @@ class ControllerResolver
 
     /**
      * Get controller instance
-     * @return AbstractController
      */
-    public function getController()
+    public function getController(): AbstractController|ResourceHandlerInterface
     {
         return $this->controller;
     }
 
     /**
      * Get action name
-     * @return string
      */
-    public function getAction()
+    public function getAction(): string
     {
         return $this->action;
     }

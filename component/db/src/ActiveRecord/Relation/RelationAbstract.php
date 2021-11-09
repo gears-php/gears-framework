@@ -14,13 +14,6 @@ use Gears\Db\ActiveRecord\ActiveRecord;
  */
 abstract class RelationAbstract
 {
-    protected ActiveManager $manager;
-
-    /**
-     * Relation name
-     */
-    protected string $name;
-
     /**
      * Query instance used for relational records fetching
      */
@@ -32,17 +25,15 @@ abstract class RelationAbstract
     abstract public function build(array $meta);
 
     /**
-     * Execute query against given owner record and return relational ones. Should
+     * Execute query against given target record and return relational ones. Should
      * return a single relation record or relation record list depending on concrete
      * implementation
      *
      * @return ActiveRecord|ActiveRecord[]
      */
-    abstract public function exec(ActiveRecord $owner);
+    abstract public function exec(): mixed;
 
-    public function __construct(string $name, ActiveManager $manager)
+    public function __construct(protected string $name, protected ActiveRecord $owner)
     {
-        $this->name = $name;
-        $this->manager = $manager;
     }
 }

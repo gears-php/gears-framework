@@ -18,33 +18,26 @@ class ActiveManager
 {
     /**
      * List of directories where to look for metadata configuration files
-     * @var array
      */
-    protected $metadataDirs = [];
+    protected array $metadataDirs = [];
 
     /**
      * Metadata cache for active record classes
      * @var Storage[]
      */
-    protected $metadata = [];
+    protected array $metadata = [];
 
     /**
      * Active record relation list
      * @var RelationAbstract[]
      */
-    protected $relations = [];
-
-    /**
-     * @var AdapterAbstract
-     */
-    protected $db;
+    protected array $relations = [];
 
     /**
      * @param AdapterAbstract $db
      */
-    public function __construct(AdapterAbstract $db)
+    public function __construct(protected AdapterAbstract $db)
     {
-        $this->db = $db;
     }
 
     /**
@@ -55,12 +48,15 @@ class ActiveManager
         return $this->db;
     }
 
+    public function create(string $className): ActiveRecord
+    {
+        return new $className($this);
+    }
+
     /**
      * Create and return query instance configured for fetching active record entities of concrete type
-     * @param string $className
-     * @return ActiveQuery
      */
-    public function of($className): ActiveQuery
+    public function of(string $className): ActiveQuery
     {
         $query = new ActiveQuery($this->db, new $className($this));
 
@@ -69,9 +65,8 @@ class ActiveManager
 
     /**
      * Add metadata dir
-     * @param string $dir
      */
-    public function addMetadataDir($dir)
+    public function addMetadataDir(string $dir): void
     {
         if (!in_array($dir, $this->metadataDirs)) {
             $this->metadataDirs[] = $dir;
@@ -79,11 +74,17 @@ class ActiveManager
     }
 
     /**
-     * Get metadata object for concrete active record class
-     * @param string $className
-     * @return Storage
+     * Set several metadata dirs
      */
-    public function getMetadata($className): Storage
+    public function setMetadataDirs(array $dirs): void
+    {
+        array_map(fn($dir) => $this->addMetadataDir($dir), $dirs);
+    }
+
+    /**
+     * Get metadata object for concrete active record class
+     */
+    public function getMetadata(string $className): Storage
     {
         if (!$this->metadata) {
             $this->loadMetadata();
@@ -97,54 +98,48 @@ class ActiveManager
     }
 
     /**
-     * Get active record relation object
+     * Get relation object for given active record relation name.
+     *
      * @param string $name Relation name
-     * @param string $className Active record class
-     * @return RelationAbstract
-     * @throws \RuntimeException
+     * @param ActiveRecord $owner Relation owner
+     * @throws RuntimeException
      */
-    public function getRelation(string $name, string $className)
+    public function getRelation(string $name, ActiveRecord $owner): RelationAbstract|null
     {
-        if (!isset($this->relations[$name])) {
-            $meta = $this->getMetadata($className)['relations'][$name] ?? [];
-            $relation = null;
+        $className = get_class($owner);
+        $metadata = $this->getMetadata($className)['relations'][$name] ?? null;
 
-            if ($meta) {
-                switch ($meta['type']) {
-                    case 'hasOne':
-                        $relation = new HasOneRelation($name, $this);
-                        break;
-
-                    case 'hasMany':
-                        $relation = new HasManyRelation($name, $this);
-                        break;
-
-                    case 'hasManyJoint':
-                        $relation = new HasManyJointRelation($name, $this);
-                        break;
-
-                    default:
-                        throw new \RuntimeException(sprintf('The type of "%s" relation is unknown', $name));
-                }
-
-                $relation->build($meta);
-            }
-
-            $this->relations[$name] = $relation;
+        if (!$metadata) {
+            return null;
         }
 
-        return $this->relations[$name];
+        $relationName = "$className:$name";
+
+        if (isset($this->relations[$relationName])) {
+            return $this->relations[$relationName];
+        }
+
+        $relation = match ($metadata['type']) {
+            'hasOne' => new HasOneRelation($name, $owner),
+            'hasMany' => new HasManyRelation($name, $owner),
+            'hasManyJoint' => new HasManyJointRelation($name, $owner),
+            default => throw new RuntimeException(sprintf('The type of "%s" relation is unknown', $name)),
+        };
+
+        $relation->build($metadata);
+
+        return $this->relations[$relationName] = $relation;
     }
 
     /**
      * Load metadata from all registered dirs and store them as configuration objects
      */
-    protected function loadMetadata()
+    protected function loadMetadata(): void
     {
         $config = new Storage;
 
         foreach ($this->metadataDirs as $dir) {
-            $configs = glob($dir . '/*.yml');
+            $configs = glob($dir . '/*' . $config->getReader()->getFileExt());
 
             foreach ($configs as $file) {
                 $config->load($file);

@@ -1,15 +1,15 @@
 <?php
 /**
  * @package   Gears\Framework
- * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @license   http://url/license
+ * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
+ * @copyright Copyright (c) 2022 Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
 
 declare(strict_types=1);
 
 namespace Gears\Framework\View;
 
+use Exception;
 use Gears\Framework\Cache\CacheInterface;
 
 defined('DS') || define('DS', DIRECTORY_SEPARATOR);
@@ -24,44 +24,38 @@ class View
 {
     /**
      * Stores all possible helper class namespaces
-     * @var array
      */
-    private $helperNamespaces = [];
+    private array $helperNamespaces = [];
 
     /**
      * Collection of all currently called helpers
-     * @var array
      */
-    private $helpers = [];
+    private array $helpers = [];
 
     /**
      * Stores paths where to search for template files
-     * @var array
      */
-    private $templatePaths = [];
+    private array $templatePaths = [];
 
     /**
      * Collection of all currently loaded templates
-     * @var array
      */
-    private $templates = [];
+    private array $templates = [];
 
     /**
      * Template files extension
-     * @var string
      */
-    private $templateFileExt = '.phtml';
+    private string $templateFileExt = '.phtml';
 
     /**
      * Cache implementation instance
-     * @var CacheInterface
      */
-    private $cache;
+    private CacheInterface $cache;
 
     /**
      * View extensions
      */
-    private $extensions;
+    private array $extensions;
 
     public function __construct(array $options = [])
     {
@@ -84,36 +78,32 @@ class View
 
     /**
      * Set cache storage
-     * @param CacheInterface $cache
      */
-    public function setCache(CacheInterface $cache)
+    public function setCache(CacheInterface $cache): void
     {
         $this->cache = $cache;
     }
 
     /**
      * Get cache storage
-     * @return CacheInterface
      */
-    public function getCache()
+    public function getCache(): CacheInterface
     {
         return $this->cache;
     }
 
     /**
      * Set absolute paths where to search templates
-     * @param array $paths
      */
-    public function setTemplatePaths($paths)
+    public function setTemplatePaths($paths): void
     {
         $this->templatePaths = $paths;
     }
 
     /**
      * Add a single templates directory path
-     * @param string $path
      */
-    public function addTemplatePath($path)
+    public function addTemplatePath($path): static
     {
         $this->templatePaths[] = realpath($path);
 
@@ -122,11 +112,11 @@ class View
 
     /**
      * Added helper classes namespace
-     * @param string $namespace
      */
-    public function addHelperNamespace($namespace)
+    public function addHelperNamespace(string $namespace): static
     {
         $this->helperNamespaces[] = $namespace;
+
         return $this;
     }
 
@@ -134,13 +124,12 @@ class View
      * Get template by full or relative name OR alias name (for already stored templates)
      *
      * @param string $name Template name to get the template. Extension is optional
-     * @param null|string $alias (optional) Unique name under which to store and access template for future
+     * @param string|null $alias (optional) Unique name under which to store and access template for future
      *
-     * @throws \Exception
+     * @throws Exception
      *
-     * @return Template
      */
-    public function load($name, $alias = null)
+    public function load(string $name, string $alias = null): Template
     {
         // possibly we are accessing already stored template
         if (!is_string($alias) && isset($this->templates[$name])) {
@@ -168,7 +157,7 @@ class View
         }
 
         if (!isset($tpl)) {
-            throw new \Exception('Template file not found: ' . $fileName);
+            throw new Exception('Template file not found: ' . $fileName);
         }
 
         return $this->templates[$alias] = $tpl;
@@ -185,11 +174,11 @@ class View
     /**
      * Call a helper with a given name and parameters.
      * @param string $helperName Helper name
-     * @param array (optional) $params Helper parameters
-     * @return string Helper execution result
-     * @throws \Exception
+     * @param array $params (optional) Helper parameters
+     * @return mixed
+     * @throws Exception
      */
-    public function helper($helperName, $params = [])
+    public function helper(string $helperName, array $params = []): mixed
     {
         if (!isset($this->helpers[$helperName])) {
             // try to find helper within all registered namespaces and instantiate it
@@ -210,39 +199,34 @@ class View
         return call_user_func_array($this->helpers[$helperName], $params);
     }
 
-    /**
-     * @param $ext
-     */
-    public function addExtension($ext)
+    public function addExtension(ExtensionInterface $ext): void
     {
-        $this->extensions[] = $ext;
+        $this->extensions[$ext->getName()] = $ext;
     }
 
     public function extension($name): string
     {
-        foreach ($this->extensions as $extension) {
-            if (method_exists($extension, $name)) {
-                return (string)call_user_func([$extension, $name]);
-            }
+        if (!isset($this->extensions[$name])) {
+            throw new \RuntimeException("View extension `$name` is not registered");
         }
 
-        return '';
+        return $this->extensions[$name]();
     }
 
     /**
      * Resolve refs like `AdminModule@content:index` to real templates inside modules, e.g. AdminModule/templates/content/index[.phtml]
      *
-     * @todo Not used atm. Think if it should be dropped in favor of more explicit and clear mehanism without refs.
+     * @deprecated todo Not used atm. Think if it should be dropped in favor of more explicit and clear mechanism without refs.
      */
     private function parseTemplateReference(string $reference): string
     {
-        if (false === strpos($reference, '@')) {
+        if (!str_contains($reference, '@')) {
             return $reference;
         }
 
         $chunks = explode('@', trim($reference, '@'));
 
-        $templateName = SRC_PATH;
+        $templateName = 'SRC_PATH';
 
         if (count($chunks) == 2) {
             $templateName .= array_shift($chunks) . DS;

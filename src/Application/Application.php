@@ -1,69 +1,61 @@
 <?php
 
 /**
- * @package   Gears\Framework
- * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @license   http://url/license
+ * @copyright For the full copyright and license information, please view the LICENSE files included in this source code.
  */
 declare(strict_types=1);
 
 namespace Gears\Framework\Application;
 
-use Gears\Framework\Application\Exception\ActionNotFoundException;
-use Gears\Framework\Application\Routing\Route;
+use ErrorException;
 use Gears\Framework\Debug;
 use Gears\Storage\Storage;
 use Gears\Framework\Event\Dispatcher;
 use Gears\Framework\Application\Routing\Router;
 use Gears\Framework\Application\Routing\Exception\RouteNotFound;
+use Gears\Framework\Application\Controller\ActionNotFoundException;
 use Gears\Framework\Application\Controller\ControllerResolver;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
+
+defined('DS') || define('DS', DIRECTORY_SEPARATOR);
 
 /**
- * Provides the most low-level application functionality, controls the application flow
+ * Provides the most low-level "kernel" functionality, controls the application flow
+ *
  * @package    Gears\Framework
  * @subpackage App
+ * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
-class Application extends Dispatcher
+abstract class Application extends Dispatcher
 {
     use ServiceAware;
 
-    /**
-     * If to ignore error_reporting() level (so @ error suppression symbol
-     * will take no effect and all errors will be still handled).
-     * By default set to false in {@link handleErrors()} method
-     */
-    private bool $ignoreErrorReporting;
-
-    /**
-     * Configuration storage
-     */
-    private Storage $config;
-
-    public function __construct(Storage $config, Services $services)
+    public function __construct(private Storage $config, protected Services $services)
     {
-        $this->config = $config;
-        $this->services = $services;
     }
 
     /**
      * Setup main application services and load modules
      */
-    public function load()
+    public function load(string $env = ''): self
     {
-        $this->handleErrors();
         $this->handleExceptions();
+        $fileExt = $this->config->getReader()->getFileExt();
+        $configFile = 'config' . rtrim('_' . $env, '_') . $fileExt;
+        $this->config->load($this->getAppDir() . '/config/' . $configFile);
+        $this->registerServices($this->config);
 
-        foreach ($this->config['modules'] as $moduleName) {
-            // todo auto-discover modules
-            $moduleClassName = $moduleName . '\\Module';
+        if (php_sapi_name() !== 'cli') {
+            $this->set('router', new Router);
+        }
+
+        foreach (glob($this->getAppDir() . '/src/*/Module.php') as $moduleFile) {
             /** @var AbstractModule $module */
-            $module = new $moduleClassName;
+            $module = require_once $moduleFile;
             $module->setServices($this->services);
-            $this->config->merge($module->getConfigFile());
             $module->load();
         }
 
@@ -71,32 +63,15 @@ class Application extends Dispatcher
     }
 
     /**
-     * Handle the income request, dispatch it to specific controller action and return the response
+     * Handle income request, dispatch it to specific controller action and return the response
      *
-     * @throws RouteNotFound
+     * @throws RouteNotFound|ActionNotFoundException
      */
     public function handle(Request $request)
     {
         $this->set('request', $request);
-        $router = new Router;
-        // todo make config reading in OOP way with nodes validations
-        $router->build($this->config['routing']);
-        $apiConfig = $this->config['api'];
 
-        foreach ($apiConfig['resources'] as $resourceDefinition) {
-            foreach (
-                $router->buildResourceRoutes(
-                    $resourceDefinition['class'],
-                    $resourceDefinition['endpoint'],
-                    $apiConfig['handler'],
-                    $apiConfig['prefix']
-                ) as $route
-            ) {
-                $route->setAttribute('resource', $resourceDefinition['class']);
-            }
-        }
-
-        if (!$route = $router->match($request)) {
+        if (!$route = $this->get('router')->match($request)) {
             throw new RouteNotFound($request->getMethod() . ' ' . $request->getPathInfo());
         }
 
@@ -111,7 +86,7 @@ class Application extends Dispatcher
 
         $response = call_user_func_array(
             [$controller, $controllerResolver->getAction()],
-            [$route->getAttribute('resource')] + $route->getParams()
+            array_merge($route->getResource() ? [$route->getResource()] : [], $route->getParams())
         );
 
         if (!$response instanceof Response) {
@@ -126,26 +101,58 @@ class Application extends Dispatcher
     }
 
     /**
+     * Return application root directory
+     */
+    abstract public function getAppDir(): string;
+
+    /**
+     * Register all global level custom services
+     */
+    abstract public function registerServices(Storage $config);
+
+    /**
      * Exception handler function. Trying to display detailed exception info
      */
-    public function exceptionHandler(\Throwable $e)
+    public function exceptionHandler(Throwable $e)
     {
-        if (ob_get_length()) {
-            ob_end_clean();
+        $statusCode = $e instanceof HttpExceptionInterface ? $e->getCode() : 500;
+
+        if (!Debug::enabled()) {
+            http_response_code($statusCode);
+            echo "<h1>Oops! An Error Occurred</h1><h2>The server returned $statusCode code</h2>";
+
+            return;
         }
 
-        echo sprintf('<pre>%s</pre>', $e . '');
+        /** @var Request $request */
+        $request = $this->get('request');
+
+        if ($request->isXmlHttpRequest() || str_contains($request->getContentType() . '', 'json')) {
+            $content = json_encode([
+                                       'exception' => [
+                                           'message' => $e->getMessage(),
+                                           'code' => $e->getCode(),
+                                           'file' => $e->getFile(),
+                                           'line' => $e->getLine(),
+                                           'trace' => $e->getTrace(),
+                                       ],
+                                   ]);
+        } else {
+            $content = "<pre>{$e}</pre>";
+        }
+
+        (new Response($content, $statusCode))->send();
     }
 
     /**
      * Error handler function
      *
-     * @throws \ErrorException
+     * @throws ErrorException
      */
     public function errorHandler(int $code, string $message, string $file, int $line): bool
     {
-        if (error_reporting() || $this->ignoreErrorReporting) {
-            throw new \ErrorException($message, $code, 1, $file, $line);
+        if (error_reporting()) {
+            throw new ErrorException($message, $code, 1, $file, $line);
         }
 
         return true;
@@ -154,9 +161,9 @@ class Application extends Dispatcher
     /**
      * Setting custom exception handler
      *
-     * @return mixed set_exception_handler return value
+     * @return callable|null set_exception_handler return value
      */
-    private function handleExceptions()
+    private function handleExceptions(): ?callable
     {
         return set_exception_handler([$this, 'exceptionHandler']);
     }
@@ -164,10 +171,8 @@ class Application extends Dispatcher
     /**
      * Setting custom error handler
      */
-    private function handleErrors(bool $ignore = false): mixed
+    private function handleErrors(): ?callable
     {
-        $this->ignoreErrorReporting = $ignore;
-
         return set_error_handler([$this, 'errorHandler']);
     }
 }

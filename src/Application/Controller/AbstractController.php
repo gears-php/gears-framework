@@ -2,7 +2,7 @@
 
 /**
  * @package   Gears\Framework
- * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
+ * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
 declare(strict_types=1);
 
@@ -26,12 +26,11 @@ abstract class AbstractController
      * @param string $uri Resource uri
      * @param int $code HTTP response code
      *
-     * @return Response
+     * @return void
      */
-    public function redirect(string $uri, int $code = Response::HTTP_FOUND): Response
+    public function redirect(string $uri, int $code = Response::HTTP_FOUND): void
     {
-        return (new Response)
-            ->setStatusCode($code)
+        (new Response)->setStatusCode($code)
             ->headers->set('Location', '/' . trim($uri, ' /') . '/');
     }
 }

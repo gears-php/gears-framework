@@ -1,7 +1,7 @@
 <?php
 /**
  * @package   Gears\Framework
- * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
+ * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
 namespace Gears\Framework\View\Parser\State\Exception;
 

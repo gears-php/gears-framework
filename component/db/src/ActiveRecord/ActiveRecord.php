@@ -6,33 +6,26 @@ namespace Gears\Db\ActiveRecord;
 
 use Gears\Storage\Storage;
 use Gears\Db\Adapter\AdapterAbstract;
+use JsonSerializable;
 
 /**
  * Simple Active record pattern implementation
  * @package Gears\Db
  */
-class ActiveRecord implements \JsonSerializable
+class ActiveRecord implements JsonSerializable
 {
     /**
      * Stores pristine (db persistent) property values
-     * @var array
      */
-    protected $data = [];
+    protected array $data = [];
 
     /**
      * Stores yet unsaved modified property values
-     * @var array
      */
-    protected $dirty = [];
-
-    /**
-     * @var ActiveManager
-     */
-    protected $manager;
+    protected array $dirty = [];
 
     /**
      * Get primary key from metadata
-     * @return string
      */
     public function getPrimaryKey(): string
     {
@@ -49,12 +42,20 @@ class ActiveRecord implements \JsonSerializable
     }
 
     /**
-     * Get metadata object for concrete active record class
+     * Get metadata object for concrete active record class.
      * @return Storage
      */
     public function getMetadata(): Storage
     {
         return $this->manager->getMetadata(get_called_class());
+    }
+
+    /**
+     * Get metadata part for AR relations.
+     */
+    public function getRelationsMetadata(): ?array
+    {
+        return $this->getMetadata()['relations'];
     }
 
     /**
@@ -66,37 +67,39 @@ class ActiveRecord implements \JsonSerializable
     }
 
     /**
-     * On construction we need to fixate data because when PDO initializes object
+     * On construction, we need to fixate data because when PDO initializes object
      * with existing db record data they go to dirty only (via magic __set)
-     * @param ActiveManager $manager
      * @see fixate
      * @see __set
      */
-    public function __construct(ActiveManager $manager)
+    public function __construct(protected ActiveManager $manager)
     {
-        $this->manager = $manager;
         $this->fixate();
     }
 
     /**
-     * Set object property value
-     * @param string $prop
-     * @param mixed $value
+     * Fill record with given property values.
      */
-    public function __set(string $prop, $value)
+    public function fill(array $props): void
+    {
+        $this->dirty = array_merge($this->dirty, $props);
+    }
+
+    /**
+     * Set object property value
+     */
+    public function __set(string $prop, mixed $value)
     {
         $this->dirty[$prop] = $value;
     }
 
     /**
      * Get object property value or get relation active record(s) in case there is relation defined with given name
-     * @param string $prop
-     * @return mixed
      */
     public function __get(string $prop)
     {
-        if ($relation = $this->manager->getRelation($prop, get_called_class())) {
-            return $relation->exec($this);
+        if ($relation = $this->manager->getRelation($prop, $this)) {
+            return $relation->exec();
         }
 
         if (isset($this->dirty[$prop])) {
@@ -132,15 +135,16 @@ class ActiveRecord implements \JsonSerializable
      */
     public function save(): bool
     {
-        $meta = $this->getMetadata();
+        $metadata = $this->getMetadata();
         $data = [];
 
         foreach ($this->dirty as $prop => $value) {
-            if ($field = $meta['fields'][$prop]) {
+            if (in_array($prop, $metadata['fields'])) {
+                $data[$prop] = $value;
+            } elseif ($field = $metadata['fields'][$prop] ?? null) {
                 $data[$field] = $value;
             }
         }
-
         $primaryKey = $this->getPrimaryKey();
         $tableName = $this->getTableName();
 
@@ -164,7 +168,6 @@ class ActiveRecord implements \JsonSerializable
 
     /**
      * Delete existing record data from db
-     * @return bool
      */
     public function delete(): bool
     {
@@ -179,12 +182,35 @@ class ActiveRecord implements \JsonSerializable
             }
         }
 
-        return (bool)$deleted;
+        return $deleted;
     }
 
     public function jsonSerialize()
     {
-        return $this->data;
+        $metadata = $this->getRelationsMetadata();
+
+        if (!$metadata || false) { // todo add configuration option to serialize with relations
+            return $this->data;
+        }
+
+        static $isRelationSerialized = [];
+
+        foreach ($metadata as $name => $relation) {
+            $cacheKey = implode(':', [
+                get_class($this),
+                $this->{$this->getPrimaryKey()},
+                $name,
+                // todo somehow get id of target record
+            ]);
+
+            if (!isset($isRelationSerialized[$cacheKey])) {
+                $relational[$name] = $this->{$name};
+            }
+
+            $isRelationSerialized[$cacheKey] = true;
+        }
+
+        return array_merge($this->data, $relational ?? []);
     }
 
     /**

@@ -1,7 +1,10 @@
 <?php
+
 /**
- * @author deniskrasilnikov86@gmail.com
+ * @author denis.krasilnikov@gears.com
  */
+declare(strict_types=1);
+
 namespace Gears\Framework\Application;
 
 /**
@@ -13,30 +16,21 @@ trait ServiceAware
 {
     /**
      * Services container instance
-     *
-     * @var Services
      */
-    protected $services;
+    protected Services $services;
 
     /**
      * Get application service
-     *
-     * @param string $name
-     *
-     * @return object
      */
-    public function get()
+    public function get(...$args): object
     {
-        return call_user_func_array([$this->services, 'get'], func_get_args());
+        return call_user_func_array([$this->services, 'get'], $args);
     }
 
     /**
      * Set application service
-     *
-     * @param string $name
-     * @param callable|object $callable
      */
-    public function set($name, $callable)
+    public function set(string $name, callable|object $callable): static
     {
         $this->services->set($name, $callable);
 
@@ -45,23 +39,18 @@ trait ServiceAware
 
     /**
      * Set a shared application service
-     *
-     * @param string $name
-     * @param callable $callable
      */
-    public function setShared($name, $callable)
+    public function shared(string $name, callable $callable): static
     {
-        $this->services->setShared($name, $callable);
+        $this->services->shared($name, $callable);
 
         return $this;
     }
 
     /**
      * Set fallback service
-     *
-     * @param $callable
      */
-    public function fallback($callable)
+    public function fallback($callable): static
     {
         $this->services->fallback($callable);
 
@@ -70,11 +59,11 @@ trait ServiceAware
 
     /**
      * Set service container
-     *
-     * @param Services $services
      */
-    public function setServices(Services $services)
+    public function setServices(Services $services): static
     {
         $this->services = $services;
+
+        return $this;
     }
 }

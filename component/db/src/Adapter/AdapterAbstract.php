@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @author deniskrasilnikov86@gmail.com
+ * @author denis.krasilnikov@gears.com
  */
 declare(strict_types=1);
 
@@ -15,6 +15,7 @@ use Gears\Db\Query;
 use Gears\Db\Query\WhereAbstract;
 use Gears\Db\Query\WhereAnd;
 use Gears\Db\Dataset;
+use RuntimeException;
 
 /**
  * Abstract db adapter is a PDO wrapper bringing more handy and laconic functionality over the last one
@@ -68,14 +69,14 @@ abstract class AdapterAbstract implements ArrayAccess
     /**
      * Execute query previously prepared with {@see prepare()}
      *
-     * @throws \RuntimeException
+     * @throws RuntimeException
      */
     public function execute(array $params): self
     {
         try {
             $this->statement->execute($params);
         } catch (PDOException $e) {
-            throw new \RuntimeException('Error executing the query: ' . $this->lastQuery, 0, $e);
+            throw new RuntimeException('Error executing the query: ' . $this->lastQuery, 0, $e);
         }
 
         return $this;
@@ -142,7 +143,7 @@ abstract class AdapterAbstract implements ArrayAccess
      * Fetch a single cell value from a first result row
      * @return mixed Table cell value or false otherwise
      */
-    public function fetchOne()
+    public function fetchOne(): mixed
     {
         return $this->statement->fetchColumn();
     }
@@ -158,33 +159,33 @@ abstract class AdapterAbstract implements ArrayAccess
     /**
      * Escape the given identifier (e.g. field name, table name)
      */
-    abstract public function escapeIdentifier($identifier);
+    abstract public function escapeIdentifier(string $identifier);
+
+    /**
+     * Get driver-specific SQL clause for limiting selected data set results.
+     */
+    abstract public function getLimitClause(int $count, int $offset): string;
 
     /**
      * Db driver specific method which allows to get the total row count of the latest performed select query
-     * @return int
-     * @throws \RuntimeException
      */
-    public function getLastRowCount()
+    public function getLastRowCount(): int
     {
-        throw new \RuntimeException(__METHOD__ . ' is not supported by current db driver');
+        throw new RuntimeException(__METHOD__ . ' is not supported by current db driver');
     }
 
     /**
      * Get id of the last inserted row
-     * @return string
      */
-    public function getLastInsertId()
+    public function getLastInsertId(): string
     {
         return $this->connection->lastInsertId();
     }
 
     /**
      * Create a new table with a given name and field definitions
-     * @param string $tableName
-     * @param array $fields
      */
-    public function create($tableName, array $fields)
+    public function create(string $tableName, array $fields)
     {
         $patterns = $this->patterns['create_table'];
         $fields = array_map(
@@ -203,21 +204,17 @@ abstract class AdapterAbstract implements ArrayAccess
 
     /**
      * Drop the table
-     * @param string $tableName
      */
-    public function drop($tableName)
+    public function drop(string $tableName)
     {
         $sql = sprintf('DROP TABLE IF EXISTS %s', $this->escapeIdentifier($tableName));
         $this->connection->exec($sql);
     }
 
     /**
-     * Insert multiple table rows
-     * @param string $tableName
-     * @param array $rows Collection of row data
-     * @return integer|boolean Number of inserted rows or false
+     * Insert multiple rows. Returns number of inserted rows or false
      */
-    public function insert($tableName, $rows)
+    public function insert(string $tableName, array $rows): bool|int
     {
         // build fields for sql
         ksort($rows[0]);
@@ -256,13 +253,9 @@ abstract class AdapterAbstract implements ArrayAccess
     }
 
     /**
-     * Update table record(s) matched by the given where clause
-     * @param string $tableName
-     * @param array $data New record data
-     * @param array|WhereAbstract $where
-     * @return integer|boolean Number of affected rows or false
+     * Update table record(s) matched by the given where clause. Returns number of affected rows or false
      */
-    public function update($tableName, $data, $where)
+    public function update(string $tableName, array $data, array|WhereAbstract $where): bool|int
     {
         if (is_array($where)) {
             $where = (new WhereAnd($this))->fromArray($where);
@@ -300,29 +293,21 @@ abstract class AdapterAbstract implements ArrayAccess
 
     /**
      * Return Dataset instance for table records manipulation
-     * @param string $tableName
-     * @return Dataset
      */
-    public function get($tableName)
+    public function get(string $tableName): Dataset
     {
         return new Dataset($tableName, $this);
     }
 
-    /**
-     * @param mixed $offset
-     * @return bool
-     */
-    public function offsetExists($offset)
+    public function offsetExists(mixed $offset): bool
     {
         return true;
     }
 
     /**
      * Return dataset by a given table name
-     * @param mixed $offset
-     * @return Dataset|null
      */
-    public function offsetGet($offset)
+    public function offsetGet(mixed $offset): ?Dataset
     {
         if (is_string($offset)) {
             return $this->get($offset);
@@ -331,28 +316,18 @@ abstract class AdapterAbstract implements ArrayAccess
         return null;
     }
 
-    /**
-     * @param mixed $offset
-     * @param mixed $value
-     */
-    public function offsetSet($offset, $value)
+    public function offsetSet(mixed $offset, mixed $value)
     {
     }
 
-    /**
-     * @param mixed $offset
-     */
-    public function offsetUnset($offset)
+    public function offsetUnset(mixed $offset)
     {
     }
 
     /**
      * Create new db connection based on given connection config parameters and additional options
-     * @param array $config
-     * @param array (optional) $options
-     * @return PDO
      */
-    protected function createConnection(array $config, array $options = [])
+    protected function createConnection(array $config, array $options = []): PDO
     {
         $dsn = "{$config['driver']}:host={$config['host']};dbname={$config['dbname']}";
 

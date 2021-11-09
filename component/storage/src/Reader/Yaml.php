@@ -1,6 +1,6 @@
 <?php
 /**
- * @author deniskrasilnikov86@gmail.com
+ * @author denis.krasilnikov@gears.com
  */
 namespace Gears\Storage\Reader;
 
@@ -16,7 +16,7 @@ class Yaml extends ReaderAbstract
      */
     public function getFileExt()
     {
-        return '.yml';
+        return '.yaml';
     }
 
     /**

@@ -1,10 +1,12 @@
 <?php
+
 /**
  * @package   Gears\Db
- * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @license   http://url/license
+ * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
+ * @copyright Copyright (c) 2022 Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
+declare(strict_types=1);
+
 namespace Gears\Db;
 
 use Gears\Db\Adapter\AdapterAbstract;
@@ -20,64 +22,21 @@ class Query
     const ASC = 'ASC';
     const DESC = 'DESC';
 
-    /**
-     * @var AdapterAbstract
-     */
-    protected $db;
-
-    /**
-     * @var string
-     */
-    private $selectOptions = '';
-
-    /**
-     * @var array
-     */
-    private $select = [];
-
-    /**
-     * @var array
-     */
-    private $from = [];
-
-    /**
-     * @var array
-     */
-    private $join = [];
-
-    /**
-     * @var WhereAbstract
-     */
-    private $where;
-
-    /**
-     * @var array
-     */
-    private $group = [];
-
-    /**
-     * @var array
-     */
-    private $order = [];
-
-    /**
-     * @var string
-     */
-    private $limit;
-
-    /**
-     * Query parameters
-     * @var array
-     */
-    private $params = [];
+    private string $selectOptions = '';
+    protected array $select = [];
+    private array $from = [];
+    private array $join = [];
+    private ?WhereAbstract $where;
+    private array $group = [];
+    private array $order = [];
+    private ?string $limit = null;
+    private array $params = [];
 
     /**
      * Init query with the db adapter instance
-     * @param AdapterAbstract $db
      */
-    public function __construct(AdapterAbstract $db)
+    public function __construct(protected AdapterAbstract $db)
     {
-        $this->db = $db;
     }
 
     /**
@@ -86,12 +45,12 @@ class Query
      * $query->select('field', 'fieldAlias');
      * $query->select(['field1Alias' => 'field1', 'field2', 'field3']);
      * </code>
-     * @param string|array $field Field name or array of fields
-     * @param string $alias (optional) Field alias
+     *
+     * @param array|string $field Field name or array of fields
+     * @param string|null $alias (optional) Field alias
      * @param string $table (optional) Table name
-     * @return $this
      */
-    public function select($field, $alias = null, $table = '')
+    public function select(array|string $field, string $alias = null, string $table = ''): static
     {
         if (is_array($field)) {
             // array of column fields was passed
@@ -108,12 +67,8 @@ class Query
     /**
      * Select a single field wrapped in COUNT() aggregate function
      * {@see selectSingle()}
-     * @param string $field
-     * @param string $alias
-     * @param string $table
-     * @return $this
      */
-    public function selectCount($field, $alias = null, $table = null)
+    public function selectCount(string $field, string $alias = null, string $table = null): static
     {
         $this->selectSingle(['count' => $field], $alias, $table);
 
@@ -122,12 +77,11 @@ class Query
 
     /**
      * Add a single field to SELECT clause
-     * @param string|array $field Field name or [aggregate_function => field] mapping
-     * @param string $alias (optional) Field alias
-     * @param string $table (optional) Table name
-     * @return $this
+     * @param array|string $field Field name or [aggregate_function => field] mapping
+     * @param string|null $alias (optional) Field alias
+     * @param string|null $table (optional) Table name
      */
-    public function selectSingle($field, $alias = null, $table = null)
+    public function selectSingle(array|string $field, string $alias = null, string $table = null): static
     {
         $fn = '%s';
 
@@ -160,9 +114,8 @@ class Query
 
     /**
      * Select all fields
-     * return Query
      */
-    public function selectAll()
+    public function selectAll(): static
     {
         $this->select[] = '*';
 
@@ -171,9 +124,8 @@ class Query
 
     /**
      * Remove all SELECT clause fields
-     * @return $this
      */
-    public function noSelect()
+    public function noSelect(): static
     {
         $this->select = [];
 
@@ -182,11 +134,8 @@ class Query
 
     /**
      * Add FROM table
-     * @param $table
-     * @param string $alias
-     * @return $this
      */
-    public function from($table, $alias = null)
+    public function from(string $table, string $alias = null): static
     {
         $table = $this->db->escapeIdentifier($table);
 
@@ -201,9 +150,8 @@ class Query
 
     /**
      * Remove all FROM clause tables
-     * @return $this
      */
-    public function noFrom()
+    public function noFrom(): static
     {
         $this->from = [];
 
@@ -212,15 +160,15 @@ class Query
 
     /**
      * Add JOIN clause. Note that $joinTable alias (if given) will be used to qualify $joinField.
-     * Table name is used otherwise. By default INNER JOIN is applied
-     * @param string|array $joinTable Joined table name or [alias => name]
+     * Table name is used otherwise. By default,INNER JOIN is applied.
+     *
+     * @param array|string $joinTable Joined table name or [alias => name]
      * @param string $joinField Joined table field
      * @param string $baseTable Basic table to join with
      * @param string $baseField Basic table field to join on
-     * @param string (optional) $type Join type
-     * @return $this
+     * @param string $type (optional) Join type
      */
-    public function join($joinTable, $joinField, $baseTable, $baseField, $type = 'inner')
+    public function join(array|string $joinTable, string $joinField, string $baseTable, string $baseField, string $type = 'inner'): static
     {
         if (is_array($joinTable)) {
             $joinAlias = key($joinTable);
@@ -246,13 +194,12 @@ class Query
     /**
      * Add LEFT JOIN clause. Note that $joinTable alias (if given) will be used to qualify $joinField.
      * Table name is used otherwise
-     * @param string|array $joinTable Joined table name or [alias => name]
+     * @param array|string $joinTable Joined table name or [alias => name]
      * @param string $joinField Joined table field
      * @param string $baseTable Basic table to join with
      * @param string $baseField Basic table field to join on
-     * @return $this
      */
-    public function leftJoin($joinTable, $joinField, $baseTable, $baseField)
+    public function leftJoin(array|string $joinTable, string $joinField, string $baseTable, string $baseField): static
     {
         $this->join($joinTable, $joinField, $baseTable, $baseField, 'left');
 
@@ -261,9 +208,8 @@ class Query
 
     /**
      * Remove all JOIN clauses
-     * @return $this
      */
-    public function noJoins()
+    public function noJoins(): static
     {
         $this->join = [];
 
@@ -272,10 +218,8 @@ class Query
 
     /**
      * Add a {@see WhereAbstract} object of WHERE clause
-     * @param WhereAbstract $where
-     * @return $this
      */
-    public function where(WhereAbstract $where)
+    public function where(WhereAbstract $where): static
     {
         $this->where = $where;
 
@@ -284,18 +228,16 @@ class Query
 
     /**
      * Get WHERE clause conditions object
-     * @return WhereAbstract
      */
-    public function getWhere()
+    public function getWhere(): ?WhereAbstract
     {
         return $this->where;
     }
 
     /**
      * Remove WHERE clause object
-     * @return $this
      */
-    public function noWhere()
+    public function noWhere(): static
     {
         $this->where = null;
 
@@ -304,11 +246,8 @@ class Query
 
     /**
      * Add GROUP BY clause field(s)
-     * @param string|array $field
-     * @param string (optional) $table
-     * @return $this
      */
-    public function group($field, $table = null)
+    public function group($field, string $table = null): static
     {
         if (is_array($field)) {
             foreach ($field as $fieldName) {
@@ -327,9 +266,8 @@ class Query
 
     /**
      * Remove all GROUP BY clause conditions
-     * @return $this
      */
-    public function noGroup()
+    public function noGroup(): static
     {
         $this->group = [];
 
@@ -341,26 +279,24 @@ class Query
      * <code>
      * $query->order('lastName', Query::ASC);
      * $query->order(['lastName', 'firstName' => Query::DESC]);
+     * $query->order('NULL'); # ORDER BY NULL
      * </code>
-     * @param string|array $field Field name or array of fields to order
+     * @param array|string $field Field name or array of fields to order
      * @param string $sort (optional) Sort direction
-     * @return $this
      */
-    public function order($field, $sort = self::ASC)
+    public function order(array|string $field, string $sort = self::ASC): static
     {
         if (is_array($field)) { // array of order-by fields
             foreach ($field as $fieldKey => $fieldValue) {
-                // numeric element index
                 if (is_numeric($fieldKey)) {
-                    // just pass field name
+                    // for numeric index just pass field name
                     $this->order($fieldValue);
-                } // we have [field name => sort direction] pair
-                else {
+                } else { // we have [field name => sort direction] pair
                     $this->order($fieldKey, $fieldValue);
                 }
             }
         } else { // add a single column field
-            if (null === $field) {
+            if (strtolower($field) == 'null') {
                 $this->order[] = 'NULL';
             } else {
                 $this->order[] = rtrim($this->db->escapeIdentifier($field) . ' ' . strtoupper($sort));
@@ -372,9 +308,8 @@ class Query
 
     /**
      * Remove all ORDER BY clause conditions
-     * @return $this
      */
-    public function noOrder()
+    public function noOrder(): static
     {
         $this->order = [];
 
@@ -383,23 +318,18 @@ class Query
 
     /**
      * Add selection limit clause
-     * @param int $offset
-     * @param int $rowCount
-     * @return $this
      */
-    public function limit(int $offset, int $rowCount)
+    public function limit(int $count, int $offset = 0): static
     {
-        // @todo move the limit clause to each specific db adapter implementation: $db->getLimitClause()
-        $this->limit = sprintf('LIMIT %d,%d', $offset, $rowCount);
+        $this->limit = $this->db->getLimitClause($count, $offset);
 
         return $this;
     }
 
     /**
      * Remove LIMIT clause
-     * @return $this
      */
-    public function noLimit()
+    public function noLimit(): static
     {
         $this->limit = null;
 
@@ -407,22 +337,9 @@ class Query
     }
 
     /**
-     * Add SQL_CALC_FOUND_ROWS option. Mysql specific
-     */
-    public function calcFoundRows()
-    {
-        $this->selectOptions .= ' SQL_CALC_FOUND_ROWS ';
-
-        return $this;
-    }
-
-    /**
      * Bind query parameter to a specific positional placeholder
-     * @param int $idx
-     * @param mixed $value
-     * @return $this
      */
-    public function bind(int $idx, $value)
+    public function bind(int $idx, mixed $value): static
     {
         $this->params[$idx] = $value;
 
@@ -431,9 +348,8 @@ class Query
 
     /**
      * Execute query and return db adapter
-     * @return AdapterAbstract
      */
-    public function exec()
+    public function exec(): AdapterAbstract
     {
         if (!count($this->select)) {
             $this->selectAll();
@@ -444,16 +360,14 @@ class Query
 
     /**
      * Get query SQL string
-     * @return string
      */
-    public function toString()
+    public function toString(): string
     {
         return $this->glue();
     }
 
     /**
      * Wrapper for the {@see toString()}
-     * @return string
      */
     public function __toString()
     {
@@ -461,11 +375,9 @@ class Query
     }
 
     /**
-     * Build the query as a string
-     * @param string $sep Query chunks separator
-     * @return string
+     * Build the query as a string. Query parts are imploded by a given separator which defaults to a single space line.
      */
-    public function glue($sep = ' ')
+    public function glue(string $sep = ' '): string
     {
         // SELECT fields and options
         $queryString = 'SELECT' . $sep . $this->selectOptions . implode(',' . $sep, $this->select);
@@ -478,7 +390,7 @@ class Query
 
         // WHERE conditions
         if (is_object($this->where) && $this->where->count()) {
-            $queryString .= 'WHERE' . $sep . $this->where->toString();
+            $queryString .= $sep . 'WHERE' . $sep . $this->where->toString();
         }
 
         // GROUP BY fields

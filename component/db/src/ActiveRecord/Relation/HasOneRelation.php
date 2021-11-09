@@ -11,27 +11,28 @@ use Gears\Db\ActiveRecord\ActiveRecord;
 class HasOneRelation extends RelationAbstract
 {
     /**
-     * Foreign key of the relation owner
-     * @var string
-     */
-    protected $foreignKey;
-
-    /**
      * {@inheritdoc}
-     * @param array $meta
      */
     public function build(array $meta)
     {
-        $this->foreignKey = $meta['foreign'];
-        $this->query = $this->manager->of($meta['class']);
+        $this->query = $this->owner->getManager()->of($meta['class']);
+        $this->query
+            ->join(
+                $tableName = $this->owner->getTableName(),
+                $meta['foreign'],
+                $this->query->getActiveRecord()->getTableName(),
+                $pk = $this->owner->getPrimaryKey()
+            )
+            ->getWhere()->eq([$tableName => $pk]);
     }
 
     /**
      * {@inheritdoc}
-     * @return ActiveRecord
      */
-    public function exec(ActiveRecord $owner): ActiveRecord
+    public function exec(): ActiveRecord
     {
-        return $this->query->fetchById($owner->{$this->foreignKey});
+        return $this->query
+            ->bind(0, $this->owner->{$this->owner->getPrimaryKey()})
+            ->fetchOne();
     }
 }

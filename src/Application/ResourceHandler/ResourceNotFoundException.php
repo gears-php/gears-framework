@@ -1,14 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gears\Framework\Application\ResourceHandler;
 
-use Gears\Framework\Application\Controller\ControllerResolver;
+use Gears\Framework\Application\HttpExceptionInterface;
 
-class ResourceNotFoundException extends \RuntimeException
+class ResourceNotFoundException extends \RuntimeException implements HttpExceptionInterface
 {
-    public function __construct(string $resource, $code = 404, \Exception $previous = null)
+    public function __construct(string $resource)
     {
-        $message = sprintf("Resource $resource was not found");
-        parent::__construct($message, $code, $previous);
+        parent::__construct("Resource $resource was not found", 404);
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gears\Db\Adapter;
 
 use PDO;
@@ -19,33 +21,45 @@ class Sqlite extends AdapterAbstract
             ' string ' => ' VARCHAR ',
             ' float ' => ' REAL ',
             ' bool ' => ' BOOL ',
-        ]
+        ],
     ];
 
     /**
      * {@inheritdoc}
      */
-    public function escapeIdentifier($name)
+    public function escapeIdentifier(string $identifier): string
     {
-        return '"' . $name . '"';
+        return '"' . $identifier . '"';
     }
 
     /**
      * Override parent since SQLite does not support a single statement multiple row insert
      * {@inheritdoc}
      */
-    public function insert($tableName, $rows)
+    public function insert(string $tableName, array $rows): bool|int
     {
+        $count = 0;
+
         foreach ($rows as $row) {
-            parent::insert($tableName, [$row]);
+            $count += parent::insert($tableName, [$row]);
         }
+
+        return $count;
     }
 
     /**
      * {@inheritdoc}
      */
-    protected function createConnection(array $config, $options = [])
+    protected function createConnection(array $config, array $options = []): PDO
     {
         return new PDO("{$config['driver']}:{$config['file']}");
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getLimitClause(int $count, int $offset): string
+    {
+        return sprintf('LIMIT %d OFFSET %d', $count, $offset);
     }
 }

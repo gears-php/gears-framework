@@ -6,7 +6,7 @@ use Gears\Db\Adapter\AdapterAbstract;
 
 /**
  * Implements the and/or query conditions logic for WHERE clause
- * @author deniskrasilnikov86@gmail.com
+ * @author denis.krasilnikov@gears.com
  * @package   Gears\Db
  */
 abstract class WhereAbstract

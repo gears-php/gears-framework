@@ -1,21 +1,22 @@
 <?php
 /**
  * @package   Gears\Framework
- * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @copyright Copyright (c) 2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @license   http://url/license
+ * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
+ * @copyright Copyright (c2022 Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
 namespace Gears\Framework\Application\Routing\Exception;
+
+use Gears\Framework\Application\HttpExceptionInterface;
 
 /**
  * Exception thrown in case no route can be matched against request uri
  * @package    Gears\Framework
  * @subpackage Routing
  */
-class RouteNotFound extends \Exception
+class RouteNotFound extends \RuntimeException implements HttpExceptionInterface
 {
     public function __construct($requestUri)
     {
-        parent::__construct(sprintf('No route found for "%s" request', $requestUri));
+        parent::__construct(sprintf('No route found for "%s" request', $requestUri), 404);
     }
 }

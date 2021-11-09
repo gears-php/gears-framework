@@ -1,6 +1,6 @@
 <?php
 /**
- * @author deniskrasilnikov86@gmail.com
+ * @author denis.krasilnikov@gears.com
  */
 namespace Gears\Storage\Reader;
 

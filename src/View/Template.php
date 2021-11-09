@@ -213,35 +213,31 @@ class Template
         echo $this->blocks[$currentBlock];
     }
 
-    protected function tCall(array $args)
+    protected function tExtension(array $args)
     {
         echo $this->view->extension($args['name']);
     }
 
     /**
      * Include another template into current template
-     * @param array $args
      */
-    protected function tInclude(array $args)
+    protected function tInclude(array $args): void
     {
         echo $this->view->load($args['name'])->assign($this->vars)->render();
     }
 
     /**
      * Extend template with current one
-     * @param array $args
      */
-    protected function tExtends(array $args)
+    protected function tExtends(array $args): void
     {
         $this->parent($this->view->load($args['name']));
     }
 
     /**
      * Generate style link tag
-     * @param array $args
-     * @return string
      */
-    protected function tCss(array $args)
+    protected function tCss(array $args): string
     {
         $args['href'] = $this->url($args['src']); // Style file web url
         unset($args['src']);
@@ -273,10 +269,8 @@ class Template
 
     /**
      * Invoke a specific partial template per each variables set inside collection
-     * @param array $args
-     * @return string
      */
-    protected function tRepeat($args)
+    protected function tRepeat(array $args): string
     {
         // partial template variables collection
         $collection = $this->vars[ltrim($args['source'], '$')];

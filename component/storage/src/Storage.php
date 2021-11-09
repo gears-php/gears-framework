@@ -1,6 +1,6 @@
 <?php
 /**
- * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
+ * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
 
 namespace Gears\Storage;
@@ -71,9 +71,9 @@ class Storage implements \ArrayAccess
      * @param string $file
      * @param string (optional) $path Dot separated path of the node under which to store the loaded data
      *
-     * @return array Loaded data tree
+     * @return self
      */
-    public function load($file, $path = null)
+    public function load($file, $path = null): self
     {
         $loaded = $this->read($file);
 
@@ -83,7 +83,7 @@ class Storage implements \ArrayAccess
             $this->set($path, $loaded);
         }
 
-        return $loaded;
+        return $this;
     }
 
     /**

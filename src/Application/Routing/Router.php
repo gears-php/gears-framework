@@ -33,13 +33,11 @@ class Router
      * Build routes for given resource.
      *
      * @param string $resource Resource class name
-     * @param string $resource Resource URL endpoint
+     * @param string $endpoint Resource URL endpoint
      * @param string $handler Resource handler class definition
      * @param string $prefix URL prefix for all resource endpoints
-     *
-     * @return iterable
      */
-    public function buildResourceRoutes(string $resource, string $endpoint, string $handler, string $prefix = ''): iterable
+    public function buildResourceRoutes(string $resource, string $endpoint, string $handler, string $prefix = ''): void
     {
         $handlerMethods = [
             'list' => 'GET %s',
@@ -54,13 +52,12 @@ class Router
 
         foreach ($handlerMethods as $method => $matchPattern) {
             $this->addRoute(
-                $route = new Route(
+                (new Route(
                     trim($endpoint, '/') . ':' . $method,
                     sprintf($matchPattern, rtrim($prefix, '/') . rtrim($endpoint, '/')),
                     ":$handler:$method"
-                )
+                ))->setResource($resource)
             );
-            yield $route;
         }
     }
 
@@ -68,7 +65,7 @@ class Router
     /**
      * Add a single route
      */
-    public function addRoute(Route $route)
+    public function addRoute(Route $route): void
     {
         $this->routes[$route->getName()] = $route;
     }

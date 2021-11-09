@@ -1,6 +1,6 @@
 <?php
 /**
- * @author: Denis Krasilnikov <deniskrasilnikov86@gmail.com>
+ * @author: Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
 namespace Gears\Framework\View;
 use Gears\Framework\View\Parser\State;
@@ -56,7 +56,7 @@ class Parser
      * List of all special template language tags to be processed
      * @var string
      */
-    protected $tags = ['extends', 'block', 'include', 'repeat', 'js', 'css', 'image', 'call'];
+    protected $tags = ['extends', 'block', 'include', 'repeat', 'js', 'css', 'image', 'extension'];
 
     /**
      * Initialize parser with a new stream

@@ -1,7 +1,8 @@
 <?php
 /**
- * @author deniskrasilnikov86@gmail.com
+ * @author denis.krasilnikov@gears.com
  */
+
 namespace Gears\Db\Adapter;
 
 /**
@@ -17,23 +18,31 @@ class Mysql extends AdapterAbstract
         'create_table' => [
             ' pk ' => ' INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY ',
             ' string ' => ' TEXT ',
-            ' float ' => ' REAL '
-        ]
+            ' float ' => ' REAL ',
+        ],
     ];
 
     /**
      * {@inheritdoc}
      */
-    public function escapeIdentifier($name)
+    public function escapeIdentifier(string $identifier): string
     {
-        return "`" . str_replace('`', '``', $name) . "`";
+        return "`" . str_replace('`', '``', $identifier) . "`";
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getLastRowCount()
+    public function getLastRowCount(): int
     {
         return intval($this->connection->query('SELECT FOUND_ROWS()')->fetchColumn());
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getLimitClause(int $count, int $offset): string
+    {
+        return sprintf('LIMIT %d, %d', $offset, $count);
     }
 }

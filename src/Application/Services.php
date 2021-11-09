@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gears\Framework\Application;
 
+use Exception;
+
 /**
  * Simple DIC implementation for various application services
  * @package Gears\Framework\Application
@@ -14,7 +16,7 @@ class Services
      * Internal services storage
      * @var array
      */
-    protected $services = [];
+    protected array $services = [];
 
     /**
      * Fallback service
@@ -27,7 +29,7 @@ class Services
      * service was not found during {@see get()} call
      * @param $callable
      */
-    public function fallback($callable)
+    public function fallback($callable): void
     {
         if (is_callable($callable)) {
             $this->fallback = $callable;
@@ -36,10 +38,8 @@ class Services
 
     /**
      * Set service object instance or factory function which will return a new service object instance
-     * @param string $name
-     * @param callable|object $service
      */
-    public function set($name, $service)
+    public function set(string $name, callable|object $service): void
     {
         if (is_object($service) || is_callable($service)) {
             $this->services[$name] = $service;
@@ -49,10 +49,8 @@ class Services
     /**
      * Same as {@see set()} but will create only a single service instance and return
      * it for any future service calls
-     * @param $name
-     * @param callable $callable
      */
-    public function setShared($name, $callable)
+    public function shared(string $name, callable $callable): void
     {
         if (is_callable($callable)) {
             $this->set($name, function ($sc) use ($callable) {
@@ -67,6 +65,7 @@ class Services
 
     /**
      * Get service object instance
+     * @throws Exception
      */
     public function get(string $name): object
     {
@@ -92,6 +91,6 @@ class Services
             }
         }
 
-        throw new \Exception(sprintf('"%s" service does not exist', $name));
+        throw new Exception(sprintf('"%s" service does not exist', $name));
     }
 }

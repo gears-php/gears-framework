@@ -11,31 +11,29 @@ use Gears\Db\ActiveRecord\ActiveRecord;
 class HasManyRelation extends RelationAbstract
 {
     /**
-     * Foreign key of the relation subject
-     * @var string
-     */
-    protected $foreignKey;
-
-    /**
      * {@inheritdoc}
-     * @param array $meta
      */
     public function build(array $meta)
     {
-        $this->foreignKey = $meta['foreign'];
-        $this->query = $this->manager->of($meta['class']);
+        $this->query = $this->owner->getManager()->of($meta['class']);
+        $this->query
+            ->join(
+                $tableName = $this->owner->getTableName(),
+                $pk = $this->owner->getPrimaryKey(),
+                $this->query->getActiveRecord()->getTableName(),
+                $meta['foreign']
+            )
+            ->getWhere()->eq([$tableName => $pk]);
     }
 
     /**
      * {@inheritdoc}
      * @return ActiveRecord[]
      */
-    public function exec(ActiveRecord $owner): array
+    public function exec(): array
     {
-        $meta = $this->query->getActiveRecord()->getMetadata();
-        $this->query->getWhere()->eq($meta['fields'][$this->foreignKey]);
-        $this->query->bind(0, $owner->{$owner->getPrimaryKey()});
-
-        return $this->query->fetchAll();
+        return $this->query
+            ->bind(0, $this->owner->{$this->owner->getPrimaryKey()})
+            ->fetchAll();
     }
 }

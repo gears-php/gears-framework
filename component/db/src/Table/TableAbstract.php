@@ -1,9 +1,8 @@
 <?php
 /**
  * @package   Gears\Db
- * @author    Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @copyright Copyright (c) 2011-2013 Denis Krasilnikov <deniskrasilnikov86@gmail.com>
- * @license   http://url/license
+ * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
+ * @copyright Copyright (c) 2022 Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
 
 declare(strict_types=1);
@@ -146,8 +145,7 @@ abstract class TableAbstract
      */
     public function fetchPage($pageNumber = 1, $rowsPerPage = 10)
     {
-        $this->getQuery()->limit(--$pageNumber * $rowsPerPage, $rowsPerPage);
-        $this->getQuery()->calcFoundRows();
+        $this->getQuery()->limit($rowsPerPage, --$pageNumber * $rowsPerPage);
 
         return $this->fetchAll();
     }
