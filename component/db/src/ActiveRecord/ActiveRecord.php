@@ -185,7 +185,7 @@ class ActiveRecord implements JsonSerializable
         return $deleted;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         $metadata = $this->getRelationsMetadata();
 

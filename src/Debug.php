@@ -93,14 +93,10 @@ class Debug
         $type = php_sapi_name() !== 'cli' ? 'default' : 'console';
 
         if (!empty(self::$replacements[$type])) {
-            $messages = preg_replace(self::$pattern, self::$replacements[$type], self::$buffer);
+            return preg_replace(self::$pattern, self::$replacements[$type], self::$buffer);
         } else {
-            $messages = self::$buffer;
+            return self::$buffer;
         }
-
-        self::$buffer = $messages;
-
-        return self::$buffer = '';
     }
 
     /**

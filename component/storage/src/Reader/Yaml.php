@@ -14,7 +14,7 @@ class Yaml extends ReaderAbstract
     /**
      * {@inheritdoc}
      */
-    public function getFileExt()
+    public function getFileExt(): string
     {
         return '.yaml';
     }
@@ -22,7 +22,7 @@ class Yaml extends ReaderAbstract
     /**
      * {@inheritdoc}
      */
-    protected function parseFile($file)
+    protected function parseFile(string $file): array
     {
         return \Spyc::YAMLLoad($file);
     }

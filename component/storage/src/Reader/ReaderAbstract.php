@@ -16,13 +16,9 @@ abstract class ReaderAbstract
     /**
      * Take the file path and return data tree array
      *
-     * @param string $file Data file full name
-     *
-     * @return array Storage data tree
-     *
      * @throws FileNotFound
      */
-    public function read($file)
+    public function read(string $file): array
     {
         if (is_file($file)) {
             return $this->parseFile($file);
@@ -33,17 +29,11 @@ abstract class ReaderAbstract
 
     /**
      * Return data file extension
-     *
-     * @return string
      */
-    abstract public function getFileExt();
+    abstract public function getFileExt(): string;
 
     /**
      * Parse the given file and return data tree
-     *
-     * @param string $file Data file full name
-     *
-     * @return array Storage data tree
      */
-    abstract protected function parseFile($file);
+    abstract protected function parseFile(string $file): array;
 }

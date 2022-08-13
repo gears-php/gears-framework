@@ -19,7 +19,7 @@ class ActiveNode extends ActiveRecord
         return $this->children;
     }
 
-    public function jsonSerialize()
+    public function jsonSerialize(): array
     {
         return array_merge(
             parent::jsonSerialize(),

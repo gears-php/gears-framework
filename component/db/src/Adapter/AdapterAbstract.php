@@ -316,11 +316,11 @@ abstract class AdapterAbstract implements ArrayAccess
         return null;
     }
 
-    public function offsetSet(mixed $offset, mixed $value)
+    public function offsetSet(mixed $offset, mixed $value): void
     {
     }
 
-    public function offsetUnset(mixed $offset)
+    public function offsetUnset(mixed $offset): void
     {
     }
 

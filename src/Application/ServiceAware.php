@@ -38,6 +38,14 @@ trait ServiceAware
     }
 
     /**
+     * Whether given service exists in container.
+     */
+    public function has(string $name): bool
+    {
+        return $this->services->has($name);
+    }
+
+    /**
      * Set a shared application service
      */
     public function shared(string $name, callable $callable): static

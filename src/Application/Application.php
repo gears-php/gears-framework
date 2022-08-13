@@ -33,7 +33,7 @@ abstract class Application extends Dispatcher
 {
     use ServiceAware;
 
-    public function __construct(private Storage $config, protected Services $services)
+    public function __construct(private readonly Storage $config, protected Services $services)
     {
     }
 
@@ -125,9 +125,9 @@ abstract class Application extends Dispatcher
         }
 
         /** @var Request $request */
-        $request = $this->get('request');
+        $request = $this->has('request') ? $this->get('request') : false;
 
-        if ($request->isXmlHttpRequest() || str_contains($request->getContentType() . '', 'json')) {
+        if ($request && ($request->isXmlHttpRequest() || str_contains($request->getContentType() . '', 'json'))) {
             $content = json_encode([
                                        'exception' => [
                                            'message' => $e->getMessage(),
@@ -138,7 +138,7 @@ abstract class Application extends Dispatcher
                                        ],
                                    ]);
         } else {
-            $content = "<pre>{$e}</pre>";
+            $content = "<pre>$e</pre>";
         }
 
         (new Response($content, $statusCode))->send();

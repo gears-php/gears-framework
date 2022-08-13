@@ -47,6 +47,14 @@ class Services
     }
 
     /**
+     * Whether given service exists in container.
+     */
+    public function has(string $name): bool
+    {
+        return isset($this->services[$name]);
+    }
+
+    /**
      * Same as {@see set()} but will create only a single service instance and return
      * it for any future service calls
      */

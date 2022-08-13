@@ -5,8 +5,10 @@
 
 namespace Gears\Storage;
 
+use Gears\Storage\Reader\Exception\FileNotFound;
 use Gears\Storage\Reader\ReaderAbstract;
 use Gears\Storage\Reader\Yaml;
+use ReturnTypeWillChange;
 
 /**
  * Simple key-value runtime storage solution
@@ -17,32 +19,24 @@ class Storage implements \ArrayAccess
 {
     /**
      * Internal storage
-     *
-     * @var array
      */
-    protected $storage;
+    protected ?array $storage;
 
     /**
      * File reader instance
-     *
-     * @var ReaderAbstract
      */
-    protected $reader;
+    protected ?ReaderAbstract $reader = null;
 
     /**
      * Storage can be initialized with a given tree data structure
-     *
-     * @param array (optional) $tree
      */
-    public function __construct($tree = null)
+    public function __construct(array $tree = null)
     {
         $this->storage = $tree;
     }
 
     /**
      * Set file reader
-     *
-     * @param ReaderAbstract $reader
      */
     public function setReader(ReaderAbstract $reader)
     {
@@ -51,10 +45,8 @@ class Storage implements \ArrayAccess
 
     /**
      * Get reader instance. Creates default reader if none exists
-     *
-     * @return ReaderAbstract File reader object
      */
-    public function getReader()
+    public function getReader(): ReaderAbstract
     {
         if (null === $this->reader) {
             // support yaml files by default
@@ -66,14 +58,10 @@ class Storage implements \ArrayAccess
 
     /**
      * Load some data tree from file and store it internally for future usage. Optionally put it into
-     * sub-node defined by second parameter. Otherwise it will fully replace existing internal storage
-     *
-     * @param string $file
-     * @param string (optional) $path Dot separated path of the node under which to store the loaded data
-     *
-     * @return self
+     * sub-node defined by second parameter. Otherwise, it will fully replace existing internal storage
+     * @throws FileNotFound
      */
-    public function load($file, $path = null): self
+    public function load(string $file, string $path = null): self
     {
         $loaded = $this->read($file);
 
@@ -88,13 +76,8 @@ class Storage implements \ArrayAccess
 
     /**
      * Same as {@see read()} but returns a storage instance
-     *
-     * @param string $file
-     * @param string (optional) $node
-     *
-     * @return Storage
      */
-    public function readObj($file, $node = null)
+    public function readObj(string $file, string $node = null): Storage
     {
         return new Storage($this->read($file, $node));
     }
@@ -102,13 +85,9 @@ class Storage implements \ArrayAccess
     /**
      * Read and return the full file data tree or its sub-node. Please note that this function
      * does not save the loaded data node internally. Use {@link load()} for this.
-     *
-     * @param string $file Path to the file
-     * @param string (optional) $path Dot separated path to the sub-node to be returned
-     *
-     * @return array Data tree
+     * @throws FileNotFound
      */
-    public function read($file, $path = null)
+    public function read(string $file, string $path = null): ?array
     {
         $tree = $this->getReader()->read($file);
         $fileExtLength = strlen($fileExt = $this->getReader()->getFileExt()); // load sub files, if any
@@ -126,11 +105,9 @@ class Storage implements \ArrayAccess
     }
 
     /**
-     * Merge current storage data with the given one
-     *
-     * @param array|string|Storage $mixed Data tree | data tree file name | Storage entity to be merged
+     * Merge current storage data with the given one. Accepts data tree array | data tree file name | Storage entity to be merged
      */
-    public function merge($mixed)
+    public function merge(Storage|array|string $mixed)
     {
         $node = [];
 
@@ -173,33 +150,29 @@ class Storage implements \ArrayAccess
     {
         $storage = $storage ?: $this->storage;
 
-        if (trim($path)) {
-            $p = &$storage;
-            $p = (array)$p;
-            $path = explode('.', $path);
-
-            foreach ($path as $node) {
-                if (isset($p[$node])) {
-                    $p = &$p[$node];
-                } else {
-                    $p = null;
-                };
-            }
-
-            return $p;
+        if (!$path) {
+            return $storage;
         }
 
-        return $storage;
+        $p = &$storage;
+        $p = (array)$p;
+        $path = explode('.', trim($path));
+
+        foreach ($path as $node) {
+            if (isset($p[$node])) {
+                $p = &$p[$node];
+            } else {
+                $p = null;
+            };
+        }
+
+        return $p;
     }
 
     /**
      * Return a first-level node value
-     *
-     * @param string $prop
-     *
-     * @return mixed
      */
-    public function __get($prop)
+    public function __get(string $prop): mixed
     {
         return $this->get($prop);
     }
@@ -274,20 +247,16 @@ class Storage implements \ArrayAccess
     }
 
     /**
-     * Check whether the storage node exists
-     *
-     * @param string $path Dot separated path to the node inside the storage data tree
-     *
-     * @return boolean
+     * Check whether the storage node by given path exists.
      */
-    public function offsetExists($path)
+    public function offsetExists(mixed $offset): bool
     {
         $p = &$this->storage;
         $p = (array)$p;
 
-        $path = explode('.', $path);
+        $offset = explode('.', $offset);
 
-        foreach ($path as $node) {
+        foreach ($offset as $node) {
             if (isset($p[$node])) {
                 $p = &$p[$node];
             } else {
@@ -300,38 +269,25 @@ class Storage implements \ArrayAccess
 
     /**
      * Get storage node value. See {@see get()}
-     *
-     * @param string $path
-     *
-     * @return mixed
      */
-    public function offsetGet($path)
+    public function offsetGet(mixed $offset): mixed
     {
-        return $this->get($path);
+        return $this->get($offset);
     }
 
     /**
      * Set storage node value. See {@see set()}
-     *
-     * @param string $path
-     * @param mixed $value
-     *
-     * @return void
      */
-    public function offsetSet($path, $value)
+    public function offsetSet(mixed $offset, mixed $value): void
     {
-        $this->set($path, $value);
+        $this->set($offset, $value);
     }
 
     /**
      * Remove storage node. See {@see del()}
-     *
-     * @param string $path
-     *
-     * @return void
      */
-    public function offsetUnset($path)
+    public function offsetUnset(mixed $offset): void
     {
-        $this->del($path);
+        $this->del($offset);
     }
 }
