@@ -37,7 +37,7 @@ abstract class AbstractModule
         $config['routing'] && $router->build($config['routing']);
         $apiConfig = $config['api'];
 
-        foreach ($apiConfig['resources'] ?? [] as $resourceDefinition) {
+        foreach ($apiConfig['resources']->raw() ?? [] as $resourceDefinition) {
             $router->buildResourceRoutes(
                 $resourceDefinition['class'],
                 $resourceDefinition['endpoint'],

@@ -1,38 +1,40 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gears\Db\ActiveRecord\Relation;
 
 use Gears\Db\ActiveRecord\ActiveRecord;
 
 /**
  * HasOne active record relation via the foreign key
- * @package Gears\Db\ActiveRecord\Relation
+ * @package Gears\Db\ActiveRecord
  */
-class HasOneRelation extends RelationAbstract
+class HasOneRelation extends RelationAbstract implements SingleRecordRelation
 {
     /**
      * {@inheritdoc}
      */
-    public function build(array $meta)
+    public function buildQuery()
     {
-        $this->query = $this->owner->getManager()->of($meta['class']);
+        $this->query = $this->manager->query($this->metadata['class']);
+        $tableName = $this->ownerMetadata['tableName'];
+        $tableAlias = uniqid($tableName[0]);
         $this->query
             ->join(
-                $tableName = $this->owner->getTableName(),
-                $meta['foreign'],
-                $this->query->getActiveRecord()->getTableName(),
-                $pk = $this->owner->getPrimaryKey()
+                [$tableAlias => $tableName],
+                $this->metadata['foreign'],
+                $this->query->getMetadata()['tableName'],
+                $pk = $this->ownerMetadata['primaryKey']
             )
-            ->getWhere()->eq([$tableName => $pk]);
+            ->getWhere()->eq([$tableAlias => $pk]);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function exec(): ActiveRecord
+    public function exec(mixed $ownerId): ?ActiveRecord
     {
-        return $this->query
-            ->bind(0, $this->owner->{$this->owner->getPrimaryKey()})
-            ->fetchOne();
+        return $this->query->bind(0, $ownerId)->fetchOne();
     }
 }

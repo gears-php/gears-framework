@@ -25,12 +25,12 @@ abstract class AbstractController
      *
      * @param string $uri Resource uri
      * @param int $code HTTP response code
-     *
-     * @return void
      */
-    public function redirect(string $uri, int $code = Response::HTTP_FOUND): void
+    public function redirect(string $uri, int $code = Response::HTTP_FOUND): Response
     {
-        (new Response)->setStatusCode($code)
-            ->headers->set('Location', '/' . trim($uri, ' /') . '/');
+        $response = (new Response)->setStatusCode($code);
+        $response->headers->set('Location', '/' . trim($uri, ' /') . '/');
+
+        return $response;
     }
 }

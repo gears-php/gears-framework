@@ -168,8 +168,13 @@ class Query
      * @param string $baseField Basic table field to join on
      * @param string $type (optional) Join type
      */
-    public function join(array|string $joinTable, string $joinField, string $baseTable, string $baseField, string $type = 'inner'): static
-    {
+    public function join(
+        array|string $joinTable,
+        string $joinField,
+        string $baseTable,
+        string $baseField,
+        string $type = 'inner'
+    ): static {
         if (is_array($joinTable)) {
             $joinAlias = key($joinTable);
             $joinTable = current($joinTable);
@@ -265,43 +270,48 @@ class Query
     }
 
     /**
-     * Remove all GROUP BY clause conditions
-     */
-    public function noGroup(): static
-    {
-        $this->group = [];
-
-        return $this;
-    }
-
-    /**
      * Add a single field or array of fields to the ORDER BY clause. Example:
      * <code>
-     * $query->order('lastName', Query::ASC);
+     * $query->order('lastName', 'tableName', Query::ASC);
      * $query->order(['lastName', 'firstName' => Query::DESC]);
      * $query->order('NULL'); # ORDER BY NULL
      * </code>
      * @param array|string $field Field name or array of fields to order
      * @param string $sort (optional) Sort direction
+     * @param string $tableAlias (optional) Table name alias
      */
-    public function order(array|string $field, string $sort = self::ASC): static
+    public function order(array|string $field, string $tableAlias, string $sort = self::ASC): static
     {
         if (is_array($field)) { // array of order-by fields
             foreach ($field as $fieldKey => $fieldValue) {
                 if (is_numeric($fieldKey)) {
                     // for numeric index just pass field name
-                    $this->order($fieldValue);
+                    $this->order($fieldValue, $tableAlias);
                 } else { // we have [field name => sort direction] pair
-                    $this->order($fieldKey, $fieldValue);
+                    $this->order($fieldKey, $tableAlias, $fieldValue);
                 }
             }
         } else { // add a single column field
             if (strtolower($field) == 'null') {
                 $this->order[] = 'NULL';
             } else {
-                $this->order[] = rtrim($this->db->escapeIdentifier($field) . ' ' . strtoupper($sort));
+                $this->order[] = rtrim(
+                    $this->db->escapeIdentifier($tableAlias) . '.'
+                    . $this->db->escapeIdentifier($field) . ' '
+                    . strtoupper($sort)
+                );
             }
         }
+
+        return $this;
+    }
+
+    /**
+     * Remove all GROUP BY clause conditions
+     */
+    public function noGroup(): static
+    {
+        $this->group = [];
 
         return $this;
     }

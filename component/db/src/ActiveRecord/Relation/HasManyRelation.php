@@ -1,39 +1,38 @@
 <?php
 
-namespace Gears\Db\ActiveRecord\Relation;
+declare(strict_types=1);
 
-use Gears\Db\ActiveRecord\ActiveRecord;
+namespace Gears\Db\ActiveRecord\Relation;
 
 /**
  * HasMany active record relation via the inverse foreign key
- * @package Gears\Db\ActiveRecord\Relation
+ * @package Gears\Db\ActiveRecord
  */
 class HasManyRelation extends RelationAbstract
 {
     /**
      * {@inheritdoc}
      */
-    public function build(array $meta)
+    public function buildQuery()
     {
-        $this->query = $this->owner->getManager()->of($meta['class']);
+        $this->query = $this->manager->query($this->metadata['class']);
+        $tableName = $this->ownerMetadata['tableName'];
+        $tableAlias = uniqid($tableName[0]);
         $this->query
             ->join(
-                $tableName = $this->owner->getTableName(),
-                $pk = $this->owner->getPrimaryKey(),
-                $this->query->getActiveRecord()->getTableName(),
-                $meta['foreign']
+                [$tableAlias => $tableName],
+                $pk = $this->ownerMetadata['primaryKey'],
+                $this->query->getMetadata()['tableName'],
+                $this->metadata['foreign']
             )
-            ->getWhere()->eq([$tableName => $pk]);
+            ->getWhere()->eq([$tableAlias => $pk]);
     }
 
     /**
      * {@inheritdoc}
-     * @return ActiveRecord[]
      */
-    public function exec(): array
+    public function exec(mixed $ownerId): array
     {
-        return $this->query
-            ->bind(0, $this->owner->{$this->owner->getPrimaryKey()})
-            ->fetchAll();
+        return $this->query->bind(0, $ownerId)->fetchAll();
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Gears\Framework\View;
+namespace Gears\Framework\View\Extension;
 
 interface ExtensionInterface
 {

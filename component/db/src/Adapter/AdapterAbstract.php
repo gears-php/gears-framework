@@ -153,6 +153,10 @@ abstract class AdapterAbstract implements ArrayAccess
      */
     public function escape(mixed $value): mixed
     {
+        if ($value === null) {
+            return 'null';
+        }
+
         return is_string($value) ? $this->connection->quote($value) : $value;
     }
 
@@ -199,15 +203,6 @@ abstract class AdapterAbstract implements ArrayAccess
             $this->escapeIdentifier($tableName),
             implode(',', $fields)
         );
-        $this->connection->exec($sql);
-    }
-
-    /**
-     * Drop the table
-     */
-    public function drop(string $tableName)
-    {
-        $sql = sprintf('DROP TABLE IF EXISTS %s', $this->escapeIdentifier($tableName));
         $this->connection->exec($sql);
     }
 

@@ -9,11 +9,11 @@ declare(strict_types=1);
 
 namespace Gears\Db\ActiveRecord;
 
+use Gears\Storage\Storage;
 use PDO;
 use Gears\Db\Adapter\AdapterAbstract;
 use Gears\Db\Query\WhereAnd;
 use Gears\Db\Query;
-use RuntimeException;
 
 /**
  * Allows to build a query which will fetch data into Active Record class object(s)
@@ -24,32 +24,29 @@ class ActiveQuery extends Query
     /**
      * {@inheritdoc}
      */
-    public function __construct(protected AdapterAbstract $db, private ActiveRecord $activeRecord)
-    {
+    public function __construct(
+        protected AdapterAbstract $db,
+        private readonly ActiveManager $manager,
+        private readonly Storage $metadata
+    ) {
         parent::__construct($db);
     }
 
     /**
      * Get query subject active record
      */
-    public function getActiveRecord(): ActiveRecord
+    public function getMetadata(): Storage
     {
-        return $this->activeRecord;
+        return $this->metadata;
     }
 
     /**
      * Query ActiveRecord list
      * @return ActiveRecord[]
      */
-    public function fetchAll($mode = PDO::FETCH_CLASS): array
+    public function fetchAll(): array
     {
-        return $this->exec()
-            ->getStatement()
-            ->fetchAll(
-                $mode,
-                get_class($this->activeRecord),
-                [$this->activeRecord->getManager()]
-            );
+        return $this->exec()->getStatement()->fetchAll(PDO::FETCH_FUNC, [$this, 'createRecord']);
     }
 
     /**
@@ -57,12 +54,14 @@ class ActiveQuery extends Query
      */
     public function fetchTree(): array
     {
-        if (!$this->activeRecord instanceof ActiveNode) {
-            throw new RuntimeException(sprintf('Class %s must implement ActiveNode for tree operations', get_class($this->activeRecord)));
+        if (!(new $this->metadata['class']) instanceof ActiveNode) {
+            throw new \LogicException(
+                sprintf('Class %s must implement ActiveNode for tree operations', $this->metadata['class'])
+            );
         }
 
-        array_unshift($this->select, $this->db->escapeIdentifier($this->activeRecord->getPrimaryKey()));
-        $records = array_map(fn($rec) => $rec[0], $this->fetchAll(PDO::FETCH_CLASS | PDO::FETCH_GROUP));
+        array_unshift($this->select, $this->db->escapeIdentifier($this->metadata['primaryKey']));
+        $records = $this->fetchAll();
 
         if (!$records) {
             return [];
@@ -73,7 +72,9 @@ class ActiveQuery extends Query
         $record = current($records);
 
         // build tree from a flat record set
+        // todo fix tree logic
         do {
+            /** @var ActiveNode $record */
             $parentId = $record->parent_id;
 
             if (isset($refs[$parentId])) { // put node as a child to a parent
@@ -97,14 +98,15 @@ class ActiveQuery extends Query
      */
     public function fetchOne(): ?ActiveRecord
     {
-        return $this->exec()
+        $records = $this->exec()
             ->getStatement()
-            ->fetchObject(get_class($this->activeRecord), [$this->activeRecord->getManager()]) ?: null;
+            ->fetchAll(PDO::FETCH_FUNC, [$this, 'createRecord']);
+        return count($records) == 1 ? $records[0] : null;
     }
 
     public function fetchById(string $id): ?ActiveRecord
     {
-        $this->getWhere()->eq($this->activeRecord->getPrimaryKey(), $id);
+        $this->getWhere()->eq($this->metadata['primaryKey'], $id);
 
         return $this->fetchOne();
     }
@@ -114,11 +116,16 @@ class ActiveQuery extends Query
      */
     public function build(): ActiveQuery
     {
-        $meta = $this->activeRecord->getMetadata();
-
-        return $this->select($meta['fields'], null, $meta['tableName'])
-            ->from($meta['tableName'])
+        return $this->select($this->metadata['fields']->raw(), null, $this->metadata['tableName'])
+            ->from($this->metadata['tableName'])
             ->where(new WhereAnd($this->db))
-            ->order($meta['sortBy']);
+            ->order($this->metadata['sortBy']->raw(), $this->metadata['tableName']);
+    }
+
+    public function createRecord(...$dbData): ActiveRecord
+    {
+        /** @var ActiveRecord $record */
+        $record = new $this->metadata['class']($this->manager);
+        return $record->init($dbData);
     }
 }

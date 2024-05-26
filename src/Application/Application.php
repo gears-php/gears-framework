@@ -9,6 +9,7 @@ namespace Gears\Framework\Application;
 
 use ErrorException;
 use Gears\Framework\Debug;
+use Gears\Storage\Reader\Exception\FileNotFound;
 use Gears\Storage\Storage;
 use Gears\Framework\Event\Dispatcher;
 use Gears\Framework\Application\Routing\Router;

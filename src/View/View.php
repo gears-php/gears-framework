@@ -9,8 +9,9 @@ declare(strict_types=1);
 
 namespace Gears\Framework\View;
 
-use Exception;
 use Gears\Framework\Cache\CacheInterface;
+use Gears\Framework\View\Extension\ExtensionInterface;
+use RuntimeException;
 
 defined('DS') || define('DS', DIRECTORY_SEPARATOR);
 
@@ -22,16 +23,6 @@ defined('DS') || define('DS', DIRECTORY_SEPARATOR);
  */
 class View
 {
-    /**
-     * Stores all possible helper class namespaces
-     */
-    private array $helperNamespaces = [];
-
-    /**
-     * Collection of all currently called helpers
-     */
-    private array $helpers = [];
-
     /**
      * Stores paths where to search for template files
      */
@@ -50,18 +41,18 @@ class View
     /**
      * Cache implementation instance
      */
-    private CacheInterface $cache;
+    private ?CacheInterface $cache;
 
     /**
      * View extensions
      */
     private array $extensions;
 
-    public function __construct(array $options = [])
+    public function init(mixed $templates = null, array $extensions = [], CacheInterface $cache = null): static
     {
         // setup template file path(s)
-        if (isset($options['templates'])) {
-            if (is_string($tpl = $options['templates'])) {
+        if (!empty($templates)) {
+            if (is_string($tpl = $templates)) {
                 $this->addTemplatePath($tpl);
             } elseif (is_array($tpl)) {
                 $this->setTemplatePaths($tpl);
@@ -69,11 +60,17 @@ class View
         }
 
         // setup cache storage
-        if (isset($options['cache']) && $options['cache'] instanceof CacheInterface) {
-            $this->setCache($options['cache']);
+        if (isset($cache)) {
+            $this->setCache($cache);
         }
 
-        $this->addHelperNamespace(__NAMESPACE__ . '\\Helper');
+        if ($extensions) {
+            foreach ($extensions as $extension) {
+                $this->addExtension($extension);
+            }
+        }
+
+        return $this;
     }
 
     /**
@@ -87,7 +84,7 @@ class View
     /**
      * Get cache storage
      */
-    public function getCache(): CacheInterface
+    public function getCache(): ?CacheInterface
     {
         return $this->cache;
     }
@@ -111,23 +108,10 @@ class View
     }
 
     /**
-     * Added helper classes namespace
-     */
-    public function addHelperNamespace(string $namespace): static
-    {
-        $this->helperNamespaces[] = $namespace;
-
-        return $this;
-    }
-
-    /**
      * Get template by full or relative name OR alias name (for already stored templates)
      *
      * @param string $name Template name to get the template. Extension is optional
      * @param string|null $alias (optional) Unique name under which to store and access template for future
-     *
-     * @throws Exception
-     *
      */
     public function load(string $name, string $alias = null): Template
     {
@@ -157,7 +141,7 @@ class View
         }
 
         if (!isset($tpl)) {
-            throw new Exception('Template file not found: ' . $fileName);
+            throw new RuntimeException('Template file not found: ' . $fileName);
         }
 
         return $this->templates[$alias] = $tpl;
@@ -171,34 +155,6 @@ class View
         return $this->load($template)->assign($vars)->render();
     }
 
-    /**
-     * Call a helper with a given name and parameters.
-     * @param string $helperName Helper name
-     * @param array $params (optional) Helper parameters
-     * @return mixed
-     * @throws Exception
-     */
-    public function helper(string $helperName, array $params = []): mixed
-    {
-        if (!isset($this->helpers[$helperName])) {
-            // try to find helper within all registered namespaces and instantiate it
-            foreach ($this->helperNamespaces as $namespace) {
-                $className = $namespace . '\\' . ucfirst($helperName);
-
-                if (class_exists($className)) {
-                    $this->helpers[$helperName] = new $className($this);
-                    break;
-                }
-            }
-
-            if (!isset($this->helpers[$helperName])) {
-                throw new \RuntimeException(sprintf('No helper class found for "%s" helper', $helperName));
-            }
-        }
-
-        return call_user_func_array($this->helpers[$helperName], $params);
-    }
-
     public function addExtension(ExtensionInterface $ext): void
     {
         $this->extensions[$ext->getName()] = $ext;
@@ -207,33 +163,9 @@ class View
     public function extension($name): string
     {
         if (!isset($this->extensions[$name])) {
-            throw new \RuntimeException("View extension `$name` is not registered");
+            throw new RuntimeException("View extension `$name` is not registered");
         }
 
         return $this->extensions[$name]();
-    }
-
-    /**
-     * Resolve refs like `AdminModule@content:index` to real templates inside modules, e.g. AdminModule/templates/content/index[.phtml]
-     *
-     * @deprecated todo Not used atm. Think if it should be dropped in favor of more explicit and clear mechanism without refs.
-     */
-    private function parseTemplateReference(string $reference): string
-    {
-        if (!str_contains($reference, '@')) {
-            return $reference;
-        }
-
-        $chunks = explode('@', trim($reference, '@'));
-
-        $templateName = 'SRC_PATH';
-
-        if (count($chunks) == 2) {
-            $templateName .= array_shift($chunks) . DS;
-        }
-
-        $templateName .= 'templates' . DS . array_shift($chunks);
-
-        return $templateName;
     }
 }

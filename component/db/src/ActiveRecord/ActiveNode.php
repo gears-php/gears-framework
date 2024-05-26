@@ -6,12 +6,16 @@ namespace Gears\Db\ActiveRecord;
 
 class ActiveNode extends ActiveRecord
 {
-    private array $children = [];
+    protected ?self $parent;
+    protected array $children = [];
     private string $childrenSerializeKey = '$children';
 
-    public function addChild(ActiveNode $child)
+    public function addChild(ActiveNode $child): static
     {
+        $child->setParent($this);
         $this->children[] = $child;
+
+        return $this;
     }
 
     public function getChildren(): array
@@ -27,5 +31,22 @@ class ActiveNode extends ActiveRecord
                 $this->childrenSerializeKey => $this->children,
             ]
         );
+    }
+
+    public function setParent(?ActiveNode $parent): void
+    {
+        $this->parent = $parent;
+    }
+
+    public function save(): bool
+    {
+        parent::save();
+
+        foreach ($this->children as $childNode) {
+            echo('saved child node/ ');
+            $childNode->save();
+        }
+
+        return true;
     }
 }

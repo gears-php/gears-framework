@@ -18,9 +18,9 @@ use ReturnTypeWillChange;
 class Storage implements \ArrayAccess
 {
     /**
-     * Internal storage
+     * Internal data
      */
-    protected ?array $storage;
+    protected array $data = [];
 
     /**
      * File reader instance
@@ -30,9 +30,9 @@ class Storage implements \ArrayAccess
     /**
      * Storage can be initialized with a given tree data structure
      */
-    public function __construct(array $tree = null)
+    public function __construct(array $tree = [])
     {
-        $this->storage = $tree;
+        $this->data = $tree;
     }
 
     /**
@@ -63,10 +63,10 @@ class Storage implements \ArrayAccess
      */
     public function load(string $file, string $path = null): self
     {
-        $loaded = $this->read($file);
+        $loaded = $this->read($file)->raw();
 
         if (!is_string($path)) {
-            $this->storage = $loaded;
+            $this->data = $loaded;
         } else {
             $this->set($path, $loaded);
         }
@@ -74,12 +74,9 @@ class Storage implements \ArrayAccess
         return $this;
     }
 
-    /**
-     * Same as {@see read()} but returns a storage instance
-     */
-    public function readObj(string $file, string $node = null): Storage
+    public function raw(): array
     {
-        return new Storage($this->read($file, $node));
+        return $this->data;
     }
 
     /**
@@ -87,7 +84,7 @@ class Storage implements \ArrayAccess
      * does not save the loaded data node internally. Use {@link load()} for this.
      * @throws FileNotFound
      */
-    public function read(string $file, string $path = null): ?array
+    public function read(string $file, string $path = null): Storage
     {
         $tree = $this->getReader()->read($file);
         $fileExtLength = strlen($fileExt = $this->getReader()->getFileExt()); // load sub files, if any
@@ -101,7 +98,7 @@ class Storage implements \ArrayAccess
             }
         );
 
-        return $tree ? $this->get($path, $tree) : [];
+        return $this->get($path, $tree);
     }
 
     /**
@@ -119,15 +116,7 @@ class Storage implements \ArrayAccess
             $node = $mixed->get();
         }
 
-        $this->storage = array_merge_recursive($this->storage, $node);
-    }
-
-    /**
-     * Same as {@link get()} but returns a new storage instance
-     */
-    public function getObj(string $path = null, string $storage = null): Storage
-    {
-        return new Storage($this->get($path, $storage));
+        $this->data = array_merge_recursive($this->data, $node);
     }
 
     /**
@@ -141,20 +130,20 @@ class Storage implements \ArrayAccess
      * $dbUsername = $cfg['server']['db']['username'];
      * </code>
      *
-     * @param string (optional) $path Path to the node separated by dots
-     * @param array (optional) $storage Custom storage tree to get value from. Inner storage is used by default
+     * @param string|null $path (optional)  Path to the node separated by dots
+     * @param array|null $data (optional)  Custom storage tree to get value from. Inner storage is used by default
      *
-     * @return array|mixed|NULL Full storage data tree | found storage node value | NULL if nothing is found
+     * @return scalar|Storage Found storage node or end-level scalar value
      */
-    public function get($path = null, $storage = null)
+    public function get(string $path = null, mixed $data = null): mixed
     {
-        $storage = $storage ?: $this->storage;
+        $data = $data ?: $this->data;
 
         if (!$path) {
-            return $storage;
+            return new Storage($data);
         }
 
-        $p = &$storage;
+        $p = &$data;
         $p = (array)$p;
         $path = explode('.', trim($path));
 
@@ -163,10 +152,18 @@ class Storage implements \ArrayAccess
                 $p = &$p[$node];
             } else {
                 $p = null;
-            };
+            }
         }
 
-        return $p;
+        return is_scalar($p) ? $p : new Storage($p ?? []);
+    }
+
+    /**
+     * Return a first-level keys of internal storage data
+     */
+    public function getKeys(): array
+    {
+        return array_keys($this->data ?? []);
     }
 
     /**
@@ -195,7 +192,7 @@ class Storage implements \ArrayAccess
     public function set($path, $value)
     {
         if (trim($path)) {
-            $p = &$this->storage;
+            $p = &$this->data;
             $p = (array)$p;
             $path = explode('.', $path);
 
@@ -216,7 +213,7 @@ class Storage implements \ArrayAccess
      */
     public function del($path)
     {
-        $p = &$this->storage;
+        $p = &$this->data;
         $p = (array)$p;
         $path = explode('.', $path);
         $nodeCount = count($path);
@@ -251,7 +248,7 @@ class Storage implements \ArrayAccess
      */
     public function offsetExists(mixed $offset): bool
     {
-        $p = &$this->storage;
+        $p = &$this->data;
         $p = (array)$p;
 
         $offset = explode('.', $offset);
@@ -269,6 +266,7 @@ class Storage implements \ArrayAccess
 
     /**
      * Get storage node value. See {@see get()}
+     * @return scalar|Storage
      */
     public function offsetGet(mixed $offset): mixed
     {

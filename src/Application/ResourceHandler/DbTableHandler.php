@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Gears\Framework\Application\ResourceHandler;
 
 use Gears\Framework\Application\ServiceAware;
-use Gears\Db\Table\TableAbstract;
+use Gears\Db\Dataset;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 class DbTableHandler implements ResourceHandlerInterface
@@ -14,21 +14,29 @@ class DbTableHandler implements ResourceHandlerInterface
 
     public function list(string $resource): JsonResponse
     {
-        /** @var TableAbstract $table */
-        $table = $this->get($resource);
+        $dataset = new Dataset($resource, $this->get('db'));
 
-        return new JsonResponse($table->fetchAll());
+        return new JsonResponse($dataset->fetchAll());
     }
 
     public function one(string $resource, string $id): JsonResponse
     {
-        /** @var TableAbstract $table */
-        $table = $this->get($resource);
+        $dataset = new Dataset($resource, $this->get('db'));
 
-        if (!$row = $table->fetchRow($id)) {
+        if (!$row = $dataset->filter('id', $id)->fetchRow()) {
             throw new ResourceNotFoundException($resource . "[$id]");
         }
 
         return new JsonResponse($row);
+    }
+
+    public function post(string $resource): mixed
+    {
+        // TODO: Implement post() method.
+    }
+
+    public function put(string $resource, string $id): mixed
+    {
+        // TODO: Implement put() method.
     }
 }

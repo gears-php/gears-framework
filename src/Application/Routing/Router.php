@@ -2,6 +2,7 @@
 
 namespace Gears\Framework\Application\Routing;
 
+use Gears\Storage\Storage;
 use Symfony\Component\HttpFoundation\Request;
 
 class Router
@@ -14,9 +15,9 @@ class Router
     /**
      * Build routes from given configuration
      */
-    public function build(array $routes)
+    public function build(Storage $routes): void
     {
-        foreach ($routes as $routeName => $route) {
+        foreach ($routes->raw() as $routeName => $route) {
             if (!isset($route['match'])) {
                 throw new \InvalidArgumentException(sprintf('Route "%s" does not have the `match` pattern', $routeName));
             }

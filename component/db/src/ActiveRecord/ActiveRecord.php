@@ -15,16 +15,6 @@ use JsonSerializable;
 class ActiveRecord implements JsonSerializable
 {
     /**
-     * Stores pristine (db persistent) property values
-     */
-    protected array $data = [];
-
-    /**
-     * Stores yet unsaved modified property values
-     */
-    protected array $dirty = [];
-
-    /**
      * Get primary key from metadata
      */
     public function getPrimaryKey(): string
@@ -43,7 +33,6 @@ class ActiveRecord implements JsonSerializable
 
     /**
      * Get metadata object for concrete active record class.
-     * @return Storage
      */
     public function getMetadata(): Storage
     {
@@ -53,28 +42,35 @@ class ActiveRecord implements JsonSerializable
     /**
      * Get metadata part for AR relations.
      */
-    public function getRelationsMetadata(): ?array
+    public function getRelationsMetadata(): Storage
     {
-        return $this->getMetadata()['relations'];
+        return $this->getMetadata()->get('relations');
     }
 
-    /**
-     * @return ActiveManager
-     */
-    public function getManager(): ActiveManager
+    public function getId(): mixed
     {
-        return $this->manager;
+        return $this->{$this->getPrimaryKey()} ?? null;
     }
 
-    /**
-     * On construction, we need to fixate data because when PDO initializes object
-     * with existing db record data they go to dirty only (via magic __set)
-     * @see fixate
-     * @see __set
-     */
     public function __construct(protected ActiveManager $manager)
     {
-        $this->fixate();
+    }
+
+    /**
+     * Initialize record state assigning its properties from db data.
+     * Execute relations and assign each relation data to corresponding AR property.
+     */
+    public function init(array $dbData = []): static
+    {
+        !count($dbData) || $this->fill(array_combine($this->getMetadata()['fields']->raw(), $dbData));
+
+        foreach ($this->getRelationsMetadata()->getKeys() as $relationName) {
+            $this->$relationName = $this->manager
+                ->getRelation($relationName, $this)
+                ->lazy($this);
+        }
+
+        return $this;
     }
 
     /**
@@ -82,50 +78,7 @@ class ActiveRecord implements JsonSerializable
      */
     public function fill(array $props): void
     {
-        $this->dirty = array_merge($this->dirty, $props);
-    }
-
-    /**
-     * Set object property value
-     */
-    public function __set(string $prop, mixed $value)
-    {
-        $this->dirty[$prop] = $value;
-    }
-
-    /**
-     * Get object property value or get relation active record(s) in case there is relation defined with given name
-     */
-    public function __get(string $prop)
-    {
-        if ($relation = $this->manager->getRelation($prop, $this)) {
-            return $relation->exec();
-        }
-
-        if (isset($this->dirty[$prop])) {
-            return $this->dirty[$prop];
-        }
-
-        if (isset($this->data[$prop])) {
-            return $this->data[$prop];
-        }
-
-        return null;
-    }
-
-    /**
-     * Remove object property value
-     * @param string $prop
-     */
-    public function __unset(string $prop)
-    {
-        if (isset($this->data[$prop])) {
-            unset($this->data[$prop]);
-        }
-
-        if (isset($this->dirty[$prop])) {
-            unset($this->dirty[$prop]);
-        }
+        array_walk($props, fn($value, $prop) => $this->$prop = $value);
     }
 
     /**
@@ -135,32 +88,43 @@ class ActiveRecord implements JsonSerializable
      */
     public function save(): bool
     {
-        $metadata = $this->getMetadata();
-        $data = [];
+        $relationsMetadata = $this->getRelationsMetadata();
+        $dirtyData = [];
 
-        foreach ($this->dirty as $prop => $value) {
-            if (in_array($prop, $metadata['fields'])) {
-                $data[$prop] = $value;
-            } elseif ($field = $metadata['fields'][$prop] ?? null) {
-                $data[$field] = $value;
+        // first save single-object relations because we will need their PKeys
+        foreach ($relationsMetadata->getKeys() as $prop) {
+            $relationRecord = $this->$prop;
+            if ($relationRecord instanceof ActiveRecord ) {
+                ($relationsMetadata["$prop.cascade"] ?? true) && $relationRecord->save();
+                $dirtyData[$relationsMetadata["$prop.foreign"]] = $relationRecord->getId();
             }
         }
+
+        // now saving this record itself
+        $metadata = $this->getMetadata();
+
+        foreach ($metadata['fields']->raw() as $alias => $field) {
+            $dirtyData[$field] = $this->{is_string($alias) ? $alias : $field} ?? null;
+        }
+
         $primaryKey = $this->getPrimaryKey();
         $tableName = $this->getTableName();
 
-        if (isset($this->data[$primaryKey])) {
-            $saved = $this->getDb()->update($tableName, $data, [$primaryKey => $this->data[$primaryKey]]);
+        if (!empty($dirtyData[$primaryKey])) {
+            $saved = $this->getDb()->update($tableName, $dirtyData, [$primaryKey => $this->$primaryKey]);
         } else {
-            $saved = $this->getDb()->insert($tableName, [$data]);
+            $saved = $this->getDb()->insert($tableName, [$dirtyData]);
 
             if ($saved) {
-                // todo read entire record data??
-                $this->dirty[$primaryKey] = $this->getDb()->getLastInsertId();
+                $this->$primaryKey = $this->getDb()->getLastInsertId();
             }
         }
 
-        if ($saved) {
-            $this->fixate();
+        // finally, saving LazyRecords because they need PK value of this record
+        foreach ($relationsMetadata->getKeys() as $prop) {
+            if ($this->$prop instanceof LazyRecords && ($relationsMetadata["$prop.cascade"] ?? true)) {
+                $this->$prop->save();
+            }
         }
 
         return (bool)$saved;
@@ -174,12 +138,8 @@ class ActiveRecord implements JsonSerializable
         $primaryKey = $this->getPrimaryKey();
         $deleted = false;
 
-        if (isset($this->data[$primaryKey])) {
-            $deleted = $this->getDb()->delete($this->getTableName(), [$primaryKey => $this->data[$primaryKey]]);
-
-            if ($deleted) {
-                $this->data = $this->dirty = [];
-            }
+        if (isset($this->$primaryKey)) {
+            $deleted = $this->getDb()->delete($this->getTableName(), [$primaryKey => $this->$primaryKey]);
         }
 
         return $deleted;
@@ -187,15 +147,22 @@ class ActiveRecord implements JsonSerializable
 
     public function jsonSerialize(): array
     {
-        $metadata = $this->getRelationsMetadata();
+        $metadata = $this->getMetadata();
+        $fields = $metadata['fields']->raw();
+        $data = array_combine($fields, array_map(fn($prop) => $this->$prop, $fields));
+        $relationsMetadata = $this->getRelationsMetadata();
 
-        if (!$metadata || false) { // todo add configuration option to serialize with relations
-            return $this->data;
+        if (!$relationsMetadata->getKeys() || $metadata['serialize_relations'] === false) {
+            return $data;
         }
 
         static $isRelationSerialized = [];
 
-        foreach ($metadata as $name => $relation) {
+        foreach ($relationsMetadata->get() as $name => $config) {
+            if (($config['serialize'] ?? null) === false) {
+                continue;
+            }
+
             $cacheKey = implode(':', [
                 get_class($this),
                 $this->{$this->getPrimaryKey()},
@@ -210,16 +177,7 @@ class ActiveRecord implements JsonSerializable
             $isRelationSerialized[$cacheKey] = true;
         }
 
-        return array_merge($this->data, $relational ?? []);
-    }
-
-    /**
-     * Move dirty data to pristine one. Typically used after record saving
-     */
-    protected function fixate()
-    {
-        $this->data = array_merge($this->data, $this->dirty);
-        $this->dirty = [];
+        return array_merge($data, $relational ?? []);
     }
 
     /**

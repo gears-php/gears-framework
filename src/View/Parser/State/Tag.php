@@ -6,6 +6,7 @@ namespace Gears\Framework\View\Parser\State;
 
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser;
+use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 
 class Tag extends State
 {
@@ -14,13 +15,16 @@ class Tag extends State
         $buffer = ltrim($this->getBuffer(), '<');
 
         $closingTagPrefix = '';
-        if (0 === strpos($buffer, '/')) {
+        if (str_starts_with($buffer, '/')) {
             $buffer = ltrim($buffer, '/');
             $closingTagPrefix = 'end';
         }
         return sprintf('<?= $this->t%s([', ucfirst($closingTagPrefix . $buffer));
     }
 
+    /**
+     * @throws InvalidCharacter
+     */
     public function run($char, Parser $parser)
     {
         if ('<' == $char) {

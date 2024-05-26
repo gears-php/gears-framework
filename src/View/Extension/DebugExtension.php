@@ -1,45 +1,51 @@
 <?php
-namespace Gears\Framework\View\Helper;
+
+declare(strict_types=1);
+
+namespace Gears\Framework\View\Extension;
 
 use Gears\Framework\Debug as DebugInfo;
 use Gears\Framework\Session;
 
-/**
- * Class DebugHelper
- * @package Gears\Framework\View\Helper
- * TODO: refactoring
- */
-class Debug extends HelperAbstract
+class DebugExtension implements ExtensionInterface
 {
+
+    public function getName(): string
+    {
+        return 'debug';
+    }
+
     /**
      * Returns various system debug info
      *
      * @return string HTML content
      */
-    public function get()
+    public function get(): string
     {
         if (DebugInfo::enabled()) {
             DebugInfo::add('-- $_GET:', $_GET, '-- $_POST:', $_POST);
             DebugInfo::add('-- Gears\Framework\Session:', Session::get(null));
 
-            return sprintf('%s<br />script <b>mem usage</b> %s<br />script <b>time</b> %s sec<br />',
-                DebugInfo::get(), DebugInfo::getMemoryUsage(), DebugInfo::scriptTime());
+            return sprintf(
+                '%s<br />script <b>mem usage</b> %s<br />script <b>time</b> %s sec<br />',
+                DebugInfo::get(),
+                DebugInfo::getMemoryUsage(),
+                DebugInfo::scriptTime()
+            );
         }
+
+        return '';
     }
 
-    /**
-     *
-     */
-    public function console($opened = false)
+    public function __invoke(array $params = null): string
     {
         if (DebugInfo::enabled()):
-
             ob_start();
 
             ?>
             <!-- debug console -->
-            <style type="text/css">
-                #debug {
+            <style>
+                .gears-debug {
                     top: 0;
                     left: 0;
                     position: fixed;
@@ -52,7 +58,7 @@ class Debug extends HelperAbstract
                     box-shadow: 0 2px 10px #555;
                 }
 
-                #debug-body pre {
+                .gears-debug-body pre {
                     font: normal 10pt consolas, "courier new", courier, monospace;
                     color: #eee;
                     text-align: left;
@@ -62,25 +68,28 @@ class Debug extends HelperAbstract
             <script type="text/javascript">
                 (function () {
                     function toggle(el) {
-                        el.style.display = (el.style.display == 'none') ? '' : 'none';
+                        el.style.display = (el.style.display === 'none') ? '' : 'none';
                     }
 
                     document.addEventListener("DOMContentLoaded", function () {
                         // console div container
-                        var div = document.createElement('div');
-                        div.setAttribute('id', 'debug');
-                        div.innerHTML = '<div id="debug-body"><pre><?php echo str_replace("\n", '\\n', self::get()); ?></pre></div>';
+                        const div = document.createElement('div');
+                        div.classList.add('gears-debug');
+                        div.innerHTML = '<div class="gears-debug-body"><pre><?php echo str_replace(
+                            "\n",
+                            '\\n',
+                            self::get()
+                        ); ?></pre></div>';
                         document.body.appendChild(div);
 
                         document.onkeyup = function (e) {
-                            var KEY_TILDE = 192;
-                            if (e.which == KEY_TILDE && e.ctrlKey) {
+                            if (e.key === '`' && e.ctrlKey) {
                                 toggle(div);
                                 return false;
                             }
                         };
 
-                        <?php if (!$opened): ?>
+                        <?php if (!($params['opened'] ?? false)): ?>
                         toggle(div);
                         <?php endif; ?>
                     }, false);
@@ -90,7 +99,8 @@ class Debug extends HelperAbstract
             <?php
 
             return ob_get_clean();
-
         endif;
+
+        return '';
     }
 }

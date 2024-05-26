@@ -5,6 +5,7 @@ namespace Gears\Db\ActiveRecord;
 use Gears\Db\ActiveRecord\Relation\HasManyJointRelation;
 use Gears\Db\ActiveRecord\Relation\HasManyRelation;
 use Gears\Db\ActiveRecord\Relation\HasOneRelation;
+use Gears\Storage\Reader\Exception\FileNotFound;
 use RuntimeException;
 use Gears\Db\ActiveRecord\Relation\RelationAbstract;
 use Gears\Db\Adapter\AdapterAbstract;
@@ -29,7 +30,7 @@ class ActiveManager
 
     /**
      * Active record relation list
-     * @var RelationAbstract[]
+     * @var RelationAbstract[][]
      */
     protected array $relations = [];
 
@@ -50,15 +51,15 @@ class ActiveManager
 
     public function create(string $className): ActiveRecord
     {
-        return new $className($this);
+        return (new $className($this))->init([]);
     }
 
     /**
      * Create and return query instance configured for fetching active record entities of concrete type
      */
-    public function of(string $className): ActiveQuery
+    public function query(string $className): ActiveQuery
     {
-        $query = new ActiveQuery($this->db, new $className($this));
+        $query = new ActiveQuery($this->db, $this, $this->getMetadata($className));
 
         return $query->build();
     }
@@ -100,35 +101,38 @@ class ActiveManager
     /**
      * Get relation object for given active record relation name.
      *
-     * @param string $name Relation name
+     * @param string $relationName Relation name
      * @param ActiveRecord $owner Relation owner
      * @throws RuntimeException
      */
-    public function getRelation(string $name, ActiveRecord $owner): RelationAbstract|null
+    public function getRelation(string $relationName, ActiveRecord $owner): ?RelationAbstract
     {
         $className = get_class($owner);
-        $metadata = $this->getMetadata($className)['relations'][$name] ?? null;
+        $metadata = $this->getMetadata($className)['relations'][$relationName] ?? null;
 
         if (!$metadata) {
             return null;
         }
 
-        $relationName = "$className:$name";
-
-        if (isset($this->relations[$relationName])) {
-            return $this->relations[$relationName];
+        if (isset($this->relations[$className][$relationName])) {
+            return $this->relations[$className][$relationName];
         }
 
         $relation = match ($metadata['type']) {
-            'hasOne' => new HasOneRelation($name, $owner),
-            'hasMany' => new HasManyRelation($name, $owner),
-            'hasManyJoint' => new HasManyJointRelation($name, $owner),
-            default => throw new RuntimeException(sprintf('The type of "%s" relation is unknown', $name)),
+            'hasOne' => new HasOneRelation($metadata, $owner->getMetadata(), $this),
+            'hasMany' => new HasManyRelation($metadata, $owner->getMetadata(), $this),
+            'hasManyJoint' => new HasManyJointRelation($metadata, $owner->getMetadata(), $this),
+            default => throw new RuntimeException(sprintf('The type of "%s" relation is unknown', $relationName)),
         };
 
-        $relation->build($metadata);
+        $relation->buildQuery();
 
-        return $this->relations[$relationName] = $relation;
+        return $this->relations[$className][$relationName] = $relation;
+    }
+
+    public function find(string $className, mixed $id): ?ActiveRecord
+    {
+        return $this->query($className)->fetchById((string)$id);
     }
 
     /**
@@ -142,12 +146,18 @@ class ActiveManager
             $configs = glob($dir . '/*' . $config->getReader()->getFileExt());
 
             foreach ($configs as $file) {
-                $config->load($file);
+                try {
+                    $config->load($file);
+                } catch (FileNotFound $e) {
+                    throw new RuntimeException('Can not load metadata form file', 0, $e);
+                }
 
                 if ($config['class']) {
-                    $this->metadata[$config['class']] = $config->getObj();
+                    $this->metadata[$config['class']] = $config->get();
                 } else {
-                    throw new RuntimeException(sprintf('ActiveRecord `class` definition missed in %s metadata file', $file));
+                    throw new RuntimeException(
+                        sprintf('ActiveRecord `class` definition missed in %s metadata file', $file)
+                    );
                 }
             }
         }

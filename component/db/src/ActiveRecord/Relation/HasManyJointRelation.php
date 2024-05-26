@@ -1,42 +1,44 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Gears\Db\ActiveRecord\Relation;
 
 use Gears\Db\ActiveRecord\ActiveNode;
-use Gears\Db\ActiveRecord\ActiveRecord;
 
 /**
  * HasMany active record relation via the joint table
- * @package Gears\Db\ActiveRecord\Relation
+ * @package Gears\Db\ActiveRecord
  */
 class HasManyJointRelation extends RelationAbstract
 {
     /**
      * {@inheritdoc}
      */
-    public function build(array $meta)
+    public function buildQuery()
     {
-        $this->query = $this->owner->getManager()->of($meta['class']);
-        $target = $this->query->getActiveRecord();
+        $this->query = $this->manager->query($this->metadata['class']);
+        $target = $this->query->getMetadata();
+        $jointTable = $this->metadata['jointTable'];
+        $jointAlias = uniqid($jointTable[0]);
         $this->query
             ->join(
-                $jointTable = $meta['jointTable'],
-                $meta['joinBy'],
-                $target->getTableName(),
-                $target->getPrimaryKey()
+                [$jointAlias => $jointTable],
+                $this->metadata['joinBy'],
+                $target['tableName'],
+                $target['primaryKey'],
             )
-            ->getWhere()->eq([$jointTable => $meta['matchBy']]);
+            ->getWhere()->eq([$jointAlias => $this->metadata['matchBy']]);
     }
 
     /**
      * {@inheritdoc}
-     * @return ActiveRecord[]
      */
-    public function exec(): array
+    public function exec(mixed $ownerId): array
     {
-        $this->query->bind(0, $this->owner->{$this->owner->getPrimaryKey()});
+        $this->query->bind(0, $ownerId);
 
-        return $this->query->getActiveRecord() instanceof ActiveNode
+        return $this->query->getMetadata() instanceof ActiveNode
             ? $this->query->fetchTree()
             : $this->query->fetchAll();
     }

@@ -240,13 +240,10 @@ class Dataset
 
     /**
      * Order the dataset selection by specified column(s). Default sorting is ASC
-     * @param string|null $field
-     * @param string $sort Sorting direction
-     * @return $this
      */
-    public function order($field, $sort = Query::ASC)
+    public function order(?string $field, string $tableName, string $sort = Query::ASC): static
     {
-        $this->query->order($field, $sort);
+        $this->query->order($field, $tableName, $sort);
 
         return $this;
     }

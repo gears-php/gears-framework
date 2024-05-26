@@ -1,4 +1,5 @@
 <?php
+
 namespace Gears\Framework\View;
 
 use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
@@ -11,15 +12,14 @@ use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
  */
 class Template
 {
-    protected $name = '';
-    protected $path = '';
-    protected $content = '';
-    protected $vars = [];
-    protected $parent;
-    protected $view;
-    protected $blocks = [];
-    protected $blocksOpened = [];
-    protected $disabled = false;
+    protected string $name = '';
+    protected string|array $path = '';
+    protected string $content = '';
+    protected array $vars = [];
+    protected ?self $parent = null;
+    protected View $view;
+    protected array $blocks = [];
+    protected array $blocksOpened = [];
 
     /**
      * Process template file
@@ -27,7 +27,7 @@ class Template
      * @param View $view
      * @throws \RuntimeException If template file not found
      */
-    public function __construct($filePath, View $view)
+    public function __construct(string $filePath, View $view)
     {
         $this->path = str_replace('/', DS, dirname($filePath));
         $this->name = basename($filePath);
@@ -46,9 +46,7 @@ class Template
             // it can be used in a loop for rendering some repeatable content
             if (is_file($filePath)) {
                 $this->content = (new Parser())->parseFile($filePath);
-                if ($cache) {
-                    $cache->set($this->content, $templateKey);
-                }
+                $cache?->set($this->content, $templateKey);
             } else {
                 throw new \RuntimeException('Template file not found: ' . $filePath);
             }
@@ -56,41 +54,15 @@ class Template
     }
 
     /**
-     * Nonexistent method call is treated as view helper method call
-     *
-     * @param string $method
-     * @param array $params
-     *
-     * @return string
-     */
-    public function __call(string $method, array $params)
-    {
-        return $this->view->helper($method, $params);
-    }
-
-    /**
      * Set template name
-     * @param string $name
      */
-    public function setName($name)
+    public function setName(string $name): void
     {
         $this->name = $name;
     }
 
     /**
-     * Set path to the template file
-     *
-     * @param string $path
-     */
-    public function setPath(string $path)
-    {
-        $this->path = $path;
-    }
-
-    /**
      * Get template name
-     *
-     * @return string
      */
     public function getName(): string
     {
@@ -98,36 +70,17 @@ class Template
     }
 
     /**
-     * Get path to the template file (not including filename itself)
-     * @return string
-     */
-    public function getPath()
-    {
-        return $this->path;
-    }
-
-    /**
      * Get path to the template file including filename itself
-     * @return string
      */
-    public function getFilePath()
+    public function getFilePath(): string
     {
         return $this->path . DS . $this->name;
     }
 
     /**
-     * Disable template rendering
-     */
-    public function disable()
-    {
-        $this->disabled = true;
-    }
-
-    /*
      * Set template blocks content
-     * @return Template
      */
-    public function setBlocks(array $blocks)
+    public function setBlocks(array $blocks): static
     {
         $this->blocks = $blocks + $this->blocks;
         return $this;
@@ -135,11 +88,8 @@ class Template
 
     /**
      * Setting template variable(s)
-     * @param string|array $mixed
-     * @param mixed $value
-     * @return Template
      */
-    public function assign($mixed, $value = null)
+    public function assign(array|string $mixed, mixed $value = null): static
     {
         if (is_array($mixed)) {
             foreach ($mixed as $name => $value) {
@@ -156,38 +106,30 @@ class Template
      * @param array $vars Template variables
      * @return string Rendered template content
      */
-    public function render(array $vars = [])
+    public function render(array $vars = []): string
     {
-        if (!$this->disabled) {
-            $processed = $this->process($this->vars + $vars);
+        $processed = $this->process($this->vars + $vars);
 
-            // we have decorator parent template
-            if ($this->parent()) {
-                return $this->parent()->setBlocks($this->blocks)->render();
-            } else {
-                return $processed;
-            }
+        // we have decorator parent template
+        if ($this->parent()) {
+            return $this->parent()->setBlocks($this->blocks)->render();
+        } else {
+            return $processed;
         }
-
-        return '';
     }
 
     /**
      * Get or set decorator parent template
-     * @param Template $tpl
-     * @return Template|null
      */
-    private function parent(Template $tpl = null)
+    private function parent(Template $tpl = null): ?Template
     {
         return $tpl ? $this->parent = $tpl : $this->parent;
     }
 
     /**
      * Start template block
-     *
-     * @param array $args
      */
-    protected function tBlock(array $args)
+    protected function tBlock(array $args): void
     {
         $this->blocksOpened[] = $args['name'];
         ob_start();
@@ -196,7 +138,7 @@ class Template
     /**
      * Close template block
      */
-    protected function tEndblock()
+    protected function tEndblock(): void
     {
         $currentBlock = array_pop($this->blocksOpened);
 
@@ -213,7 +155,7 @@ class Template
         echo $this->blocks[$currentBlock];
     }
 
-    protected function tExtension(array $args)
+    protected function tExtension(array $args): void
     {
         echo $this->view->extension($args['name']);
     }
@@ -232,39 +174,6 @@ class Template
     protected function tExtends(array $args): void
     {
         $this->parent($this->view->load($args['name']));
-    }
-
-    /**
-     * Generate style link tag
-     */
-    protected function tCss(array $args): string
-    {
-        $args['href'] = $this->url($args['src']); // Style file web url
-        unset($args['src']);
-        $args += ['media' => 'all']; // default media type
-        return sprintf('<link rel="stylesheet" type="text/css"%s />', $this->getTagAttributesString($args));
-    }
-
-    /**
-     * Generate js script src tag
-     * @param array $args
-     * @return string
-     */
-    protected function tJs(array $args)
-    {
-        $args['src'] = $this->url($args['src']); // Script file web url
-        return sprintf('<script type="text/javascript"%s></script>', $this->getTagAttributesString($args));
-    }
-
-    /**
-     * @param array $args
-     *
-     * @return string
-     */
-    protected function tImage(array $args)
-    {
-        $args['src'] = $this->url($args['src']); // Image web url
-        return sprintf('<img%s />', $this->getTagAttributesString($args));
     }
 
     /**
@@ -294,117 +203,25 @@ class Template
     }
 
     /**
-     * Gather all given key=>value pairs into html tag attributes string (e.g. attr="value")
-     * @param $attributes
-     * @return string
-     */
-    private function getTagAttributesString($attributes)
-    {
-        $attributesString = '';
-        foreach ($attributes as $name => $value) {
-            $attributesString .= sprintf(' %s="%s"', $name, $value);
-        }
-        return $attributesString;
-    }
-
-    /**
      * Process and return template content
-     * @param array $vars
-     * @return string
-     * @throws InvalidCharacter
      */
-    private function process(array $vars)
+    private function process(array $vars): string
     {
         try {
             ob_start();
             extract($vars);
             eval('?>' . $this->content);
             return ob_get_clean();
-        } catch (InvalidCharacter $e) {
-            throw $e;
-        } catch (\Exception $e) {
+        } catch (InvalidCharacter|\Exception $e) {
             $this->exception($e);
         }
-
-        return '';
-    }
-
-    /**
-     * Return full url for a given path
-     *
-     * @param string $path
-     *
-     * @return string
-     */
-    private function url(string $path): string
-    {
-        if (0 === strpos($path, '/')) {
-            return $path;
-        }
-
-        $path = ltrim($path, '/');
-        // probably we have asset (img/js/css) path given
-        // find out this by extension
-        $ext = substr($path, strrpos($path, '.') + 1);
-        switch ($ext) {
-            // style
-            case 'css':
-                return '/css/' . $path;
-            // script
-            case 'js':
-                return '/js/' . $path;
-            // image
-            case 'png':
-            case 'gif':
-            case 'jpg':
-            case 'ico':
-                return '/img/' . $path;
-            // just some url
-            default:
-                return $path;
-        }
-    }
-
-    /**
-     * Return script with basic js application constants under 'app' namespace
-     *
-     * @return string
-     */
-    private function appJs()
-    {
-        # todo move to app level template (or block)
-        return sprintf('<script type="text/javascript">var app = app || {};%s</script>',
-            $this->jsVars(['uri' => '', 'img_uri' => '/img'], 'app')
-        );
-    }
-
-    /**
-     * Pass multiple php variables to js
-     * @param array $vars Variables array in (name => value) format
-     * @param string $namespace (optional) Namespace, inside which create the variables
-     * @param array $exceptions (optional) Array of names of some variables passed with first parameter which shouldn't be processed
-     * @return string
-     * @throws \Exception
-     */
-    private function jsVars($vars, $namespace = null, array $exceptions = [])
-    {
-        $script = '';
-
-        foreach ($vars as $name => $value) {
-            if (!in_array($name, $exceptions)) {
-                $script .= sprintf('%s%s = %s;', $namespace . '.', $name, $this->jsEncode($value));
-            }
-        }
-
-        return $script;
     }
 
     /**
      * Encode the given php variable into its valid js representation
-     * @param mixed $var
-     * @return string
+     * @deprecated
      */
-    private function jsEncode($var)
+    public function jsEncode(mixed $var): float|string
     {
         if (is_numeric($var) || is_bool($var)) {
             // prepare numeric

@@ -18,7 +18,7 @@ class ActiveRecordHandler implements ResourceHandlerInterface
     public function list(string $resource): array
     {
         /** @var ActiveQuery $query */
-        $query = $this->get('arm')->of($resource);
+        $query = $this->get('arm')->query($resource);
 
         return $this->get('request')->query->has('__ar:tree')
             ? $query->fetchTree()
@@ -28,7 +28,7 @@ class ActiveRecordHandler implements ResourceHandlerInterface
     public function one(string $resource, string $id): ActiveRecord
     {
         /** @var ActiveQuery $query */
-        $query = $this->get('arm')->of($resource);
+        $query = $this->get('arm')->query($resource);
 
         if (!$record = $query->fetchById($id)) {
             throw new ResourceNotFoundException($resource . "[$id]");
@@ -42,6 +42,7 @@ class ActiveRecordHandler implements ResourceHandlerInterface
         $payload = json_decode($this->get('request')->getContent(), true);
         /** @var ActiveRecord $record */
         $record = $this->get('arm')->create($resource);
+        unset($payload[$record->getPrimaryKey()]);
         $record->fill($payload);
         $record->save();
 
@@ -53,7 +54,7 @@ class ActiveRecordHandler implements ResourceHandlerInterface
         $payload = json_decode($this->get('request')->getContent(), true);
 
         /** @var ActiveRecord $record */
-        if (!$record = $this->get('arm')->of($resource)->fetchById($id)) {
+        if (!$record = $this->get('arm')->query($resource)->fetchById($id)) {
             throw new ResourceNotFoundException($resource . "[$id]");
         }
 
