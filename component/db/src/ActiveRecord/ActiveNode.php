@@ -6,9 +6,8 @@ namespace Gears\Db\ActiveRecord;
 
 class ActiveNode extends ActiveRecord
 {
-    protected ?self $parent;
+    public ?self $parent;
     protected array $children = [];
-    private string $childrenSerializeKey = '$children';
 
     public function addChild(ActiveNode $child): static
     {
@@ -28,7 +27,7 @@ class ActiveNode extends ActiveRecord
         return array_merge(
             parent::jsonSerialize(),
             [
-                $this->childrenSerializeKey => $this->children,
+                $this->getMetadata()->raw()['childrenSerializeKey'] ?? '$children' => $this->children,
             ]
         );
     }

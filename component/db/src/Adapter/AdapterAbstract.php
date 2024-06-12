@@ -110,9 +110,7 @@ abstract class AdapterAbstract implements ArrayAccess
      */
     public function fetchAssoc(int $fetchStyle = PDO::FETCH_ASSOC): array
     {
-        $rows = $this->statement->fetchAll(PDO::FETCH_GROUP | $fetchStyle);
-
-        return array_map('reset', $rows);
+        return $this->statement->fetchAll(PDO::FETCH_GROUP | $fetchStyle);
     }
 
     /**

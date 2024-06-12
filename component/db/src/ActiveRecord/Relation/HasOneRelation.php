@@ -24,7 +24,7 @@ class HasOneRelation extends RelationAbstract implements SingleRecordRelation
             ->join(
                 [$tableAlias => $tableName],
                 $this->metadata['foreign'],
-                $this->query->getMetadata()['tableName'],
+                $this->query->getTableName(),
                 $pk = $this->ownerMetadata['primaryKey']
             )
             ->getWhere()->eq([$tableAlias => $pk]);

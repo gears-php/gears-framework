@@ -8,6 +8,8 @@ declare(strict_types=1);
 namespace Gears\Framework\Application;
 
 use ErrorException;
+use Gears\Db\ActiveRecord\ActiveManager;
+use Gears\Db\Db;
 use Gears\Framework\Debug;
 use Gears\Storage\Reader\Exception\FileNotFound;
 use Gears\Storage\Storage;
@@ -34,19 +36,25 @@ abstract class Application extends Dispatcher
 {
     use ServiceAware;
 
-    public function __construct(private readonly Storage $config, protected Services $services)
+    public function __construct(protected Storage $config, protected Services $services)
     {
     }
 
     /**
      * Setup main application services and load modules
+     * @throws FileNotFound
      */
     public function load(string $env = ''): self
     {
         $this->handleExceptions();
+        $this->handleErrors();
+
         $fileExt = $this->config->getReader()->getFileExt();
         $configFile = 'config' . rtrim('_' . $env, '_') . $fileExt;
         $this->config->load($this->getAppDir() . '/config/' . $configFile);
+
+        $this->withDb()->withActiveRecord();
+
         $this->registerServices($this->config);
 
         if (php_sapi_name() !== 'cli') {
@@ -91,7 +99,7 @@ abstract class Application extends Dispatcher
         );
 
         if (!$response instanceof Response) {
-            $response = new JsonResponse(['data' => $response, '__time' => Debug::scriptTime(), '__memory' => Debug::getMemoryUsage()]);
+            $response = new JsonResponse($response);
         }
 
         $this->dispatch('app.response', [$response]);
@@ -99,6 +107,11 @@ abstract class Application extends Dispatcher
         $response->send();
 
         $this->dispatch('app.done');
+    }
+
+    public function getSourceDir(): string
+    {
+        return $this->getAppDir() . '/src';
     }
 
     /**
@@ -130,14 +143,14 @@ abstract class Application extends Dispatcher
 
         if ($request && ($request->isXmlHttpRequest() || str_contains($request->getContentType() . '', 'json'))) {
             $content = json_encode([
-                                       'exception' => [
-                                           'message' => $e->getMessage(),
-                                           'code' => $e->getCode(),
-                                           'file' => $e->getFile(),
-                                           'line' => $e->getLine(),
-                                           'trace' => $e->getTrace(),
-                                       ],
-                                   ]);
+                'exception' => [
+                    'message' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTrace(),
+                ],
+            ]);
         } else {
             $content = "<pre>$e</pre>";
         }
@@ -175,5 +188,38 @@ abstract class Application extends Dispatcher
     private function handleErrors(): ?callable
     {
         return set_error_handler([$this, 'errorHandler']);
+    }
+
+
+    /** Setup Database service */
+    private function withDb(): static
+    {
+        if ($this->has('db')) {
+            return $this;
+        }
+
+        $dbCfg = $this->config->get('db');
+
+        if (is_object($dbCfg) && $dbCfg->raw()) {
+            $this->set('db', Db::connect($dbCfg->raw()));
+        }
+
+        return $this;
+    }
+
+
+    /** Setup Active Record service */
+    private function withActiveRecord(): static
+    {
+        if ($this->has('arm')) {
+            return $this;
+        }
+
+        if ($this->config->get('active_record')) {
+            $this->set('arm', $arm = new ActiveManager($this->getDb()));
+            $arm->setMetadataDirs(glob($this->getSourceDir() . '/*/config/active_record'));
+        }
+
+        return $this;
     }
 }

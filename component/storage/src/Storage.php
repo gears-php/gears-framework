@@ -163,7 +163,7 @@ class Storage implements \ArrayAccess
      */
     public function getKeys(): array
     {
-        return array_keys($this->data ?? []);
+        return array_keys($this->data);
     }
 
     /**

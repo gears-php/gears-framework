@@ -7,8 +7,13 @@ declare(strict_types=1);
 
 namespace Gears\Framework\Application;
 
+use Gears\Db\ActiveRecord\ActiveManager;
+use Gears\Db\Adapter\AdapterAbstract;
+use Gears\Db\Db;
+use Gears\Storage\Storage;
+
 /**
- * Provides functionality for services management
+ * Provides functionality for services management and access.
  *
  * @package Gears\Framework\Application
  */
@@ -73,5 +78,21 @@ trait ServiceAware
         $this->services = $services;
 
         return $this;
+    }
+
+    public function getDb(): AdapterAbstract
+    {
+        /** @var AdapterAbstract $db */
+        $db = $this->get('db');
+
+        return $db;
+    }
+
+    public function getActiveRecord(): ActiveManager
+    {
+        /** @var ActiveManager $arm */
+        $arm = $this->get('arm');
+
+        return $arm;
     }
 }

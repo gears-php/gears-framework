@@ -22,7 +22,7 @@ class HasManyRelation extends RelationAbstract
             ->join(
                 [$tableAlias => $tableName],
                 $pk = $this->ownerMetadata['primaryKey'],
-                $this->query->getMetadata()['tableName'],
+                $this->query->getTableName(),
                 $this->metadata['foreign']
             )
             ->getWhere()->eq([$tableAlias => $pk]);
@@ -33,6 +33,6 @@ class HasManyRelation extends RelationAbstract
      */
     public function exec(mixed $ownerId): array
     {
-        return $this->query->bind(0, $ownerId)->fetchAll();
+        return $this->query->bind(0, $ownerId)->fetchRecords();
     }
 }

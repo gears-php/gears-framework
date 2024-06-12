@@ -24,8 +24,8 @@ abstract class RelationAbstract
 
     /**
      * Execute query against given target record and return relational one(s).
-     * Should single record or records array depending on relation type.
-     * implementation
+     * Should return single record or records array depending on relation type
+     * implementation.
      *
      * @return ActiveRecord[]|ActiveRecord
      */

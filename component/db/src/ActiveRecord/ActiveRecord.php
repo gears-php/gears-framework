@@ -14,46 +14,15 @@ use JsonSerializable;
  */
 class ActiveRecord implements JsonSerializable
 {
-    /**
-     * Get primary key from metadata
-     */
-    public function getPrimaryKey(): string
-    {
-        return $this->getMetadata()['primaryKey'];
-    }
+    use MetadataAware;
 
-    /**
-     * Get table name from metadata
-     * @return string
-     */
-    public function getTableName(): string
+    public function __construct(protected ActiveManager $manager, private readonly Storage $metadata)
     {
-        return $this->getMetadata()['tableName'];
-    }
-
-    /**
-     * Get metadata object for concrete active record class.
-     */
-    public function getMetadata(): Storage
-    {
-        return $this->manager->getMetadata(get_called_class());
-    }
-
-    /**
-     * Get metadata part for AR relations.
-     */
-    public function getRelationsMetadata(): Storage
-    {
-        return $this->getMetadata()->get('relations');
     }
 
     public function getId(): mixed
     {
         return $this->{$this->getPrimaryKey()} ?? null;
-    }
-
-    public function __construct(protected ActiveManager $manager)
-    {
     }
 
     /**
@@ -62,7 +31,7 @@ class ActiveRecord implements JsonSerializable
      */
     public function init(array $dbData = []): static
     {
-        !count($dbData) || $this->fill(array_combine($this->getMetadata()['fields']->raw(), $dbData));
+        !count($dbData) || $this->fill(array_combine($this->getFields(), $dbData));
 
         foreach ($this->getRelationsMetadata()->getKeys() as $relationName) {
             $this->$relationName = $this->manager
@@ -101,9 +70,8 @@ class ActiveRecord implements JsonSerializable
         }
 
         // now saving this record itself
-        $metadata = $this->getMetadata();
 
-        foreach ($metadata['fields']->raw() as $alias => $field) {
+        foreach ($this->getFields() as $alias => $field) {
             $dirtyData[$field] = $this->{is_string($alias) ? $alias : $field} ?? null;
         }
 
@@ -147,12 +115,11 @@ class ActiveRecord implements JsonSerializable
 
     public function jsonSerialize(): array
     {
-        $metadata = $this->getMetadata();
-        $fields = $metadata['fields']->raw();
+        $fields = $this->getFields();
         $data = array_combine($fields, array_map(fn($prop) => $this->$prop, $fields));
         $relationsMetadata = $this->getRelationsMetadata();
 
-        if (!$relationsMetadata->getKeys() || $metadata['serialize_relations'] === false) {
+        if (!$relationsMetadata->getKeys() || $this->metadata['serialize_relations'] === false) {
             return $data;
         }
 

@@ -51,7 +51,7 @@ class ActiveManager
 
     public function create(string $className): ActiveRecord
     {
-        return (new $className($this))->init([]);
+        return (new $className($this, $this->getMetadata($className)))->init([]);
     }
 
     /**

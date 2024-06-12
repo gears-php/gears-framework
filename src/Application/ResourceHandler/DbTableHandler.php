@@ -14,14 +14,14 @@ class DbTableHandler implements ResourceHandlerInterface
 
     public function list(string $resource): JsonResponse
     {
-        $dataset = new Dataset($resource, $this->get('db'));
+        $dataset = new Dataset($resource, $this->getDb());
 
         return new JsonResponse($dataset->fetchAll());
     }
 
     public function one(string $resource, string $id): JsonResponse
     {
-        $dataset = new Dataset($resource, $this->get('db'));
+        $dataset = new Dataset($resource, $this->getDb());
 
         if (!$row = $dataset->filter('id', $id)->fetchRow()) {
             throw new ResourceNotFoundException($resource . "[$id]");
@@ -33,6 +33,7 @@ class DbTableHandler implements ResourceHandlerInterface
     public function post(string $resource): mixed
     {
         // TODO: Implement post() method.
+
     }
 
     public function put(string $resource, string $id): mixed

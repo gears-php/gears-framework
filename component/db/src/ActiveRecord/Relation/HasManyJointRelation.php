@@ -18,15 +18,14 @@ class HasManyJointRelation extends RelationAbstract
     public function buildQuery()
     {
         $this->query = $this->manager->query($this->metadata['class']);
-        $target = $this->query->getMetadata();
         $jointTable = $this->metadata['jointTable'];
         $jointAlias = uniqid($jointTable[0]);
         $this->query
             ->join(
                 [$jointAlias => $jointTable],
                 $this->metadata['joinBy'],
-                $target['tableName'],
-                $target['primaryKey'],
+                $this->query->getTableName(),
+                $this->query->getPrimaryKey(),
             )
             ->getWhere()->eq([$jointAlias => $this->metadata['matchBy']]);
     }
@@ -38,8 +37,6 @@ class HasManyJointRelation extends RelationAbstract
     {
         $this->query->bind(0, $ownerId);
 
-        return $this->query->getMetadata() instanceof ActiveNode
-            ? $this->query->fetchTree()
-            : $this->query->fetchAll();
+        return $this->query->fetchRecords();
     }
 }

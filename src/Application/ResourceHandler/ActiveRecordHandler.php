@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Gears\Framework\Application\ResourceHandler;
 
-use Gears\Db\ActiveRecord\ActiveQuery;
 use Gears\Framework\Application\ServiceAware;
 use Gears\Db\ActiveRecord\ActiveRecord;
 
@@ -17,18 +16,12 @@ class ActiveRecordHandler implements ResourceHandlerInterface
 
     public function list(string $resource): array
     {
-        /** @var ActiveQuery $query */
-        $query = $this->get('arm')->query($resource);
-
-        return $this->get('request')->query->has('__ar:tree')
-            ? $query->fetchTree()
-            : $query->fetchAll();
+        return $this->getActiveRecord()->query($resource)->fetchRecords();
     }
 
     public function one(string $resource, string $id): ActiveRecord
     {
-        /** @var ActiveQuery $query */
-        $query = $this->get('arm')->query($resource);
+        $query = $this->getActiveRecord()->query($resource);
 
         if (!$record = $query->fetchById($id)) {
             throw new ResourceNotFoundException($resource . "[$id]");
@@ -40,8 +33,7 @@ class ActiveRecordHandler implements ResourceHandlerInterface
     public function post(string $resource): ActiveRecord
     {
         $payload = json_decode($this->get('request')->getContent(), true);
-        /** @var ActiveRecord $record */
-        $record = $this->get('arm')->create($resource);
+        $record = $this->getActiveRecord()->create($resource);
         unset($payload[$record->getPrimaryKey()]);
         $record->fill($payload);
         $record->save();
@@ -53,8 +45,7 @@ class ActiveRecordHandler implements ResourceHandlerInterface
     {
         $payload = json_decode($this->get('request')->getContent(), true);
 
-        /** @var ActiveRecord $record */
-        if (!$record = $this->get('arm')->query($resource)->fetchById($id)) {
+        if (!$record = $this->getActiveRecord()->query($resource)->fetchById($id)) {
             throw new ResourceNotFoundException($resource . "[$id]");
         }
 

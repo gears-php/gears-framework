@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gears\Framework\Application;
 
 use Gears\Framework\Application\Routing\Router;
+use Gears\Storage\Reader\Exception\FileNotFound;
 use Gears\Storage\Storage;
 use ReflectionClass;
 
@@ -21,6 +22,7 @@ abstract class AbstractModule
 
     /**
      * Setup module based on its configuration.
+     * @throws FileNotFound
      */
     public function load(): void
     {
@@ -35,7 +37,10 @@ abstract class AbstractModule
         /** @var Router $router */
         $router = $this->get('router');
         $config['routing'] && $router->build($config['routing']);
-        $apiConfig = $config['api'];
+
+        if (!$apiConfig = $config['api']) {
+            return;
+        }
 
         foreach ($apiConfig['resources']->raw() ?? [] as $resourceDefinition) {
             $router->buildResourceRoutes(

@@ -16,11 +16,13 @@ use Gears\Db\Query\WhereAnd;
 use Gears\Db\Query;
 
 /**
- * Allows to build a query which will fetch data into Active Record class object(s)
+ * Querying Active Record(s) from db
  * @package Gears\Db
  */
 class ActiveQuery extends Query
 {
+    use MetadataAware;
+
     /**
      * {@inheritdoc}
      */
@@ -40,57 +42,9 @@ class ActiveQuery extends Query
         return $this->metadata;
     }
 
-    /**
-     * Query ActiveRecord list
-     * @return ActiveRecord[]
-     */
-    public function fetchAll(): array
+    public function fetchRecords(): array
     {
-        return $this->exec()->getStatement()->fetchAll(PDO::FETCH_FUNC, [$this, 'createRecord']);
-    }
-
-    /**
-     * Get ActiveNode`s tree list where all child nodes put under their parents.
-     */
-    public function fetchTree(): array
-    {
-        if (!(new $this->metadata['class']) instanceof ActiveNode) {
-            throw new \LogicException(
-                sprintf('Class %s must implement ActiveNode for tree operations', $this->metadata['class'])
-            );
-        }
-
-        array_unshift($this->select, $this->db->escapeIdentifier($this->metadata['primaryKey']));
-        $records = $this->fetchAll();
-
-        if (!$records) {
-            return [];
-        }
-
-        /** @var ActiveNode[] $refs */
-        $refs = $moved = [];
-        $record = current($records);
-
-        // build tree from a flat record set
-        // todo fix tree logic
-        do {
-            /** @var ActiveNode $record */
-            $parentId = $record->parent_id;
-
-            if (isset($refs[$parentId])) { // put node as a child to a parent
-                $refs[$parentId]->addChild($record);
-                $childrenCount = count($refs[$parentId]->getChildren());
-                $refs[$record->id] = &$refs[$parentId]->getChildren()[$childrenCount - 1];
-                $moved[] = $record->id;
-            } else { // top level node
-                $refs[$record->id] = &$records[key($records)];
-            }
-        } while ($record = next($records));
-
-        // remove all moved child nodes from top level
-        $records = array_diff_key($records, array_flip($moved));
-
-        return array_values($records);
+        return is_subclass_of($this->getClassName(), ActiveNode::class) ? $this->fetchTree() : $this->fetchAll();
     }
 
     /**
@@ -106,7 +60,7 @@ class ActiveQuery extends Query
 
     public function fetchById(string $id): ?ActiveRecord
     {
-        $this->getWhere()->eq($this->metadata['primaryKey'], $id);
+        $this->getWhere()->eq($this->getPrimaryKey(), $id);
 
         return $this->fetchOne();
     }
@@ -116,16 +70,64 @@ class ActiveQuery extends Query
      */
     public function build(): ActiveQuery
     {
-        return $this->select($this->metadata['fields']->raw(), null, $this->metadata['tableName'])
-            ->from($this->metadata['tableName'])
+        return $this->select($this->getFields(), null, $this->getTableName())
+            ->from($this->getTableName())
             ->where(new WhereAnd($this->db))
-            ->order($this->metadata['sortBy']->raw(), $this->metadata['tableName']);
+            ->order($this->metadata['sortBy']->raw(), $this->getTableName());
     }
 
     public function createRecord(...$dbData): ActiveRecord
     {
+        $className = $this->getClassName();
         /** @var ActiveRecord $record */
-        $record = new $this->metadata['class']($this->manager);
+        $record = new $className($this->manager, $this->metadata);
+
         return $record->init($dbData);
+    }
+
+    /**
+     * Query ActiveRecord plain list
+     * @return ActiveRecord[]
+     */
+    private function fetchAll(): array
+    {
+        return $this->exec()->getStatement()->fetchAll(PDO::FETCH_FUNC, [$this, 'createRecord']);
+    }
+
+    /**
+     * Get ActiveNode tree structure where all child nodes put under their parents.
+     */
+    private function fetchTree(): array
+    {
+        $records = $this->fetchAll();
+        $records = array_combine(array_column($records, $primaryKey = $this->getPrimaryKey()), $records);
+
+        if (!$records) {
+            return [];
+        }
+
+        /** @var ActiveNode[] $refs */
+        $refs = $moved = [];
+        $record = current($records);
+
+        // build tree from a flat record set
+        do {
+            /** @var ActiveNode $record */
+            $parentId = $record->{$this->getParentKey()};
+
+            if (isset($refs[$parentId])) { // put node as a child to a parent
+                $refs[$parentId]->addChild($record);
+                $childrenCount = count($refs[$parentId]->getChildren());
+                $refs[$record->$primaryKey] = &$refs[$parentId]->getChildren()[$childrenCount - 1];
+                $moved[] = $record->$primaryKey;
+            } else { // top level node
+                $refs[$record->$primaryKey] = &$records[key($records)];
+            }
+        } while ($record = next($records));
+
+        // remove all moved child nodes from top level
+        $records = array_diff_key($records, array_flip($moved));
+
+        return array_values($records);
     }
 }
