@@ -33,4 +33,12 @@ abstract class AbstractController
 
         return $response;
     }
+
+    /**
+     * Render given view template into response object.
+     */
+    public function render(string $template, array $vars = []): Response
+    {
+        return new Response($this->get('view')->render($template, $vars));
+    }
 }
