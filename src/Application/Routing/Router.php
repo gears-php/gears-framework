@@ -26,6 +26,11 @@ class Router
                 throw new \InvalidArgumentException(sprintf('Route "%s" does not have the `to` handler definition', $routeName));
             }
 
+            if (is_int($routeName)) {
+                preg_match_all('/[a-zA-Z0-9_]+/', str_replace('controller', '', strtolower($route['to'])), $matches);
+                $routeName = 'route_' . implode('_', array_unique($matches[0]));
+            }
+
             $this->addRoute(new Route($routeName, $route['match'], $route['to']));
         }
     }
@@ -56,7 +61,7 @@ class Router
                 (new Route(
                     trim($endpoint, '/') . ':' . $method,
                     sprintf($matchPattern, rtrim($prefix, '/') . rtrim($endpoint, '/')),
-                    ":$handler:$method"
+                    "$handler:$method"
                 ))->setResource($resource)
             );
         }

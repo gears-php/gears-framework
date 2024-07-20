@@ -17,18 +17,22 @@ class ControllerResolver
      */
     private string $action;
 
+    public function __construct(private readonly ?string $controllerNamespacePrefix)
+    {
+    }
+
     /**
      * Take the controller action definition from the route and resolve it into controller instance and action name
      */
     public function resolve(Route $route): self
     {
         $handler = $route->getHandlerDefinition();
-        list($module, $class, $action) = explode(':', $handler);
+        list($class, $action) = explode(':', $handler);
 
         if (!class_exists($class)) {
-            $class = implode('\\', [$module, 'Controller', $class . 'Controller']);
+            $class = rtrim($this->controllerNamespacePrefix ?: 'App\Controller', '\\') . '\\' . $class . 'Controller';
         }
-        
+
         $this->controller = new $class;
         $this->action = $action;
 

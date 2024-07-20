@@ -8,7 +8,6 @@ namespace Gears\Storage;
 use Gears\Storage\Reader\Exception\FileNotFound;
 use Gears\Storage\Reader\ReaderAbstract;
 use Gears\Storage\Reader\Yaml;
-use ReturnTypeWillChange;
 
 /**
  * Simple key-value runtime storage solution
@@ -111,9 +110,9 @@ class Storage implements \ArrayAccess
         if (is_array($mixed)) {
             $node = $mixed;
         } elseif (is_string($mixed)) {
-            $node = $this->read($mixed);
+            $node = $this->read($mixed)->raw();
         } elseif ($mixed instanceof Storage) {
-            $node = $mixed->get();
+            $node = $mixed->get()->raw();
         }
 
         $this->data = array_merge_recursive($this->data, $node);
@@ -155,7 +154,7 @@ class Storage implements \ArrayAccess
             }
         }
 
-        return is_scalar($p) ? $p : new Storage($p ?? []);
+        return is_scalar($p) || is_null($p) ? $p : new Storage($p ?? []);
     }
 
     /**

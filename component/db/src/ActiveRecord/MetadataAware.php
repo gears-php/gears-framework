@@ -14,8 +14,8 @@ trait MetadataAware
     {
         $fields = $this->metadata['fields']->raw();
 
-        if ($parentKey = $this->getParentKey()) {
-            array_unshift($fields, $parentKey);
+        if (is_subclass_of($this->getClassName(), ActiveNode::class) ) {
+            array_unshift($fields, $this->getParentKey());
         }
 
         array_unshift($fields, $this->getPrimaryKey());
@@ -33,7 +33,7 @@ trait MetadataAware
      */
     public function getPrimaryKey(): string
     {
-        return $this->metadata['primaryKey'];
+        return $this->metadata['primaryKey'] ?? 'id';
     }
 
     /**
@@ -42,7 +42,7 @@ trait MetadataAware
      */
     public function getTableName(): string
     {
-        return $this->getMetadata()['tableName'];
+        return $this->metadata['tableName'];
     }
 
     /**
@@ -50,15 +50,15 @@ trait MetadataAware
      */
     public function getRelationsMetadata(): Storage
     {
-        return $this->metadata->get('relations');
+        return $this->metadata['relations'] ?? new Storage;
     }
 
     /**
      * Get parent key from metadata (ActiveNode subtype)
      */
-    public function getParentKey(): ?string
+    public function getParentKey(): string
     {
-        return $this->metadata['parentKey'] ?? null;
+        return $this->metadata['parentKey'] ?? 'parent_id';
     }
 
     public function getMetadata(): Storage

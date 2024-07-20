@@ -50,22 +50,35 @@ abstract class Application extends Dispatcher
         $this->handleErrors();
 
         $fileExt = $this->config->getReader()->getFileExt();
-        $configFile = 'config' . rtrim('_' . $env, '_') . $fileExt;
-        $this->config->load($this->getAppDir() . '/config/' . $configFile);
+        $configFile = 'app' . rtrim('_' . $env, '_') . $fileExt;
+        $this->config->load($this->getConfigDir() . "/$configFile");
 
-        $this->withDb()->withActiveRecord();
+        $this->setupServices($this->config);
+        $this->setupDb();
+        $this->setupActiveRecord();
 
-        $this->registerServices($this->config);
+        if (php_sapi_name() === 'cli') {
+            return $this;
+        }
+        // below we build routes and do other stuff related to web-context only
 
-        if (php_sapi_name() !== 'cli') {
-            $this->set('router', new Router);
+        $this->set('router', $router = new Router);
+        $this->config->merge($this->getConfigDir() . '/routing.yaml');
+
+        // todo make config nodes validations
+        $this->config['routes'] && $router->build($this->config['routes']);
+
+        if (!$apiConfig = $this->config['api']) {
+            return $this;
         }
 
-        foreach (glob($this->getAppDir() . '/src/*/Module.php') as $moduleFile) {
-            /** @var AbstractModule $module */
-            $module = require_once $moduleFile;
-            $module->setServices($this->services);
-            $module->load();
+        foreach ($apiConfig['resources']->raw() ?? [] as $resourceDefinition) {
+            $router->buildResourceRoutes(
+                $resourceDefinition['class'],
+                $resourceDefinition['endpoint'],
+                $apiConfig['handler'],
+                $apiConfig['prefix']
+            );
         }
 
         return $this;
@@ -84,7 +97,7 @@ abstract class Application extends Dispatcher
             throw new RouteNotFound($request->getMethod() . ' ' . $request->getPathInfo());
         }
 
-        $controllerResolver = (new ControllerResolver)->resolve($route);
+        $controllerResolver = (new ControllerResolver($this->config['controllers_namespace_prefix']))->resolve($route);
 
         $controller = $controllerResolver->getController();
         $controller->setServices($this->services);
@@ -109,9 +122,9 @@ abstract class Application extends Dispatcher
         $this->dispatch('app.done');
     }
 
-    public function getSourceDir(): string
+    public function getConfigDir(): string
     {
-        return $this->getAppDir() . '/src';
+        return $this->getAppDir() . '/config';
     }
 
     /**
@@ -120,9 +133,9 @@ abstract class Application extends Dispatcher
     abstract public function getAppDir(): string;
 
     /**
-     * Register all global level custom services
+     * Setup all global level custom services
      */
-    abstract public function registerServices(Storage $config);
+    abstract public function setupServices(Storage $config);
 
     /**
      * Exception handler function. Trying to display detailed exception info
@@ -141,7 +154,7 @@ abstract class Application extends Dispatcher
         /** @var Request $request */
         $request = $this->has('request') ? $this->get('request') : false;
 
-        if ($request && ($request->isXmlHttpRequest() || str_contains($request->getContentType() . '', 'json'))) {
+        if ($request && ($request->isXmlHttpRequest() || str_contains($request->getContentTypeFormat() . '', 'json'))) {
             $content = json_encode([
                 'exception' => [
                     'message' => $e->getMessage(),
@@ -192,10 +205,10 @@ abstract class Application extends Dispatcher
 
 
     /** Setup Database service */
-    private function withDb(): static
+    private function setupDb()
     {
         if ($this->has('db')) {
-            return $this;
+            return;
         }
 
         $dbCfg = $this->config->get('db');
@@ -203,23 +216,19 @@ abstract class Application extends Dispatcher
         if (is_object($dbCfg) && $dbCfg->raw()) {
             $this->set('db', Db::connect($dbCfg->raw()));
         }
-
-        return $this;
     }
 
 
     /** Setup Active Record service */
-    private function withActiveRecord(): static
+    private function setupActiveRecord()
     {
         if ($this->has('arm')) {
-            return $this;
+            return;
         }
 
-        if ($this->config->get('active_record')) {
+        if ($this->config->get('active_record') !== false) {
             $this->set('arm', $arm = new ActiveManager($this->getDb()));
-            $arm->setMetadataDirs(glob($this->getSourceDir() . '/*/config/active_record'));
+            $arm->setMetadataDirs([$this->getConfigDir() . '/active_record']);
         }
-
-        return $this;
     }
 }
