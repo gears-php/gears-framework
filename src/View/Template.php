@@ -86,20 +86,6 @@ class Template
         return $this;
     }
 
-    /**
-     * Setting template variable(s)
-     */
-    public function assign(array|string $mixed, mixed $value = null): static
-    {
-        if (is_array($mixed)) {
-            foreach ($mixed as $name => $value) {
-                $this->assign($name, $value);
-            }
-        } else {
-            $this->vars[$mixed] = $value;
-        }
-        return $this;
-    }
 
     /**
      * Render template
@@ -108,7 +94,15 @@ class Template
      */
     public function render(array $vars = []): string
     {
-        $processed = $this->process($this->vars + $vars);
+        $this->vars = $vars;
+
+        try {
+            ob_start();
+            eval('?>' . $this->content);
+            $processed = ob_get_clean();
+        } catch (InvalidCharacter|\Exception $e) {
+            $this->exception($e);
+        }
 
         // we have decorator parent template
         if ($this->parent()) {
@@ -116,6 +110,18 @@ class Template
         } else {
             return $processed;
         }
+    }
+
+    /** Get template variable value */
+    public function __get(string $name): mixed
+    {
+        return $this->vars[$name] ?? null;
+    }
+
+    /** Call view extension function */
+    public function __call(string $name, array $args): mixed
+    {
+        return $this->view->callFunction($name, $args);
     }
 
     /**
@@ -165,7 +171,7 @@ class Template
      */
     protected function tInclude(array $args): void
     {
-        echo $this->view->load($args['name'])->assign($this->vars)->render();
+        echo $this->view->load($args['name'])->render($this->vars);
     }
 
     /**
@@ -190,8 +196,7 @@ class Template
 
             foreach (array_values($collection) as $index => &$vars) {
                 $vars['_TPL_INDEX_'] = $index;
-                $tpl->assign($vars);
-                $html .= $tpl->render();
+                $html .= $tpl->render($vars);
             }
 
             return $html;
@@ -200,41 +205,6 @@ class Template
         }
 
         return '';
-    }
-
-    /**
-     * Process and return template content
-     */
-    private function process(array $vars): string
-    {
-        try {
-            ob_start();
-            extract($vars);
-            eval('?>' . $this->content);
-            return ob_get_clean();
-        } catch (InvalidCharacter|\Exception $e) {
-            $this->exception($e);
-        }
-    }
-
-    /**
-     * Encode the given php variable into its valid js representation
-     * @deprecated
-     */
-    public function jsEncode(mixed $var): float|string
-    {
-        if (is_numeric($var) || is_bool($var)) {
-            // prepare numeric
-            return (float)($var);
-        } elseif (is_string($var)) {
-            // prepare string
-            return '"' . preg_replace("/\r?\n/", "\\n", addslashes($var)) . '"';
-        } elseif (is_array($var)) {
-            // prepare array
-            return json_encode($var);
-        }
-
-        return var_export($var, true);
     }
 
     /**

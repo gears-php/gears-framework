@@ -6,6 +6,7 @@ namespace Gears\Framework\View\Extension;
 
 use Gears\Framework\Debug as DebugInfo;
 use Gears\Framework\Session;
+use Gears\Framework\View\View;
 
 class DebugExtension implements ExtensionInterface
 {
@@ -102,5 +103,10 @@ class DebugExtension implements ExtensionInterface
         endif;
 
         return '';
+    }
+
+    public function setup(View $view)
+    {
+        // TODO: Implement setup() method.
     }
 }
