@@ -48,10 +48,10 @@ class View
      */
     private array $extensions;
 
-    /** Custom functions from extension */
+    /** Custom functions */
     private array $functions = [];
 
-    /** Variables from extensions. Are passed for all templates */
+    /** "Global" variables. Are passed for all templates */
     private array $vars = [];
 
     public function init(mixed $templates = null, array $extensions = [], CacheInterface $cache = null): static
@@ -163,7 +163,6 @@ class View
 
     public function addExtension(ExtensionInterface $ext): void
     {
-        $ext->setup($this);
         $this->extensions[$ext->getName()] = $ext;
     }
 
@@ -176,9 +175,11 @@ class View
         return $this->extensions[$name]();
     }
 
-    public function addFunction(string $name, callable $func): void
+    public function addFunction(string $name, callable $func): static
     {
         $this->functions[$name] = $func;
+
+        return $this;
     }
 
     public function callFunction(string $name, array $args): mixed
@@ -190,9 +191,11 @@ class View
         throw new GenericException("Function $name is not found");
     }
 
-    public function addVariable(string $name, mixed $value): void
+    public function addVariable(string $name, mixed $value): static
     {
         $this->vars[$name] = $value;
+
+        return $this;
     }
 
 }

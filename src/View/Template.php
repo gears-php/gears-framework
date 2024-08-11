@@ -100,7 +100,8 @@ class Template
             ob_start();
             eval('?>' . $this->content);
             $processed = ob_get_clean();
-        } catch (InvalidCharacter|\Exception $e) {
+        } catch (InvalidCharacter|GenericException $e) {
+            ob_end_clean();
             $this->exception($e);
         }
 

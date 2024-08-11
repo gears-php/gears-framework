@@ -9,8 +9,7 @@ namespace Gears\Framework\Application;
 
 use Gears\Db\ActiveRecord\ActiveManager;
 use Gears\Db\Adapter\AdapterAbstract;
-use Gears\Db\Db;
-use Gears\Storage\Storage;
+use Gears\Framework\View\View;
 
 /**
  * Provides functionality for services management and access.
@@ -94,5 +93,13 @@ trait ServiceAware
         $arm = $this->get('arm');
 
         return $arm;
+    }
+
+    public function getView(): View
+    {
+        /** @var View $view */
+        $view = $this->get('view');
+
+        return $view;
     }
 }
