@@ -13,10 +13,6 @@ use Gears\Framework\Application\HttpExceptionInterface;
  * @package    Gears\Framework
  * @subpackage Routing
  */
-class RouteNotFound extends \RuntimeException implements HttpExceptionInterface
+class GenerateUrlException extends \RuntimeException implements HttpExceptionInterface
 {
-    public function __construct($requestUri)
-    {
-        parent::__construct(sprintf('No route found for "%s" path', $requestUri), 404);
-    }
 }

@@ -100,7 +100,7 @@ class Template
             ob_start();
             eval('?>' . $this->content);
             $processed = ob_get_clean();
-        } catch (InvalidCharacter|GenericException $e) {
+        } catch (\Throwable $e) {
             ob_end_clean();
             $this->exception($e);
         }
@@ -215,7 +215,7 @@ class Template
      *
      * @param \Exception $e
      */
-    private function exception(\Exception $e)
+    private function exception(\Throwable $e)
     {
         throw new \RuntimeException(sprintf('%s template rendering error', $this->getFilePath()), 0, $e);
     }

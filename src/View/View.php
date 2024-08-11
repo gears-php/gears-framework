@@ -36,7 +36,7 @@ class View
     /**
      * Template files extension
      */
-    private string $templateFileExt = '.phtml';
+    private string $templateFileExt = '.html.php';
 
     /**
      * Cache implementation instance

@@ -9,7 +9,8 @@ namespace Gears\Framework\Application;
 
 use Gears\Db\ActiveRecord\ActiveManager;
 use Gears\Db\Adapter\AdapterAbstract;
-use Gears\Framework\View\View;
+use Gears\Framework\Application\Routing\Router;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Provides functionality for services management and access.
@@ -79,27 +80,27 @@ trait ServiceAware
         return $this;
     }
 
+    /** @noinspection PhpIncompatibleReturnTypeInspection */
+    public function getRequest(): Request
+    {
+        return $this->get('request');
+    }
+
+    /** @noinspection PhpIncompatibleReturnTypeInspection */
+    public function getRouter(): Router
+    {
+        return $this->get('router');
+    }
+
+    /** @noinspection PhpIncompatibleReturnTypeInspection */
     public function getDb(): AdapterAbstract
     {
-        /** @var AdapterAbstract $db */
-        $db = $this->get('db');
-
-        return $db;
+        return $this->get('db');
     }
 
+    /** @noinspection PhpIncompatibleReturnTypeInspection */
     public function getActiveRecord(): ActiveManager
     {
-        /** @var ActiveManager $arm */
-        $arm = $this->get('arm');
-
-        return $arm;
-    }
-
-    public function getView(): View
-    {
-        /** @var View $view */
-        $view = $this->get('view');
-
-        return $view;
+        return $this->get('arm');
     }
 }

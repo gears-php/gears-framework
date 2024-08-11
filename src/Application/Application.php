@@ -36,22 +36,33 @@ abstract class Application extends Dispatcher
 {
     use ServiceAware;
 
+    /** @var AbstractServiceSetup[] */
+    protected array $setupClasses = [];
+
     public function __construct(protected Storage $config, protected Services $services)
     {
     }
 
     /**
-     * Setup main application services and load modules
-     * @throws FileNotFound
+     * Setup all application services
      */
-    public function load(string $env = ''): self
+    public function setup(string $env = ''): self
     {
-        $this->handleExceptions();
-        $this->handleErrors();
+        set_exception_handler([$this, 'handleException']);
+        set_error_handler([$this, 'handleError']);
 
         $fileExt = $this->config->getReader()->getFileExt();
         $configFile = 'app' . rtrim('_' . $env, '_') . $fileExt;
-        $this->config->load($this->getConfigDir() . "/$configFile");
+
+        if (!is_file($configFile)) {
+            $configFile = 'app' . $fileExt;
+        }
+
+        try {
+            $this->config->load($this->getConfigDir() . "/$configFile");
+        } catch (FileNotFound $e) {
+            $this->handleException($e);
+        }
 
         $this->setupServices($this->config);
         $this->setupDb();
@@ -60,6 +71,7 @@ abstract class Application extends Dispatcher
         if (php_sapi_name() === 'cli') {
             return $this;
         }
+
         // below we build routes and do other stuff related to web-context only
 
         $this->set('router', $router = new Router);
@@ -133,14 +145,9 @@ abstract class Application extends Dispatcher
     abstract public function getAppDir(): string;
 
     /**
-     * Setup all global level custom services
-     */
-    abstract public function setupServices(Storage $config);
-
-    /**
      * Exception handler function. Trying to display detailed exception info
      */
-    public function exceptionHandler(Throwable $e)
+    public function handleException(Throwable $e)
     {
         $statusCode = $e instanceof HttpExceptionInterface ? $e->getCode() : 500;
 
@@ -165,7 +172,9 @@ abstract class Application extends Dispatcher
                 ],
             ]);
         } else {
-            $content = "<pre>$e</pre>";
+            ob_start();
+            require_once __DIR__ . '/templates/exception.html.php';
+            $content = ob_get_clean();
         }
 
         (new Response($content, $statusCode))->send();
@@ -176,7 +185,7 @@ abstract class Application extends Dispatcher
      *
      * @throws ErrorException
      */
-    public function errorHandler(int $code, string $message, string $file, int $line): bool
+    public function handleError(int $code, string $message, string $file, int $line): bool
     {
         if (error_reporting()) {
             throw new ErrorException($message, $code, 1, $file, $line);
@@ -185,24 +194,13 @@ abstract class Application extends Dispatcher
         return true;
     }
 
-    /**
-     * Setting custom exception handler
-     *
-     * @return callable|null set_exception_handler return value
-     */
-    private function handleExceptions(): ?callable
+    /** Setup services from special classes */
+    private function setupServices(Storage $config)
     {
-        return set_exception_handler([$this, 'exceptionHandler']);
+        foreach ($this->setupClasses as $setupClass) {
+            (new $setupClass())->setServices($this->services)->setup($config);
+        }
     }
-
-    /**
-     * Setting custom error handler
-     */
-    private function handleErrors(): ?callable
-    {
-        return set_error_handler([$this, 'errorHandler']);
-    }
-
 
     /** Setup Database service */
     private function setupDb()

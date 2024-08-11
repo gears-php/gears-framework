@@ -2,7 +2,9 @@
 
 namespace Gears\Framework\Application\Routing;
 
+use Gears\Framework\Application\Routing\Exception\GenerateUrlException;
 use Gears\Storage\Storage;
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
 class Router
@@ -19,11 +21,11 @@ class Router
     {
         foreach ($routes->raw() as $routeName => $route) {
             if (!isset($route['match'])) {
-                throw new \InvalidArgumentException(sprintf('Route "%s" does not have the `match` pattern', $routeName));
+                throw new InvalidArgumentException(sprintf('Route "%s" does not have the `match` pattern', $routeName));
             }
 
             if (!isset($route['to'])) {
-                throw new \InvalidArgumentException(sprintf('Route "%s" does not have the `to` handler definition', $routeName));
+                throw new InvalidArgumentException(sprintf('Route "%s" does not have the `to` handler definition', $routeName));
             }
 
             if (is_int($routeName)) {
@@ -141,6 +143,21 @@ class Router
         } // each route
 
         return null;
+    }
+
+    public function generateUrl(string $routeName, array $params, ?Request $request = null): string
+    {
+        if (!isset($this->routes[$routeName])) {
+            throw new GenerateUrlException("Invalid route name: $routeName");
+        }
+
+        $url = strtr($this->routes[$routeName]->getMatchPattern(), array_flip(substr_replace(array_flip($params), ':', 0, 0)));
+
+        if ($request) {
+            $url = $request->getSchemeAndHttpHost() . '/' . ltrim($url, '/');
+        }
+
+        return $url;
     }
 
     /**
