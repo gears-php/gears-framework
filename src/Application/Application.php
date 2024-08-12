@@ -16,7 +16,7 @@ use Gears\Storage\Storage;
 use Gears\Framework\Event\Dispatcher;
 use Gears\Framework\Application\Routing\Router;
 use Gears\Framework\Application\Routing\Exception\RouteNotFound;
-use Gears\Framework\Application\Controller\ActionNotFoundException;
+use Gears\Framework\Application\Controller\UndefinedActionException;
 use Gears\Framework\Application\Controller\ControllerResolver;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -99,7 +99,7 @@ abstract class Application extends Dispatcher
     /**
      * Handle income request, dispatch it to specific controller action and return the response
      *
-     * @throws RouteNotFound|ActionNotFoundException
+     * @throws RouteNotFound|UndefinedActionException
      */
     public function handle(Request $request)
     {
@@ -111,17 +111,15 @@ abstract class Application extends Dispatcher
 
         $controllerResolver = (new ControllerResolver($this->config['controllers_namespace_prefix']))->resolve($route);
 
-        $controller = $controllerResolver->getController();
+        $controller = new ($controllerResolver->getController());
         $controller->setServices($this->services);
 
-        if (!method_exists($controller, $controllerResolver->getAction())) {
-            throw new ActionNotFoundException($controllerResolver);
+        if (!method_exists($controller, $action = $controllerResolver->getAction())) {
+            throw new UndefinedActionException($controllerResolver, $route);
         }
 
-        $response = call_user_func_array(
-            [$controller, $controllerResolver->getAction()],
-            array_merge($route->getResource() ? [$route->getResource()] : [], $route->getParams())
-        );
+        $args = array_merge($route->getResource() ? [$route->getResource()] : [], $route->getParams());
+        $response = $controller->$action(...$args);
 
         if (!$response instanceof Response) {
             $response = new JsonResponse($response);

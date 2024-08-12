@@ -100,16 +100,19 @@ class Template
             ob_start();
             eval('?>' . $this->content);
             $processed = ob_get_clean();
-        } catch (\Throwable $e) {
-            ob_end_clean();
-            $this->exception($e);
-        }
 
-        // we have decorator parent template
-        if ($this->parent()) {
-            return $this->parent()->setBlocks($this->blocks)->render();
-        } else {
-            return $processed;
+            // we have decorator parent template
+            if ($this->parent()) {
+                return $this->parent()->setBlocks($this->blocks)->render();
+            } else {
+                return $processed;
+            }
+        } catch (\Throwable $e) {
+            $bufferCount = ob_get_level();
+            while ($bufferCount--) {
+                ob_end_clean();
+            }
+            throw new GenericException(sprintf('Template rendering error in %s', $this->getFilePath()), 0, $e);
         }
     }
 
@@ -206,17 +209,5 @@ class Template
         }
 
         return '';
-    }
-
-    /**
-     * Process the given exception by adding more info
-     *
-     * @throw \RuntimeException More detailed template exception
-     *
-     * @param \Exception $e
-     */
-    private function exception(\Throwable $e)
-    {
-        throw new \RuntimeException(sprintf('%s template rendering error', $this->getFilePath()), 0, $e);
     }
 }
