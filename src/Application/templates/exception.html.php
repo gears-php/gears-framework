@@ -1,21 +1,45 @@
+<?php
+
+function gf_base_path(): bool|string
+{
+    return strstr(__DIR__, '/vendor/', true);
+}
+
+function gf_trace_file(string $file, int $line): void
+{
+    ?>
+    <div class="px-3 pb-2 mb-2 border-bottom gf-trace-file">
+    <?= substr($file, strlen(gf_base_path()) + 1) ?><small class="text-black-50">:<?= $line ?></small>
+    </div>
+    <?php
+}
+
+/** @var Exception $e */
+$errors = [$e];
+while ($e = $e->getPrevious()) {
+    array_unshift($errors, $e);
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title><?= /** @var $e */ $e->getMessage() ?></title>
+    <title><?= $errors[0]->getMessage() ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <style>
         body {
             background-color: #dee2e6;
         }
 
-        button.nav-link,
-        div.trace-in {
-            font-size: 0.9rem;
+        .nav-link,
+        .gf-trace-file {
+            font-size: .9rem;
+        }
+        .gf-stack-trace{
+            font-size: .8rem;
         }
 
-        button.nav-link.active {
-            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+        .nav-link.active {
             font-weight: bolder;
         }
     </style>
@@ -27,49 +51,47 @@
     </div>
 
     <div class="container">
+
         <div class="nav nav-tabs mt-4" role="tablist">
-            <?php
-            $e_breadcrumbs = new Exception('', 0, $e); $i = 0;
-            while ($e_breadcrumbs = $e_breadcrumbs->getPrevious()): ?>
-                <button class="nav-link <?php if (!$i): ?>active  <?php endif ?>" id="error-tab-<?= $i ?>" data-bs-toggle="tab" data-bs-target="#error-pane-<?= $i ?>" type="button" role="tab" aria-controls="error-pane-<?= $i ?>" aria-selected="true" title="<?= get_class($e_breadcrumbs) ?>">
-                    <?= $i++ ? '&larr;' : '' ?>
-                    <?= (new ReflectionClass($e_breadcrumbs))->getShortName() ?>
+            <?php foreach ($errors as $i => $err): ?>
+                <button class="nav-link <?php if (!$i): ?>active  <?php endif ?>" id="error-tab-<?= $i ?>" data-bs-toggle="tab" data-bs-target="#error-pane-<?= $i ?>" type="button" role="tab" aria-controls="error-pane-<?= $i ?>" aria-selected="false" title="<?= get_class($err) ?>">
+                    <?= (new ReflectionClass($err))->getShortName() ?>
+                    <?= $i + 1 < count($errors) ? '&rarr;' : '' ?>
                 </button>
-            <?php endwhile ?>
+            <?php endforeach ?>
+            <button class="nav-link" id="error-tab-raw" data-bs-toggle="tab" data-bs-target="#error-pane-raw" type="button" role="tab" aria-controls="error-pane-raw" aria-selected="false">&#9636; Raw</button>
         </div>
 
         <div class="tab-content shadow mb-5 bg-body">
-            <?php
-            $e = new Exception('', 0, $e); $i = 0;
-            while ($e = $e->getPrevious()): ?>
-
-
-<?php if (false): ?>
-<pre>
-<?= get_class($e) ?><br>
-<?= $e->getMessage() ?><br>
-in <?= $e->getFile() ?>(<?= $e->getLine() ?>)<br>
-<?= str_replace("\n", '<br>', $e->getTraceAsString()) ?>
-</pre>
-<?php endif ?>
+            <?php foreach ($errors as $i => $err): ?>
                 <div class="mb-4 tab-pane <?php if (!$i): ?>active shown<?php endif ?>" role="tabpanel" id="error-pane-<?= $i++ ?>"  aria-labelledby="error-tab-<?= $i ?>">
+                    <h5 class="p-3 bg-light text-black-50"><?= $err->getMessage() ?></h5>
+                    <?php gf_trace_file($err->getFile(), $err->getLine()) ?>
+                    <?php foreach ($err->getTrace() as $t): ?>
+                        <?php if (!str_starts_with($t['file'], gf_base_path() . '/vendsor/')) : ?>
+                            <div class="px-3"><?= $t['class'] ?? '' ?><?= $t['type'] ?? '' ?><span class="fw-bold"><?= $t['function'] ?></span></div>
+                        <?php endif ?>
 
-<!--                    <div class="bg-secondary text-light px-3 py-1">--><?php //= (new ReflectionClass($e))->getShortName() ?><!--</div>-->
-
-                    <h5 class="p-3 mb-0 bg-dark text-secondary"><?= $e->getMessage() ?></h5>
-
-
-    <!--                --><?php //var_export($e->getTrace()) ?>
-
-                    <div class="px-3 py-2">in <?= $e->getFile() ?> <span class="text-secondary">[<?= $e->getLine() ?>]</span></div>
-                    <?php foreach ($e->getTrace() as $t): ?>
-                        <div class="px-3 pt-2 border-top"><?= $t['class'] ?? '' ?><?= $t['type'] ?? '' ?><span class="fw-bold"><?= $t['function'] ?></span></div>
-                        <div class="px-3 pb-2 trace-in">in <?= $t['file'] ?> <span class="text-secondary">[<?= $t['line'] ?>]</span>
-                        </div>
+                        <?php gf_trace_file($t['file'], $t['line']) ?>
                     <?php endforeach ?>
+
                 </div>
-            <?php endwhile ?>
+            <?php endforeach ?>
+
+            <!-- raw stack trace -->
+            <div class="mb-4 tab-pane" role="tabpanel" id="error-pane-raw" aria-labelledby="error-tab-raw">
+                <?php foreach ($errors as $i => $err): ?>
+                    <pre class="gf-stack-trace px-3 py-3 mb-0">
+<?= $i > 0 ? '&rarr; ' : '' ?><?= get_class($err) ?>: <?= $err->getMessage() ?>&nbsp;
+    in <?= $err->getFile() ?>(<?= $err->getLine() ?>)<br>
+<?= $err->getTraceAsString() ?>
+                    </pre>
+                <?php endforeach ?>
+            </div>
+            <!-- // raw stack trace -->
+
         </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js" integrity="sha384-IQsoLXl5PILFhosVNubq5LC7Qb9DXgDA9i+tQ8Zj3iwWAwPtgFTxbJ8NT4GN1R8p" crossorigin="anonymous"></script>

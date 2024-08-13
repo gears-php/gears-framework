@@ -2,8 +2,6 @@
 
 namespace Gears\Framework\View;
 
-use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
-
 /**
  * Template class instantiated per each specific template file
  *
@@ -140,6 +138,7 @@ class Template
 
     /**
      * Start template block
+     * @noinspection PhpUnused
      */
     protected function tBlock(array $args): void
     {
@@ -149,6 +148,7 @@ class Template
 
     /**
      * Close template block
+     * @noinspection PhpUnused
      */
     protected function tEndblock(): void
     {
@@ -167,6 +167,7 @@ class Template
         echo $this->blocks[$currentBlock];
     }
 
+    /** @noinspection PhpUnused */
     protected function tExtension(array $args): void
     {
         echo $this->view->extension($args['name']);
@@ -174,6 +175,7 @@ class Template
 
     /**
      * Include another template into current template
+     * @noinspection PhpUnused
      */
     protected function tInclude(array $args): void
     {
@@ -182,6 +184,7 @@ class Template
 
     /**
      * Extend template with current one
+     * @noinspection PhpUnused
      */
     protected function tExtends(array $args): void
     {
@@ -190,6 +193,7 @@ class Template
 
     /**
      * Invoke a specific partial template per each variables set inside collection
+     * @noinspection PhpUnused
      */
     protected function tRepeat(array $args): string
     {

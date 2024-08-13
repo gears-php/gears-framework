@@ -191,6 +191,7 @@ class View
         throw new ViewException("Function \"$name\" is not found");
     }
 
+    /** @noinspection PhpUnused */
     public function addVariable(string $name, mixed $value): static
     {
         $this->vars[$name] = $value;
