@@ -147,7 +147,7 @@ class View
         }
 
         if (!isset($tpl)) {
-            throw new RuntimeException('Template file not found: ' . $fileName);
+            throw new ViewException('Template file not found: ' . $fileName);
         }
 
         return $this->templates[$alias] = $tpl;
@@ -188,7 +188,7 @@ class View
             return $this->functions[$name](...$args);
         }
 
-        throw new GenericException("Function $name is not found");
+        throw new ViewException("Function \"$name\" is not found");
     }
 
     public function addVariable(string $name, mixed $value): static

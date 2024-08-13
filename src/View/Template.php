@@ -48,7 +48,7 @@ class Template
                 $this->content = (new Parser())->parseFile($filePath);
                 $cache?->set($this->content, $templateKey);
             } else {
-                throw new \RuntimeException('Template file not found: ' . $filePath);
+                throw new ViewException('Template file not found: ' . $filePath);
             }
         }
     }
@@ -101,18 +101,20 @@ class Template
             eval('?>' . $this->content);
             $processed = ob_get_clean();
 
-            // we have decorator parent template
-            if ($this->parent()) {
-                return $this->parent()->setBlocks($this->blocks)->render();
-            } else {
-                return $processed;
-            }
         } catch (\Throwable $e) {
             $bufferCount = ob_get_level();
             while ($bufferCount--) {
                 ob_end_clean();
             }
-            throw new GenericException(sprintf('Template rendering error in %s', $this->getFilePath()), 0, $e);
+
+            throw new RenderingException(sprintf('Template rendering error in %s', $this->getFilePath()), 0, $e);
+        }
+
+        // we have decorator parent template
+        if ($this->parent()) {
+            return $this->parent()->setBlocks($this->blocks)->render();
+        } else {
+            return $processed;
         }
     }
 
