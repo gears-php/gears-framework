@@ -101,7 +101,7 @@ abstract class State
     public function __construct(Parser $parser)
     {
         $this->parser = $parser;
-        $this->name = basename(str_replace('\\', DS, get_called_class()));
+        $this->name = basename(str_replace('\\', DIRECTORY_SEPARATOR, get_called_class()));
     }
 
     /**

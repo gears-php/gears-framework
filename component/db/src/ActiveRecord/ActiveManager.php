@@ -118,10 +118,11 @@ class ActiveManager
             return $this->relations[$className][$relationName];
         }
 
+        $ownerMetadata = $owner->getMetadata()->raw();
         $relation = match ($metadata['type']) {
-            'hasOne' => new HasOneRelation($metadata, $owner->getMetadata(), $this),
-            'hasMany' => new HasManyRelation($metadata, $owner->getMetadata(), $this),
-            'hasManyJoint' => new HasManyJointRelation($metadata, $owner->getMetadata(), $this),
+            'hasOne' => new HasOneRelation($metadata, $ownerMetadata, $this),
+            'hasMany' => new HasManyRelation($metadata, $ownerMetadata, $this),
+            'hasManyJoint' => new HasManyJointRelation($metadata, $ownerMetadata, $this),
             default => throw new RuntimeException(sprintf('The type of "%s" relation is unknown', $relationName)),
         };
 
@@ -156,7 +157,7 @@ class ActiveManager
                     $this->metadata[$config['class']] = $config->get();
                 } else {
                     throw new RuntimeException(
-                        sprintf('ActiveRecord `class` definition missed in %s metadata file', $file)
+                        sprintf('ActiveRecord `class` definition not found in %s metadata file', $file)
                     );
                 }
             }

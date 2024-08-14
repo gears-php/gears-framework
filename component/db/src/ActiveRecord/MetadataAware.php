@@ -12,7 +12,7 @@ trait MetadataAware
 
     public function getFields(): array
     {
-        $fields = $this->metadata['fields']->raw();
+        $fields = $this->metadata['fields'];
 
         if (is_subclass_of($this->getClassName(), ActiveNode::class) ) {
             array_unshift($fields, $this->getParentKey());
@@ -50,7 +50,7 @@ trait MetadataAware
      */
     public function getRelationsMetadata(): Storage
     {
-        return $this->metadata['relations'] ?? new Storage;
+        return $this->metadata->get('relations');
     }
 
     /**

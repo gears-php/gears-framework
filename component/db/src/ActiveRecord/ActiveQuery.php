@@ -73,7 +73,7 @@ class ActiveQuery extends Query
         return $this->select($this->getFields(), null, $this->getTableName())
             ->from($this->getTableName())
             ->where(new WhereAnd($this->db))
-            ->order($this->metadata['sortBy']->raw(), $this->getTableName());
+            ->order($this->metadata['sortBy'] ?? [], $this->getTableName());
     }
 
     public function createRecord(...$dbData): ActiveRecord

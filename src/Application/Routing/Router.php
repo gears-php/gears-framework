@@ -17,9 +17,9 @@ class Router
     /**
      * Build routes from given configuration
      */
-    public function build(Storage $routes): void
+    public function build(array $routes): void
     {
-        foreach ($routes->raw() as $routeName => $route) {
+        foreach ($routes as $routeName => $route) {
             if (!isset($route['match'])) {
                 throw new InvalidArgumentException(sprintf('Route "%s" does not have the `match` pattern', $routeName));
             }

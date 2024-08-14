@@ -19,8 +19,8 @@ use Gears\Db\Query\WhereAbstract;
 class Query
 {
     # sort direction constants
-    const ASC = 'ASC';
-    const DESC = 'DESC';
+    public const ASC = 'ASC';
+    public const DESC = 'DESC';
 
     private string $selectOptions = '';
     protected array $select = [];

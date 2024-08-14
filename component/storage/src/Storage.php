@@ -19,7 +19,7 @@ class Storage implements \ArrayAccess
     /**
      * Internal data
      */
-    protected array $data = [];
+    protected mixed $data = [];
 
     /**
      * File reader instance
@@ -27,11 +27,11 @@ class Storage implements \ArrayAccess
     protected ?ReaderAbstract $reader = null;
 
     /**
-     * Storage can be initialized with a given tree data structure
+     * Storage can be initialized with a given data
      */
-    public function __construct(array $tree = [])
+    public function __construct(mixed $data = null)
     {
-        $this->data = $tree;
+        $this->data = $data;
     }
 
     /**
@@ -73,7 +73,7 @@ class Storage implements \ArrayAccess
         return $this;
     }
 
-    public function raw(): array
+    public function raw(): mixed
     {
         return $this->data;
     }
@@ -85,14 +85,17 @@ class Storage implements \ArrayAccess
      */
     public function read(string $file, string $path = null): Storage
     {
-        $tree = $this->getReader()->read($file);
-        $fileExtLength = strlen($fileExt = $this->getReader()->getFileExt()); // load sub files, if any
+        $fileRealpath = realpath(dirname($file)) . DIRECTORY_SEPARATOR;
+        $realFile =  $fileRealpath . basename($file);
+        $tree = $this->getReader()->read($realFile);
+        $fileExtLen = strlen($fileExt = $this->getReader()->getFileExt());
 
         array_walk_recursive(
             $tree,
-            function (&$item) use ($file, $fileExt, $fileExtLength) {
-                if (is_string($item) && substr($item, -$fileExtLength) == $fileExt) {
-                    $item = $this->read(dirname($file) . DS . $item);
+            function (&$item) use ($fileRealpath, $fileExt, $fileExtLen) {
+                // load data from another source file when detect special directive (e.g. "@path/to/load_me.ext")
+                if (is_string($item) && $item[0] == '@' && substr($item, -$fileExtLen) == $fileExt) {
+                    $item = $this->read($fileRealpath . substr($item, 1))->raw();
                 }
             }
         );
@@ -115,26 +118,32 @@ class Storage implements \ArrayAccess
             $node = $mixed->get()->raw();
         }
 
-        $this->data = array_merge_recursive($this->data, $node);
+        $this->data = array_replace_recursive($this->data, $node);
     }
 
     /**
-     * Get storage node value. If nothing passed returns full storage data tree.
-     * If no property found returns NULL. Example:
+     * Get storage data as new storage object. Primarily used for array-like data structures
+     * in order to get some nested level data parts.
+     *
+     * If path omitted returns NEW storage with full data.
+     * If nothing found by path returns NEW empty storage.
+     *
+     * Example:
      *
      * <code>
+     * # get first level data in array-like storage structure
+     * $routes = $storage->get('routes');
+     * # get 3rd-level nested data in array-like storage structure...
      * $dbUsername = $storage->get('server.db.username');
-     * # which equals to:
-     * $cfg = $storage->get();
+     * # ...which is same as
+     * $cfg = $storage->get()->raw();
      * $dbUsername = $cfg['server']['db']['username'];
      * </code>
      *
-     * @param string|null $path (optional)  Path to the node separated by dots
-     * @param array|null $data (optional)  Custom storage tree to get value from. Inner storage is used by default
-     *
-     * @return scalar|Storage Found storage node or end-level scalar value
+     * @param string|null $path (optional) Path to the node separated by dots
+     * @param array|null $data (optional) Custom data tree to get value from instead of internal storage data
      */
-    public function get(string $path = null, mixed $data = null): mixed
+    public function get(string $path = null, array $data = null): Storage
     {
         $data = $data ?: $this->data;
 
@@ -143,7 +152,6 @@ class Storage implements \ArrayAccess
         }
 
         $p = &$data;
-        $p = (array)$p;
         $path = explode('.', trim($path));
 
         foreach ($path as $node) {
@@ -154,7 +162,7 @@ class Storage implements \ArrayAccess
             }
         }
 
-        return is_scalar($p) || is_null($p) ? $p : new Storage($p ?? []);
+        return new Storage($p);
     }
 
     /**
@@ -162,13 +170,13 @@ class Storage implements \ArrayAccess
      */
     public function getKeys(): array
     {
-        return array_keys($this->data);
+        return array_keys($this->data ?: []);
     }
 
     /**
-     * Return a first-level node value
+     * Return a first-level node as NEW storage
      */
-    public function __get(string $prop): mixed
+    public function __get(string $prop): Storage
     {
         return $this->get($prop);
     }
@@ -188,7 +196,7 @@ class Storage implements \ArrayAccess
      *
      * @return void
      */
-    public function set($path, $value)
+    public function set(string $path, mixed $value): void
     {
         if (trim($path)) {
             $p = &$this->data;
@@ -204,13 +212,9 @@ class Storage implements \ArrayAccess
     }
 
     /**
-     * Remove node from storage
-     *
-     * @param string $path
-     *
-     * @return void
+     * Delete node from storage
      */
-    public function del($path)
+    public function delete(string $path): void
     {
         $p = &$this->data;
         $p = (array)$p;
@@ -231,15 +235,11 @@ class Storage implements \ArrayAccess
     }
 
     /**
-     * Wrapper for the {@see del()}
-     *
-     * @param string $path
-     *
-     * @return void
+     * Wrapper for the {@see delete()}
      */
-    public function rem($path)
+    public function remove(string $path): void
     {
-        $this->del($path);
+        $this->delete($path);
     }
 
     /**
@@ -264,12 +264,17 @@ class Storage implements \ArrayAccess
     }
 
     /**
-     * Get storage node value. See {@see get()}
-     * @return scalar|Storage
+     * Get storage node RAW value. Also see {@see get()}
+     * Example:
+     *
+     * <code>
+     * $dbUsername = $storage['server.db.username'];
+     * $dbUsername = $storage['server']['db']['username'];
+     * </code>
      */
     public function offsetGet(mixed $offset): mixed
     {
-        return $this->get($offset);
+        return $this->get($offset)->raw();
     }
 
     /**
@@ -281,10 +286,10 @@ class Storage implements \ArrayAccess
     }
 
     /**
-     * Remove storage node. See {@see del()}
+     * Remove storage node. See {@see delete()}
      */
     public function offsetUnset(mixed $offset): void
     {
-        $this->del($offset);
+        $this->delete($offset);
     }
 }

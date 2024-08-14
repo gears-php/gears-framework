@@ -13,8 +13,6 @@ use Gears\Framework\Cache\CacheInterface;
 use Gears\Framework\View\Extension\ExtensionInterface;
 use RuntimeException;
 
-defined('DS') || define('DS', DIRECTORY_SEPARATOR);
-
 /**
  * View
  *
@@ -138,7 +136,7 @@ class View
         }
         // search for template file within template paths and store it using alias name
         foreach ($this->templatePaths as $filePath) {
-            $filePath = $filePath . DS . $fileName;
+            $filePath = $filePath . DIRECTORY_SEPARATOR . $fileName;
 
             if (is_file($filePath)) {
                 $tpl = new Template($filePath, $this);

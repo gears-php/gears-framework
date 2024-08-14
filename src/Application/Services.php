@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Gears\Framework\Application;
 
-use Exception;
+use RuntimeException;
 
 /**
  * Simple DIC implementation for various application services
@@ -99,6 +99,6 @@ class Services
             }
         }
 
-        throw new Exception(sprintf('"%s" service does not exist', $name));
+        throw new RuntimeException(sprintf('"%s" service does not exist', $name));
     }
 }

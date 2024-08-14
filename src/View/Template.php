@@ -27,7 +27,7 @@ class Template
      */
     public function __construct(string $filePath, View $view)
     {
-        $this->path = str_replace('/', DS, dirname($filePath));
+        $this->path = str_replace('/', DIRECTORY_SEPARATOR, dirname($filePath));
         $this->name = basename($filePath);
         $this->view = $view;
 
@@ -72,7 +72,7 @@ class Template
      */
     public function getFilePath(): string
     {
-        return $this->path . DS . $this->name;
+        return $this->path . DIRECTORY_SEPARATOR . $this->name;
     }
 
     /**

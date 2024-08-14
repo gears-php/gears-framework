@@ -23,8 +23,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
-defined('DS') || define('DS', DIRECTORY_SEPARATOR);
-
 /**
  * Provides the most low-level "kernel" functionality, controls the application flow
  *
@@ -32,34 +30,31 @@ defined('DS') || define('DS', DIRECTORY_SEPARATOR);
  * @subpackage App
  * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
-abstract class Application extends Dispatcher
+class Application extends Dispatcher
 {
     use ServiceAware;
 
-    /** @var AbstractServiceSetup[] */
-    protected array $setupClasses = [];
-
-    public function __construct(protected Storage $config, protected Services $services)
+    public function __construct(protected Storage $config = new Storage, protected Services $services = new Services)
     {
     }
 
     /**
      * Setup all application services
      */
-    public function setup(string $env = ''): self
+    public function setup(): self
     {
+        $env = $_SERVER['APP_ENV'] ?? 'prod';
+        ($env == 'dev') && Debug::enable();
+
         set_exception_handler([$this, 'handleException']);
         set_error_handler([$this, 'handleError']);
 
         $fileExt = $this->config->getReader()->getFileExt();
-        $configFile = 'app' . rtrim('_' . $env, '_') . $fileExt;
-
-        if (!is_file($configFile)) {
-            $configFile = 'app' . $fileExt;
-        }
 
         try {
-            $this->config->load($this->getConfigDir() . "/$configFile");
+            $this->config->load($this->getConfigDir() . "/app$fileExt");
+            $envFile = $this->getConfigDir() . "/app$env$fileExt";
+            is_file($envFile) && $this->config->merge($envFile);
         } catch (FileNotFound $e) {
             $this->handleException($e);
         }
@@ -75,7 +70,7 @@ abstract class Application extends Dispatcher
         // below we build routes and do other stuff related to web-context only
 
         $this->set('router', $router = new Router);
-        $this->config->merge($this->getConfigDir() . '/routing.yaml');
+        $this->config->merge($this->getConfigDir() . "/routing$fileExt");
 
         // todo make config nodes validations
         $this->config['routes'] && $router->build($this->config['routes']);
@@ -84,7 +79,7 @@ abstract class Application extends Dispatcher
             return $this;
         }
 
-        foreach ($apiConfig['resources']->raw() ?? [] as $resourceDefinition) {
+        foreach ($apiConfig['resources'] ?? [] as $resourceDefinition) {
             $router->buildResourceRoutes(
                 $resourceDefinition['class'],
                 $resourceDefinition['endpoint'],
@@ -140,7 +135,10 @@ abstract class Application extends Dispatcher
     /**
      * Return application root directory
      */
-    abstract public function getAppDir(): string;
+    public function getAppDir(): string
+    {
+        return realpath(dirname($_SERVER['SCRIPT_FILENAME']) . '/../');
+    }
 
     /**
      * Exception handler function. Trying to display detailed exception info
@@ -195,7 +193,7 @@ abstract class Application extends Dispatcher
     /** Setup services from special classes */
     private function setupServices(Storage $config)
     {
-        foreach ($this->setupClasses as $setupClass) {
+        foreach (require_once $this->getAppDir() . '/src/setup.php' as $setupClass) {
             (new $setupClass())->setServices($this->services)->setup($config);
         }
     }
@@ -207,13 +205,10 @@ abstract class Application extends Dispatcher
             return;
         }
 
-        $dbCfg = $this->config->get('db');
-
-        if (is_object($dbCfg) && $dbCfg->raw()) {
-            $this->set('db', Db::connect($dbCfg->raw()));
+        if ($dbCfg = $this->config['db']) {
+            $this->set('db', Db::connect($dbCfg));
         }
     }
-
 
     /** Setup Active Record service */
     private function setupActiveRecord()
@@ -222,7 +217,7 @@ abstract class Application extends Dispatcher
             return;
         }
 
-        if ($this->config->get('active_record') !== false) {
+        if ($this->config['active_record'] !== false) {
             $this->set('arm', $arm = new ActiveManager($this->getDb()));
             $arm->setMetadataDirs([$this->getConfigDir() . '/active_record']);
         }

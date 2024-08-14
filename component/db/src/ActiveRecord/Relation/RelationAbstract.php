@@ -8,7 +8,6 @@ use Gears\Db\ActiveRecord\ActiveManager;
 use Gears\Db\ActiveRecord\ActiveQuery;
 use Gears\Db\ActiveRecord\ActiveRecord;
 use Gears\Db\ActiveRecord\LazyRecords;
-use Gears\Storage\Storage;
 
 /**
  * Base class of any concrete active record relation type
@@ -47,13 +46,13 @@ abstract class RelationAbstract
     }
 
     public function __construct(
-        protected Storage $metadata,
-        protected Storage $ownerMetadata,
+        protected array $metadata,
+        protected array $ownerMetadata,
         protected ActiveManager $manager
     ) {
     }
 
-    public function getMetadata(): Storage
+    public function getMetadata(): array
     {
         return $this->metadata;
     }

@@ -136,6 +136,6 @@ class File implements CacheInterface
             throw new \Exception('Cache key is not set');
         }
 
-        return $this->cacheDir . DS . $cacheKey;
+        return $this->cacheDir . DIRECTORY_SEPARATOR . $cacheKey;
     }
 }
