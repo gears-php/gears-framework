@@ -2,7 +2,10 @@
 /**
  * @author: Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
+declare(strict_types=1);
+
 namespace Gears\Framework\View;
+
 use Gears\Framework\View\Parser\State;
 
 class Parser
@@ -10,59 +13,46 @@ class Parser
     /**
      * Path to initial file
      */
-    protected $file;
+    protected string $file;
 
     /**
      * Input stream
-     * @var string
      */
-    protected $stream = '';
+    protected string $stream = '';
 
     /**
      * Parsed template output stream
-     * @var string
      */
-    protected $buffer = '';
+    protected string $buffer = '';
 
     /**
      * Current stream character offset
-     * @var int
      */
-    protected $offset = 0;
+    protected int $offset = 0;
 
     /**
      * Character at current stream offset
-     * @var bool|string(1)
      */
-    protected $char = false;
+    protected string|bool $char = false;
 
-    /**
-     * @var array
-     */
-    protected $states = [];
+    protected array $states = [];
 
     /**
      * Current state object
-     * @var State
      */
-    protected $currentState;
+    protected ?State $currentState = null;
 
-    /**
-     * @var int
-     */
-    protected $offsetCorrection = 0;
+    protected int $offsetCorrection = 0;
 
     /**
      * List of all special template language tags to be processed
-     * @var string
      */
-    protected $tags = ['extends', 'block', 'include', 'repeat', 'js', 'css', 'image', 'extension'];
+    protected array $tags = ['extends', 'block', 'include', 'repeat', 'js', 'css', 'image', 'extension'];
 
     /**
      * Initialize parser with a new stream
-     * @param string $stream
      */
-    public function init($stream)
+    public function init(string $stream): void
     {
         $this->stream = str_replace(["\r\n", "\r"], "\n", $stream);
         $this->offsetCorrection = 0;
@@ -70,9 +60,8 @@ class Parser
 
     /**
      * Process template tag turning it into corresponding template method call
-     * @param $startOffset
      */
-    public function processTag($startOffset)
+    public function processTag(int $startOffset): void
     {
         // take into account offset correction from previous processed tag
         $startOffset += $this->offsetCorrection;
@@ -102,18 +91,16 @@ class Parser
      * @param string $filePath Full path to the file to be processed
      * @return string Processed content
      */
-    public function parseFile($filePath)
+    public function parseFile(string $filePath): string
     {
         $this->file = $filePath;
         return $this->parse(file_get_contents($filePath));
     }
 
     /**
-     * Process input stream by parsing special tags of template language
-     * @param string $stream
-     * @return string Processed stream
+     * Process input stream by parsing special tags of template language and return processed one.
      */
-    public function parse($stream)
+    public function parse(string $stream): string
     {
         // initialize parser with an input stream
         $this->init($stream);
@@ -124,7 +111,12 @@ class Parser
         }, $this->stream);
 
         // capture all template tags start positions
-        preg_match_all(sprintf('/<\/?(?:%s)/', implode('|', $this->tags)), $cleanStream, $tagOffsets, PREG_OFFSET_CAPTURE);
+        preg_match_all(
+            sprintf('/<\/?(?:%s)[ >]/', implode('|', $this->tags)),
+            $cleanStream,
+            $tagOffsets,
+            PREG_OFFSET_CAPTURE
+        );
         unset($cleanStream);
 
         foreach ($tagOffsets[0] as $tagOffset) {
@@ -136,17 +128,13 @@ class Parser
 
     /**
      * Get current stream offset position
-     * @return int
      */
-    public function getOffset()
+    public function getOffset(): int
     {
         return $this->offset;
     }
 
-    /**
-     * @return string
-     */
-    public function getPosition()
+    public function getPosition(): string
     {
         $chunk = substr($this->stream, 0, $this->offset);
         $line = substr_count($chunk, "\n") + 1;
@@ -156,18 +144,16 @@ class Parser
 
     /**
      * Read and return next stream character. False otherwise
-     * @return string|boolean
      */
-    public function readChar()
+    public function readChar(): bool|string
     {
         return $this->char = isset($this->stream[++$this->offset]) ? $this->stream[$this->offset] : false;
     }
 
     /**
      * Get current stream character
-     * @return string
      */
-    public function getChar()
+    public function getChar(): bool|string
     {
         return $this->char;
     }
@@ -176,9 +162,8 @@ class Parser
      * Get stream character(s) by the given offset
      * @param int $offset (optional) Offset value relative to the current inner offset
      * @param int $count (optional) Number of characters to take
-     * @return string
      */
-    public function getCharAt($offset = 0, $count = 1)
+    public function getCharAt(int $offset = 0, int $count = 1): bool|string
     {
         $offset += $this->getOffset();
         if ($offset >= 0) {
@@ -194,25 +179,23 @@ class Parser
      * @param int $offset (optional) Offset value relative to the current inner offset
      * @return bool
      */
-    public function isChar($char, $offset = 0)
+    public function isChar(string $char, int $offset = 0): bool
     {
         return $char == $this->getCharAt($offset, strlen($char));
     }
 
     /**
      * Run state with a given name
-     * @param string $stateName
      */
-    public function state($stateName)
+    public function state(string $stateName): void
     {
         $this->getState($stateName)->run($this->getChar(), $this);
     }
 
     /**
      * Switch to a new state
-     * @param string $stateName
      */
-    public function switchState($stateName)
+    public function switchState(string $stateName): void
     {
         if ($this->currentState) {
             $this->addBuffer($this->currentState->getProcessedBuffer());
@@ -228,11 +211,8 @@ class Parser
 
     /**
      * Get state by a given state name
-     * @param $stateName
-     * @return State
-     * @throws \Exception
      */
-    public function getState($stateName)
+    public function getState(string $stateName): State
     {
         $stateName = __NAMESPACE__ . '\\Parser\\State\\' . $stateName;
         if (!isset($this->states[$stateName])) {
@@ -244,25 +224,23 @@ class Parser
     /**
      * Return the name of input stream file
      */
-    public function getFile()
+    public function getFile(): string
     {
         return $this->file;
     }
 
     /**
      * Return final output
-     * @return string
      */
-    public function getBuffer()
+    public function getBuffer(): string
     {
         return $this->buffer;
     }
 
     /**
      * Add parser buffer
-     * @param string $chars
      */
-    public function addBuffer($chars)
+    public function addBuffer(string $chars): void
     {
         $this->buffer .= $chars;
     }

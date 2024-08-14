@@ -142,6 +142,10 @@ class Template
      */
     protected function tBlock(array $args): void
     {
+        if (!isset($args['name'])) {
+            throw new RenderingException('Missing &lt;block&gt; "name" attribute in ' . $this->getFilePath());
+        }
+
         $this->blocksOpened[] = $args['name'];
         ob_start();
     }
@@ -155,7 +159,7 @@ class Template
         $currentBlock = array_pop($this->blocksOpened);
 
         if (!$currentBlock) {
-            throw new \RuntimeException('&lt;/block&gt; used without opening counterpart');
+            throw new RenderingException('&lt;/block&gt; used without opening counterpart');
         }
 
         $block_content = ob_get_clean();

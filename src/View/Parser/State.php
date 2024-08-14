@@ -9,25 +9,23 @@ use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 
 abstract class State
 {
-    protected $buffer = '';
-    protected $name = '';
-    protected $parser;
-    protected $prevState;
+    protected string $buffer = '';
+    protected string $name = '';
+    protected Parser $parser;
+    protected ?State $prevState;
 
     /**
      * Add character to the state buffer
-     * @param $char
      */
-    public function addBuffer($char)
+    public function addBuffer($char): void
     {
         $this->buffer .= $char;
     }
 
     /**
      * Get state buffer
-     * @return string
      */
-    public function getBuffer()
+    public function getBuffer(): string
     {
         return $this->buffer;
     }
@@ -43,17 +41,15 @@ abstract class State
     /**
      * Clean buffer
      */
-    public function cleanBuffer()
+    public function cleanBuffer(): void
     {
         $this->buffer = '';
     }
 
     /**
      * If state is the one with a given name
-     * @param $stateName
-     * @return bool
      */
-    public function is($stateName)
+    public function is($stateName): bool
     {
         return $this->name == $stateName;
     }
@@ -61,23 +57,17 @@ abstract class State
     /**
      * @return Parser
      */
-    public function parser()
+    public function parser(): Parser
     {
         return $this->parser;
     }
 
-    /**
-     * @param State $state
-     */
-    public function setPrevState(State $state = null)
+    public function setPrevState(State $state = null): void
     {
         $this->prevState = $state;
     }
 
-    /**
-     * @return State
-     */
-    public function getPrevState()
+    public function getPrevState(): ?State
     {
         return $this->prevState;
     }
@@ -95,28 +85,19 @@ abstract class State
         );
     }
 
-    /**
-     * @param \Gears\Framework\View\Parser $parser
-     */
     public function __construct(Parser $parser)
     {
         $this->parser = $parser;
         $this->name = basename(str_replace('\\', DIRECTORY_SEPARATOR, get_called_class()));
     }
 
-    /**
-     * @return string
-     */
-    public function getName()
+    public function getName(): string
     {
         return $this->name;
     }
 
     /**
      * Process current input stream character
-     * @param $char
-     * @param \Gears\Framework\View\Parser $parser
-     * @return mixed
      */
     abstract public function run($char, Parser $parser);
 }
