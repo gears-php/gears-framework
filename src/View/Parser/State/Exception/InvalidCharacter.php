@@ -16,11 +16,11 @@ class InvalidCharacter extends \Exception
 {
     public function __construct($stateClass, $char, $pos, $file = '')
     {
-        parent::__construct(sprintf('%s found invalid character "%s" at %s position in %s file',
+        parent::__construct(sprintf('%s found invalid character "%s" in %s:%s',
             (new \ReflectionClass($stateClass))->getShortName(),
             $char,
+            $file,
             $pos,
-            $file
         ));
     }
 }

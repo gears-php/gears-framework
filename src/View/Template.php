@@ -143,7 +143,13 @@ class Template
     protected function tBlock(array $args): void
     {
         if (!isset($args['name'])) {
-            throw new RenderingException('Missing &lt;block&gt; "name" attribute in ' . $this->getFilePath());
+            throw new RenderingException(
+                sprintf(
+                    'Missing "name" attribute for &lt;block&gt; tag in %s:%d',
+                    $this->getFilePath(),
+                    $args['_meta']['tag_pos']
+                )
+            );
         }
 
         $this->blocksOpened[] = $args['name'];

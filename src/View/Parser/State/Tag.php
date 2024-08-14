@@ -19,7 +19,7 @@ class Tag extends State
             $buffer = ltrim($buffer, '/');
             $closingTagPrefix = 'end';
         }
-        return sprintf('<?= $this->t%s([', ucfirst($closingTagPrefix . $buffer));
+        return sprintf('<?= $this->t%s(["_meta" => ["tag_pos" => %d], ', ucfirst($closingTagPrefix . $buffer), $this->parser()->getPosition());
     }
 
     /**
