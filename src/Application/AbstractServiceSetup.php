@@ -8,7 +8,11 @@ use Gears\Storage\Storage;
 
 abstract class AbstractServiceSetup
 {
-    use ServiceAware;
+    public function __construct(
+        protected readonly Storage $config,
+        protected readonly ServiceContainer $services,
+    ) {
+    }
 
-    abstract public function setup(Storage $config);
+    abstract public function setup();
 }

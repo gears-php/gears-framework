@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Gears\Db\ActiveRecord;
 
 use Gears\Storage\Storage;
-use Gears\Db\Adapter\AdapterAbstract;
+use Gears\Db\Db;
 use JsonSerializable;
 
 /**
@@ -147,10 +147,7 @@ class ActiveRecord implements JsonSerializable
         return array_merge($data, $relational ?? []);
     }
 
-    /**
-     * @return AdapterAbstract
-     */
-    protected function getDb(): AdapterAbstract
+    protected function getDb(): Db
     {
         return $this->manager->getDb();
     }

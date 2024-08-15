@@ -4,26 +4,23 @@ declare(strict_types=1);
 
 namespace Gears\Framework\Application\ResourceHandler;
 
-use Gears\Framework\Application\ServiceAware;
 use Gears\Db\ActiveRecord\ActiveRecord;
+
+use function Gears\Framework\Application\Helper\{Model, Query, Request};
 
 /**
  * Handler for Gears ActiveRecord resources
  */
 class ActiveRecordHandler implements ResourceHandlerInterface
 {
-    use ServiceAware;
-
     public function list(string $resource): array
     {
-        return $this->getActiveRecord()->query($resource)->fetchRecords();
+        return Query($resource)->fetchRecords();
     }
 
     public function one(string $resource, string $id): ActiveRecord
     {
-        $query = $this->getActiveRecord()->query($resource);
-
-        if (!$record = $query->fetchById($id)) {
+        if (!$record = Query($resource)->fetchById($id)) {
             throw new ResourceNotFoundException($resource . "[$id]");
         }
 
@@ -32,8 +29,8 @@ class ActiveRecordHandler implements ResourceHandlerInterface
 
     public function post(string $resource): ActiveRecord
     {
-        $payload = json_decode($this->get('request')->getContent(), true);
-        $record = $this->getActiveRecord()->create($resource);
+        $payload = json_decode(Request()->getContent(), true);
+        $record = Model($resource);
         unset($payload[$record->getPrimaryKey()]);
         $record->fill($payload);
         $record->save();
@@ -43,9 +40,9 @@ class ActiveRecordHandler implements ResourceHandlerInterface
 
     public function put(string $resource, string $id): ActiveRecord
     {
-        $payload = json_decode($this->get('request')->getContent(), true);
+        $payload = json_decode(Request()->getContent(), true);
 
-        if (!$record = $this->getActiveRecord()->query($resource)->fetchById($id)) {
+        if (!$record = Query($resource)->fetchById($id)) {
             throw new ResourceNotFoundException($resource . "[$id]");
         }
 

@@ -24,7 +24,7 @@ class Dataset
 
     /**
      * Db adapter instance holder
-     * @var Adapter\AdapterAbstract
+     * @var Db
      */
     protected $db;
 
@@ -37,9 +37,9 @@ class Dataset
     /**
      * Instantiate data set
      * @param string $tableName
-     * @param Adapter\AdapterAbstract $db
+     * @param Db $db
      */
-    public function __construct($tableName, Adapter\AdapterAbstract $db)
+    public function __construct($tableName, Db $db)
     {
         $this->tableName = $tableName;
         $this->query = (new Query($db))

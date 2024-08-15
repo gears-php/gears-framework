@@ -4,24 +4,23 @@ declare(strict_types=1);
 
 namespace Gears\Framework\Application\ResourceHandler;
 
-use Gears\Framework\Application\ServiceAware;
 use Gears\Db\Dataset;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
+use function Gears\Framework\Application\Helper\Db;
+
 class DbTableHandler implements ResourceHandlerInterface
 {
-    use ServiceAware;
-
     public function list(string $resource): JsonResponse
     {
-        $dataset = new Dataset($resource, $this->getDb());
+        $dataset = new Dataset($resource, Db());
 
         return new JsonResponse($dataset->fetchAll());
     }
 
     public function one(string $resource, string $id): JsonResponse
     {
-        $dataset = new Dataset($resource, $this->getDb());
+        $dataset = new Dataset($resource, Db());
 
         if (!$row = $dataset->filter('id', $id)->fetchRow()) {
             throw new ResourceNotFoundException($resource . "[$id]");

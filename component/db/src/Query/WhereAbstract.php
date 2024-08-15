@@ -2,7 +2,7 @@
 
 namespace Gears\Db\Query;
 
-use Gears\Db\Adapter\AdapterAbstract;
+use Gears\Db\Db;
 
 /**
  * Implements the and/or query conditions logic for WHERE clause
@@ -25,14 +25,14 @@ abstract class WhereAbstract
 
     /**
      * Db adapter instance
-     * @var AdapterAbstract
+     * @var Db
      */
     private $db;
 
     /**
-     * @param AdapterAbstract $db
+     * @param Db $db
      */
-    public function __construct(AdapterAbstract $db)
+    public function __construct(Db $db)
     {
         $this->db = $db;
     }

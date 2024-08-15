@@ -17,7 +17,7 @@ class HasManyJointRelation extends RelationAbstract
      */
     public function buildQuery()
     {
-        $this->query = $this->manager->query($this->metadata['class']);
+        $this->query = $this->manager->createQuery($this->metadata['class']);
         $jointTable = $this->metadata['jointTable'];
         $jointAlias = uniqid($jointTable[0]);
         $this->query

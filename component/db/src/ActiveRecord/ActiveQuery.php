@@ -9,9 +9,9 @@ declare(strict_types=1);
 
 namespace Gears\Db\ActiveRecord;
 
+use Gears\Db\Db;
 use Gears\Storage\Storage;
 use PDO;
-use Gears\Db\Adapter\AdapterAbstract;
 use Gears\Db\Query\WhereAnd;
 use Gears\Db\Query;
 
@@ -27,7 +27,7 @@ class ActiveQuery extends Query
      * {@inheritdoc}
      */
     public function __construct(
-        protected AdapterAbstract $db,
+        protected Db $db,
         private readonly ActiveManager $manager,
         private readonly Storage $metadata
     ) {

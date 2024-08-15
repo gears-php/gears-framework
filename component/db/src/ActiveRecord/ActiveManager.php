@@ -5,10 +5,10 @@ namespace Gears\Db\ActiveRecord;
 use Gears\Db\ActiveRecord\Relation\HasManyJointRelation;
 use Gears\Db\ActiveRecord\Relation\HasManyRelation;
 use Gears\Db\ActiveRecord\Relation\HasOneRelation;
+use Gears\Db\Db;
 use Gears\Storage\Reader\Exception\FileNotFound;
 use RuntimeException;
 use Gears\Db\ActiveRecord\Relation\RelationAbstract;
-use Gears\Db\Adapter\AdapterAbstract;
 use Gears\Storage\Storage;
 
 /**
@@ -34,22 +34,17 @@ class ActiveManager
      */
     protected array $relations = [];
 
-    /**
-     * @param AdapterAbstract $db
-     */
-    public function __construct(protected AdapterAbstract $db)
+
+    public function __construct(protected Db $db)
     {
     }
 
-    /**
-     * @return AdapterAbstract
-     */
-    public function getDb(): AdapterAbstract
+    public function getDb(): Db
     {
         return $this->db;
     }
 
-    public function create(string $className): ActiveRecord
+    public function createRecord(string $className): ActiveRecord
     {
         return (new $className($this, $this->getMetadata($className)))->init([]);
     }
@@ -57,7 +52,7 @@ class ActiveManager
     /**
      * Create and return query instance configured for fetching active record entities of concrete type
      */
-    public function query(string $className): ActiveQuery
+    public function createQuery(string $className): ActiveQuery
     {
         $query = new ActiveQuery($this->db, $this, $this->getMetadata($className));
 
@@ -131,9 +126,10 @@ class ActiveManager
         return $this->relations[$className][$relationName] = $relation;
     }
 
+    /** Find single active record by given id */
     public function find(string $className, mixed $id): ?ActiveRecord
     {
-        return $this->query($className)->fetchById((string)$id);
+        return $this->createQuery($className)->fetchById((string)$id);
     }
 
     /**

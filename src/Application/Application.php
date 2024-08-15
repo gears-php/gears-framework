@@ -5,221 +5,302 @@
  */
 declare(strict_types=1);
 
-namespace Gears\Framework\Application;
+namespace Gears\Framework\Application {
 
-use ErrorException;
-use Gears\Db\ActiveRecord\ActiveManager;
-use Gears\Db\Db;
-use Gears\Framework\Debug;
-use Gears\Storage\Reader\Exception\FileNotFound;
-use Gears\Storage\Storage;
-use Gears\Framework\Event\Dispatcher;
-use Gears\Framework\Application\Routing\Router;
-use Gears\Framework\Application\Routing\Exception\RouteNotFound;
-use Gears\Framework\Application\Controller\UndefinedActionException;
-use Gears\Framework\Application\Controller\ControllerResolver;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Throwable;
-
-/**
- * Provides the most low-level "kernel" functionality, controls the application flow
- *
- * @package    Gears\Framework
- * @subpackage App
- * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
- */
-class Application extends Dispatcher
-{
-    use ServiceAware;
-
-    public function __construct(protected Storage $config = new Storage, protected Services $services = new Services)
-    {
-    }
+    use ErrorException;
+    use Gears\Db\ActiveRecord\ActiveManager;
+    use Gears\Db\Db;
+    use Gears\Framework\Debug;
+    use Gears\Storage\Reader\Exception\FileNotFound;
+    use Gears\Storage\Storage;
+    use Gears\Framework\Event\Dispatcher;
+    use Gears\Framework\Application\Routing\Router;
+    use Gears\Framework\Application\Routing\Exception\RouteNotFound;
+    use Gears\Framework\Application\Controller\UndefinedActionException;
+    use Gears\Framework\Application\Controller\ControllerResolver;
+    use Symfony\Component\HttpFoundation\JsonResponse;
+    use Symfony\Component\HttpFoundation\Request;
+    use Symfony\Component\HttpFoundation\Response;
+    use Throwable;
 
     /**
-     * Setup all application services
+     * Provides the most low-level "kernel" functionality, controls the application flow
+     *
+     * @package    Gears\Framework
+     * @subpackage App
+     * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
      */
-    public function setup(): self
+    class Application extends Dispatcher
     {
-        $env = $_SERVER['APP_ENV'] ?? 'prod';
-        ($env == 'dev') && Debug::enable();
+        private ?Request $request = null;
 
-        set_exception_handler([$this, 'handleException']);
-        set_error_handler([$this, 'handleError']);
-
-        $fileExt = $this->config->getReader()->getFileExt();
-
-        try {
-            $this->config->load($this->getConfigDir() . "/app$fileExt");
-            $envFile = $this->getConfigDir() . "/app$env$fileExt";
-            is_file($envFile) && $this->config->merge($envFile);
-        } catch (FileNotFound $e) {
-            $this->handleException($e);
+        public function __construct(
+            private readonly Storage $config = new Storage(),
+            private readonly ServiceContainer $services = new ServiceContainer(),
+            private readonly Router $router = new Router(),
+        ) {
         }
 
-        $this->setupServices($this->config);
-        $this->setupDb();
-        $this->setupActiveRecord();
+        /**
+         * Setup all application services
+         */
+        public function setup(): self
+        {
+            _container($this->services);
 
-        if (php_sapi_name() === 'cli') {
+            $env = $_SERVER['APP_ENV'] ?? 'prod';
+            ($env == 'dev') && Debug::enable();
+
+            set_exception_handler([$this, 'handleException']);
+            set_error_handler([$this, 'handleError']);
+
+            $fileExt = $this->config->getReader()->getFileExt();
+
+            try {
+                $this->config->load($this->getConfigDir() . "/app$fileExt");
+                $envFile = $this->getConfigDir() . "/app$env$fileExt";
+                is_file($envFile) && $this->config->merge($envFile);
+            } catch (FileNotFound $e) {
+                $this->handleException($e);
+            }
+
+            $this->setupServices();
+            $this->setupDb();
+            $this->setupActiveRecord();
+
+            if (php_sapi_name() === 'cli') {
+                return $this;
+            }
+
+            // below we build routes and do other stuff related to web-context only
+
+            $this->services->set('router', $this->router);
+            $this->config->merge($this->getConfigDir() . "/routing$fileExt");
+
+            // todo make config nodes validations
+            $this->config['routes'] && $this->router->build($this->config['routes']);
+
+            if (!$apiConfig = $this->config['api']) {
+                return $this;
+            }
+
+            foreach ($apiConfig['resources'] ?? [] as $resourceDefinition) {
+                $this->router->buildResourceRoutes(
+                    $resourceDefinition['class'],
+                    $resourceDefinition['endpoint'],
+                    $apiConfig['handler'],
+                    $apiConfig['prefix']
+                );
+            }
+
             return $this;
         }
 
-        // below we build routes and do other stuff related to web-context only
+        /**
+         * Handle income request, dispatch it to specific controller action and return the response
+         *
+         * @throws RouteNotFound|UndefinedActionException
+         */
+        public function handle(Request $request)
+        {
+            $this->services->set('request', $this->request = $request);
 
-        $this->set('router', $router = new Router);
-        $this->config->merge($this->getConfigDir() . "/routing$fileExt");
+            if (!$route = $this->router->match($request)) {
+                throw new RouteNotFound($request->getMethod() . ' ' . $request->getPathInfo());
+            }
 
-        // todo make config nodes validations
-        $this->config['routes'] && $router->build($this->config['routes']);
-
-        if (!$apiConfig = $this->config['api']) {
-            return $this;
-        }
-
-        foreach ($apiConfig['resources'] ?? [] as $resourceDefinition) {
-            $router->buildResourceRoutes(
-                $resourceDefinition['class'],
-                $resourceDefinition['endpoint'],
-                $apiConfig['handler'],
-                $apiConfig['prefix']
+            $controllerResolver = (new ControllerResolver($this->config['controllers_namespace_prefix']))->resolve(
+                $route
             );
+            $controller = new ($controllerResolver->getController())();
+
+            if (!method_exists($controller, $action = $controllerResolver->getAction())) {
+                throw new UndefinedActionException($controllerResolver, $route);
+            }
+
+            $args = array_merge($route->getResource() ? [$route->getResource()] : [], $route->getParams());
+            $response = $controller->$action(...$args);
+
+            if (!$response instanceof Response) {
+                $response = new JsonResponse($response);
+            }
+
+            $this->dispatch('app.response', [$response]);
+            $response->send();
+            $this->dispatch('app.done');
         }
 
-        return $this;
+        public function getConfigDir(): string
+        {
+            return $this->getAppDir() . '/config';
+        }
+
+        /**
+         * Return application root directory
+         */
+        public function getAppDir(): string
+        {
+            return realpath(dirname($_SERVER['SCRIPT_FILENAME']) . '/../');
+        }
+
+        /**
+         * Exception handler function. Trying to display detailed exception info
+         */
+        public function handleException(Throwable $e)
+        {
+            $statusCode = $e instanceof HttpExceptionInterface ? $e->getCode() : 500;
+
+            if (!Debug::enabled()) {
+                http_response_code($statusCode);
+                echo "<h1>Oops! An Error Occurred</h1><h2>The server returned $statusCode code</h2>";
+
+                return;
+            }
+
+            if ($this->request && ($this->request->isXmlHttpRequest() || str_contains(
+                        $this->request->getContentTypeFormat() . '',
+                        'json'
+                    ))) {
+                $content = json_encode([
+                    'exception' => [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTrace(),
+                    ],
+                ]);
+            } else {
+                ob_start();
+                require_once __DIR__ . '/templates/exception.html.php';
+                $content = ob_get_clean();
+            }
+
+            (new Response($content, $statusCode))->send();
+        }
+
+        /**
+         * Error handler function
+         *
+         * @throws ErrorException
+         */
+        public function handleError(int $code, string $message, string $file, int $line): bool
+        {
+            if (error_reporting()) {
+                throw new ErrorException($message, $code, 1, $file, $line);
+            }
+
+            return true;
+        }
+
+        /** Setup services from special classes */
+        private function setupServices()
+        {
+            foreach (require_once $this->getAppDir() . '/src/setup.php' as $setupClass) {
+                (new $setupClass($this->config, $this->services))->setup();
+            }
+        }
+
+        /** Setup Database service */
+        private function setupDb()
+        {
+            if ($this->services->has('db')) {
+                return;
+            }
+
+            if ($dbCfg = $this->config['db']) {
+                $this->services->set('db', Db::connect($dbCfg));
+            }
+        }
+
+        /** Setup Active Record service */
+        private function setupActiveRecord()
+        {
+            if ($this->services->has('arm')) {
+                return;
+            }
+
+            if ($this->config['active_record'] !== false) {
+                /** @var Db $db */
+                $db = $this->services->get('db');
+                $this->services->set('arm', $arm = new ActiveManager($db));
+                $arm->setMetadataDirs([$this->getConfigDir() . '/active_record']);
+            }
+        }
+    }
+}
+
+namespace Gears\Framework\Application\Helper {
+
+    use Gears\Db\ActiveRecord\ActiveManager;
+    use Gears\Db\ActiveRecord\ActiveQuery;
+    use Gears\Db\ActiveRecord\ActiveRecord;
+    use Gears\Db\Db;
+    use Gears\Framework\Application\Routing\Router;
+    use Symfony\Component\HttpFoundation\Request;
+
+    use Symfony\Component\HttpFoundation\Response;
+
+    use function Gears\Framework\Application\_container;
+
+    function Service(...$args): object
+    {
+        return _container()->get(...$args);
+    }
+
+    /** @noinspection PhpIncompatibleReturnTypeInspection */
+    function Request(): Request
+    {
+        return _container()->get('request');
+    }
+
+    /** @noinspection PhpIncompatibleReturnTypeInspection */
+    function Router(): Router
+    {
+        return _container()->get('router');
     }
 
     /**
-     * Handle income request, dispatch it to specific controller action and return the response
-     *
-     * @throws RouteNotFound|UndefinedActionException
+     * Render given view template into response object.
      */
-    public function handle(Request $request)
+    function Render(string $template, array $vars = []): Response
     {
-        $this->set('request', $request);
-
-        if (!$route = $this->get('router')->match($request)) {
-            throw new RouteNotFound($request->getMethod() . ' ' . $request->getPathInfo());
-        }
-
-        $controllerResolver = (new ControllerResolver($this->config['controllers_namespace_prefix']))->resolve($route);
-
-        $controller = new ($controllerResolver->getController());
-        $controller->setServices($this->services);
-
-        if (!method_exists($controller, $action = $controllerResolver->getAction())) {
-            throw new UndefinedActionException($controllerResolver, $route);
-        }
-
-        $args = array_merge($route->getResource() ? [$route->getResource()] : [], $route->getParams());
-        $response = $controller->$action(...$args);
-
-        if (!$response instanceof Response) {
-            $response = new JsonResponse($response);
-        }
-
-        $this->dispatch('app.response', [$response]);
-
-        $response->send();
-
-        $this->dispatch('app.done');
-    }
-
-    public function getConfigDir(): string
-    {
-        return $this->getAppDir() . '/config';
+        return new Response(_container()->get('view')->render($template, $vars));
     }
 
     /**
-     * Return application root directory
+     * Redirect to another url location
      */
-    public function getAppDir(): string
+    function Redirect(string $uri, int $responseCode = Response::HTTP_FOUND): Response
     {
-        return realpath(dirname($_SERVER['SCRIPT_FILENAME']) . '/../');
+        $response = (new Response())->setStatusCode($responseCode);
+        $response->headers->set('Location', '/' . trim($uri, ' /') . '/');
+
+        return $response;
+    }
+
+    /** @noinspection PhpIncompatibleReturnTypeInspection */
+    function Db(): Db
+    {
+        return _container()->get('db');
+    }
+
+    function Query(string $class): ActiveQuery
+    {
+        /** @var ActiveManager $manager */
+        $manager = _container()->get('arm');
+        return $manager->createQuery($class);
     }
 
     /**
-     * Exception handler function. Trying to display detailed exception info
+     * @template T
+     * @param class-string $class
+     * @return T
      */
-    public function handleException(Throwable $e)
+    function Model(string $class): ActiveRecord
     {
-        $statusCode = $e instanceof HttpExceptionInterface ? $e->getCode() : 500;
-
-        if (!Debug::enabled()) {
-            http_response_code($statusCode);
-            echo "<h1>Oops! An Error Occurred</h1><h2>The server returned $statusCode code</h2>";
-
-            return;
-        }
-
-        /** @var Request $request */
-        $request = $this->has('request') ? $this->get('request') : false;
-
-        if ($request && ($request->isXmlHttpRequest() || str_contains($request->getContentTypeFormat() . '', 'json'))) {
-            $content = json_encode([
-                'exception' => [
-                    'message' => $e->getMessage(),
-                    'code' => $e->getCode(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTrace(),
-                ],
-            ]);
-        } else {
-            ob_start();
-            require_once __DIR__ . '/templates/exception.html.php';
-            $content = ob_get_clean();
-        }
-
-        (new Response($content, $statusCode))->send();
-    }
-
-    /**
-     * Error handler function
-     *
-     * @throws ErrorException
-     */
-    public function handleError(int $code, string $message, string $file, int $line): bool
-    {
-        if (error_reporting()) {
-            throw new ErrorException($message, $code, 1, $file, $line);
-        }
-
-        return true;
-    }
-
-    /** Setup services from special classes */
-    private function setupServices(Storage $config)
-    {
-        foreach (require_once $this->getAppDir() . '/src/setup.php' as $setupClass) {
-            (new $setupClass())->setServices($this->services)->setup($config);
-        }
-    }
-
-    /** Setup Database service */
-    private function setupDb()
-    {
-        if ($this->has('db')) {
-            return;
-        }
-
-        if ($dbCfg = $this->config['db']) {
-            $this->set('db', Db::connect($dbCfg));
-        }
-    }
-
-    /** Setup Active Record service */
-    private function setupActiveRecord()
-    {
-        if ($this->has('arm')) {
-            return;
-        }
-
-        if ($this->config['active_record'] !== false) {
-            $this->set('arm', $arm = new ActiveManager($this->getDb()));
-            $arm->setMetadataDirs([$this->getConfigDir() . '/active_record']);
-        }
+        /** @var ActiveManager $manager */
+        $manager = _container()->get('arm');
+        return $manager->createRecord($class);
     }
 }

@@ -4,26 +4,15 @@ declare(strict_types=1);
 
 namespace Gears\Db\Adapter;
 
+use Gears\Db\Db;
 use PDO;
 
 /**
  * SQLite db adapter
- * @package Gears\Db\Adapter
+ * @package Gears\Db\Db
  */
-class Sqlite extends AdapterAbstract
+final class Sqlite extends Db
 {
-    /**
-     * {@inheritdoc}
-     */
-    protected array $patterns = [
-        'create_table' => [
-            ' pk ' => ' INTEGER PRIMARY KEY NOT NULL ',
-            ' string ' => ' VARCHAR ',
-            ' float ' => ' REAL ',
-            ' bool ' => ' BOOL ',
-        ],
-    ];
-
     /**
      * {@inheritdoc}
      */
@@ -50,16 +39,16 @@ class Sqlite extends AdapterAbstract
     /**
      * {@inheritdoc}
      */
-    protected function createConnection(array $config, array $options = []): PDO
+    public function getLimitClause(int $count, int $offset): string
     {
-        return new PDO("{$config['driver']}:{$config['file']}");
+        return sprintf('LIMIT %d OFFSET %d', $count, $offset);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getLimitClause(int $count, int $offset): string
+    protected function createConnection(array $config, array $options = []): PDO
     {
-        return sprintf('LIMIT %d OFFSET %d', $count, $offset);
+        return new PDO("{$config['driver']}:{$config['file']}");
     }
 }

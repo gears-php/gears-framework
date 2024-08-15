@@ -6,11 +6,23 @@ namespace Gears\Framework\Application;
 
 use RuntimeException;
 
+/** @internal This function is intended for use inside framework source code. DO NOT USE IT IN YOUR APP CODE */
+function _container(ServiceContainer $container = null): ServiceContainer
+{
+    static $instance = null;
+
+    if (!$instance) {
+        $instance = $container ?: new ServiceContainer();
+    }
+
+    return $instance;
+}
+
 /**
- * Simple DIC implementation for various application services
+ * Simple container implementation for various application services
  * @package Gears\Framework\Application
  */
-class Services
+class ServiceContainer
 {
     /**
      * Internal services storage
@@ -27,9 +39,8 @@ class Services
     /**
      * Set fallback service factory which is called in case some specific
      * service was not found during {@see get()} call
-     * @param $callable
      */
-    public function fallback($callable): void
+    public function fallback(callable $callable): void
     {
         if (is_callable($callable)) {
             $this->fallback = $callable;
@@ -73,16 +84,15 @@ class Services
 
     /**
      * Get service object instance
-     * @throws Exception
+     * @throws RuntimeException
      */
-    public function get(string $name): object
+    public function get(string $name, ...$args): object
     {
         // return existing service
         if (isset($this->services[$name])) {
             if (is_callable($this->services[$name])) {
-                $args = func_get_args();
-                $args[0] = $this;
-                return call_user_func_array($this->services[$name], $args);
+                array_unshift($args, $this);
+                return call_user_func($this->services[$name], ...$args);
             } else {
                 return $this->services[$name];
             }
@@ -90,10 +100,8 @@ class Services
 
         // return service from fallback
         if ($this->fallback) {
-            $args[] = $this; // container
-            $args[] = $name; // missed service
-            $args[] = array_slice(func_get_args(), 1); // arguments
-            $service = call_user_func_array($this->fallback, $args);
+            array_unshift($args, $this, $name);
+            $service = call_user_func($this->fallback, ...$args);
             if (is_object($service)) {
                 return $service;
             }

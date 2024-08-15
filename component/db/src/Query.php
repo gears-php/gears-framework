@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace Gears\Db;
 
-use Gears\Db\Adapter\AdapterAbstract;
 use Gears\Db\Query\WhereAbstract;
 
 /**
@@ -35,7 +34,7 @@ class Query
     /**
      * Init query with the db adapter instance
      */
-    public function __construct(protected AdapterAbstract $db)
+    public function __construct(protected Db $db)
     {
     }
 
@@ -359,7 +358,7 @@ class Query
     /**
      * Execute query and return db adapter
      */
-    public function exec(): AdapterAbstract
+    public function exec(): Db
     {
         if (!count($this->select)) {
             $this->selectAll();

@@ -17,7 +17,7 @@ class HasOneRelation extends RelationAbstract implements SingleRecordRelation
      */
     public function buildQuery()
     {
-        $this->query = $this->manager->query($this->metadata['class']);
+        $this->query = $this->manager->createQuery($this->metadata['class']);
         $tableName = $this->ownerMetadata['tableName'];
         $tableAlias = uniqid($tableName[0]);
         $this->query

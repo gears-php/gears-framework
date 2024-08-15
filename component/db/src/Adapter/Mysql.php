@@ -5,23 +5,14 @@
 
 namespace Gears\Db\Adapter;
 
+use Gears\Db\Db;
+
 /**
  * Implements database adapter functionality specific to MySQL db storage
- * @package Gears\Db\Adapter
+ * @package Gears\Db\Db
  */
-class Mysql extends AdapterAbstract
+final class Mysql extends Db
 {
-    /**
-     * {@inheritdoc}
-     */
-    protected array $patterns = [
-        'create_table' => [
-            ' pk ' => ' INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY ',
-            ' string ' => ' TEXT ',
-            ' float ' => ' REAL ',
-        ],
-    ];
-
     /**
      * {@inheritdoc}
      */
@@ -44,5 +35,13 @@ class Mysql extends AdapterAbstract
     public function getLimitClause(int $count, int $offset): string
     {
         return sprintf('LIMIT %d, %d', $offset, $count);
+    }
+
+    /** {@inheritdoc} */
+    protected function createConnection(array $config, array $options = []): \PDO
+    {
+        $dsn = "{$config['driver']}:host={$config['host']};dbname={$config['dbname']}";
+
+        return new \PDO($dsn, $config['user'], $config['pass'], $options);
     }
 }
