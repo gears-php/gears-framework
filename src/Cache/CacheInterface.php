@@ -14,8 +14,13 @@ namespace Gears\Framework\Cache;
 interface CacheInterface
 {
     public function __construct($cachePath, $cacheParams = []);
+
+    /** Check if cache is valid. */
     public function isValid($cacheKey = false);
+
     public function set($data, $cacheKey = false);
+
     public function get($cacheKey = false);
+
     public function getTime($cacheKey = false);
 }

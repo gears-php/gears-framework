@@ -10,7 +10,7 @@ use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 
 class Tag extends State
 {
-    public function getProcessedBuffer()
+    public function getProcessedBuffer(): string
     {
         $buffer = ltrim($this->getBuffer(), '<');
 
@@ -32,9 +32,9 @@ class Tag extends State
         } elseif ($parser->isChar('</', -1)) {
             $this->addBuffer('/');
         } elseif (' ' == $char) {
-            $parser->switchState('TagSpace');
+            $parser->switchState(TagSpace::class);
         } elseif ('/' == $char || '>' == $char) {
-            $parser->switchState('TagClose');
+            $parser->switchState(TagClose::class);
         } elseif (preg_match('/[a-z0-9]/', $char)) {
             $this->addBuffer($char);
         } else {

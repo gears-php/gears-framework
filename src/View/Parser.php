@@ -7,6 +7,8 @@ declare(strict_types=1);
 namespace Gears\Framework\View;
 
 use Gears\Framework\View\Parser\State;
+use Gears\Framework\View\Parser\State\Read;
+use Gears\Framework\View\Parser\State\TagClose;
 
 class Parser
 {
@@ -33,7 +35,7 @@ class Parser
     /**
      * Character at current stream offset
      */
-    protected string|bool $char = false;
+    protected string $char = '';
 
     protected array $states = [];
 
@@ -47,7 +49,7 @@ class Parser
     /**
      * List of all special template language tags to be processed
      */
-    protected array $tags = ['extends', 'block', 'include', 'repeat', 'js', 'css', 'image', 'extension'];
+    protected array $tags = ['extends', 'block', 'include', 'repeat', 'extension'];
 
     /**
      * Initialize parser with a new stream
@@ -68,13 +70,13 @@ class Parser
         $this->offset = $startOffset - 1;
         $this->buffer = '';
 
-        $this->switchState('Read');
+        $this->switchState(Read::class);
 
-        while (!$this->currentState->is('TagClose') && $this->readChar() !== false) {
+        while (!$this->currentState instanceof TagClose && $this->nextChar()) {
             $this->state($this->currentState->getName());
         }
 
-        $this->switchState('Read');
+        $this->switchState(Read::class);
 
         // clean (initial) tag length
         $tagLength = $this->offset - $startOffset + 1;
@@ -143,17 +145,32 @@ class Parser
     }
 
     /**
-     * Read and return next stream character. False otherwise
+     * Read next stream character by moving forward on input stream.
      */
-    public function readChar(): bool|string
+    public function nextChar(): string
     {
-        return $this->char = isset($this->stream[++$this->offset]) ? $this->stream[$this->offset] : false;
+        return $this->char = ($this->stream[++$this->offset] ?? '');
+    }
+
+    /**
+     * Get next $count of characters by moving forward on input stream.
+     */
+    public function nextChars(int $count = 1): string
+    {
+        $count >= 1 || throw new \ValueError('Given count must be 1 or greater.');
+        $chars = '';
+
+        while ($count-- && ($char = $this->nextChar())) {
+            $chars .= $char;
+        }
+
+        return $chars;
     }
 
     /**
      * Get current stream character
      */
-    public function getChar(): bool|string
+    public function getChar(): string
     {
         return $this->char;
     }
@@ -163,14 +180,13 @@ class Parser
      * @param int $offset (optional) Offset value relative to the current inner offset
      * @param int $count (optional) Number of characters to take
      */
-    public function getCharAt(int $offset = 0, int $count = 1): bool|string
+    public function getCharAt(int $offset = 0, int $count = 1): string
     {
         $offset += $this->getOffset();
         if ($offset >= 0) {
             return substr($this->stream, $offset, $count);
-        } else {
-            return false;
         }
+        return '';
     }
 
     /**
@@ -211,14 +227,16 @@ class Parser
 
     /**
      * Get state by a given state name
+     * @template T of State
+     * @param class-string<T> $stateClass
+     * @return T
      */
-    public function getState(string $stateName): State
+    public function getState(string $stateClass): State
     {
-        $stateName = __NAMESPACE__ . '\\Parser\\State\\' . $stateName;
-        if (!isset($this->states[$stateName])) {
-            $this->states[$stateName] = new $stateName($this);
+        if (!isset($this->states[$stateClass])) {
+            $this->states[$stateClass] = new $stateClass($this);
         }
-        return $this->states[$stateName];
+        return $this->states[$stateClass];
     }
 
     /**

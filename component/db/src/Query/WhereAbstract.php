@@ -142,9 +142,8 @@ abstract class WhereAbstract
 
     /**
      * Count and return the number of currently added conditions
-     * @return integer
      */
-    public function count()
+    public function count(): int
     {
         return count($this->conditions);
     }

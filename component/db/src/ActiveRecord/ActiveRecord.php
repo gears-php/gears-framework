@@ -47,13 +47,18 @@ class ActiveRecord implements JsonSerializable
      */
     public function fill(array $props): void
     {
-        array_walk($props, fn($value, $prop) => $this->$prop = $value);
+        foreach ($props as $prop => $value) {
+            if (method_exists($this, $prop)) {
+                $this->$prop($value); // use convertor method to transform db raw value to suitable format
+            } else {
+                $this->$prop = $value;
+            }
+        }
     }
 
     /**
-     * Save object property data into db
+     * Save record property data into db, including relations.
      * @return bool If saved successfully
-     * @see fixate
      */
     public function save(): bool
     {
@@ -72,7 +77,13 @@ class ActiveRecord implements JsonSerializable
         // now saving this record itself
 
         foreach ($this->getFields() as $alias => $field) {
-            $dirtyData[$field] = $this->{is_string($alias) ? $alias : $field} ?? null;
+            $fieldName = is_string($alias) ? $alias : $field;
+            if (method_exists($this, $fieldName)) {
+                // use convertor method to get db-acceptable value
+                $dirtyData[$field] = $this->$fieldName();
+            } else {
+                $dirtyData[$field] = $this->$fieldName ?? null;
+            }
         }
 
         $primaryKey = $this->getPrimaryKey();

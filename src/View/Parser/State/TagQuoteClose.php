@@ -6,24 +6,28 @@ namespace Gears\Framework\View\Parser\State;
 
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser;
+use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 
 class TagQuoteClose extends State
 {
-    public function getProcessedBuffer()
+    public function getProcessedBuffer(): string
     {
-        return sprintf(',');
+        return ',';
     }
 
+    /**
+     * @throws InvalidCharacter
+     */
     public function run($char, Parser $parser)
     {
         if ('\'' == $char || '"' == $char) {
             $this->addBuffer($char);
         } elseif (' ' == $char) {
-            $parser->switchState('TagSpace');
+            $parser->switchState(TagSpace::class);
         } elseif ('/' == $char || '>' == $char) {
-            $parser->switchState('TagClose');
+            $parser->switchState(TagClose::class);
         } elseif (preg_match('/\w/', $char)) {
-            $parser->switchState('TagAttr');
+            $parser->switchState(TagAttr::class);
         } else {
             $this->invalidCharacterException();
         }

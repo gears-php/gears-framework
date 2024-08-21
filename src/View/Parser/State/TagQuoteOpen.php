@@ -9,14 +9,14 @@ use Gears\Framework\View\Parser;
 
 class TagQuoteOpen extends State
 {
-    protected $quoteSymbol = '';
+    private string $quoteSymbol = '';
 
-    public function getQuoteSymbol()
+    public function getQuoteSymbol(): string
     {
         return $this->quoteSymbol;
     }
 
-    public function getProcessedBuffer()
+    public function getProcessedBuffer(): string
     {
         return '';
     }
@@ -25,12 +25,12 @@ class TagQuoteOpen extends State
     {
         // empty quotes
         if ($parser->isChar('\'\'', -1) || $parser->isChar('""', -1)) {
-            $parser->switchState('TagQuoteClose');
+            $parser->switchState(TagQuoteClose::class);
         } elseif ('\'' == $char || '"' == $char) {
             $this->quoteSymbol = $char;
             $this->addBuffer($char);
-            $parser->readChar();
-            $parser->switchState('TagAttrValue');
+            $parser->nextChar();
+            $parser->switchState(TagAttrValue::class);
         }
     }
 }

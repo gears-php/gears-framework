@@ -3,7 +3,7 @@
 namespace Gears\Framework\View;
 
 /**
- * Template class instantiated per each specific template file
+ * Template is an object representation of specific template file
  *
  * @package    Gears\Framework
  * @subpackage View
@@ -27,6 +27,10 @@ class Template
      */
     public function __construct(string $filePath, View $view)
     {
+        if (!is_file($filePath)) {
+            throw new TemplateFileNotFoundException($filePath);
+        }
+
         $this->path = str_replace('/', DIRECTORY_SEPARATOR, dirname($filePath));
         $this->name = basename($filePath);
         $this->view = $view;
@@ -39,16 +43,14 @@ class Template
             $this->content = $cache->get($templateKey);
         }
 
-        if (!$this->content) {
-            // processing (compiling) template file only once during construction since
-            // it can be used in a loop for rendering some repeatable content
-            if (is_file($filePath)) {
-                $this->content = (new Parser())->parseFile($filePath);
-                $cache?->set($this->content, $templateKey);
-            } else {
-                throw new ViewException('Template file not found: ' . $filePath);
-            }
+        if ($this->content) {
+            return;
         }
+
+        // processing (compiling) template file only once during construction since
+        // it can be used in a loop for rendering some repeatable content
+        $this->content = (new Parser())->parseFile($filePath);
+        $cache?->set($this->content, $templateKey);
     }
 
     /**
@@ -98,7 +100,6 @@ class Template
             ob_start();
             eval('?>' . $this->content);
             $processed = ob_get_clean();
-
         } catch (\Throwable $e) {
             $bufferCount = ob_get_level();
             while ($bufferCount--) {
@@ -145,7 +146,7 @@ class Template
         if (!isset($args['name'])) {
             throw new RenderingException(
                 sprintf(
-                    'Missing "name" attribute for &lt;block&gt; tag in %s:%d',
+                    'Missing &lt;block&gt; "name" attribute in %s:%d',
                     $this->getFilePath(),
                     $args['_meta']['tag_pos']
                 )
@@ -189,7 +190,7 @@ class Template
      */
     protected function tInclude(array $args): void
     {
-        echo $this->view->load($args['name'])->render($this->vars);
+        echo $this->view->load($args['name'])->render($this->vars + array_diff_key($args, array_flip(['_meta', 'name'])));
     }
 
     /**
@@ -202,28 +203,44 @@ class Template
     }
 
     /**
-     * Invoke a specific partial template per each variables set inside collection
+     * Invoke a partial template for each element of given iterable data
      * @noinspection PhpUnused
      */
     protected function tRepeat(array $args): string
     {
-        // partial template variables collection
-        $collection = $this->vars[ltrim($args['source'], '$')];
+        var_dump($args);
+        $collection = $args['for'] ?? throw new RenderingException(
+            sprintf(
+                'Missing &lt;repeat&gt; "for" attribute data in %s:%d',
+                $this->getFilePath(),
+                $args['_meta']['tag_pos']
+            )
+        );
 
-        if (count($collection)) {
-            $tpl = $this->view->load($args['name']);
-            $html = '';
-
-            foreach (array_values($collection) as $index => &$vars) {
-                $vars['_TPL_INDEX_'] = $index;
-                $html .= $tpl->render($vars);
-            }
-
-            return $html;
-        } elseif (isset($args['alt'])) {
-            return $args['alt'];
+        if (!is_iterable($collection)) {
+            throw new RenderingException(
+                sprintf(
+                    '&lt;repeat&gt; "for" attribute value is not iterable in %s:%d',
+                    $this->getFilePath(),
+                    $args['_meta']['tag_pos']
+                )
+            );
         }
 
-        return '';
+        if (!count($collection)) {
+            return $args['alt'] ?? '';
+        }
+
+        $tpl = $this->view->load($args['name']);
+        $html = '';
+
+        foreach (array_values($collection) as $index => $item) {
+            $html .= $tpl->render([
+                '$index' => $index,
+                ($args['as'] ?? 'item') => $item
+            ]);
+        }
+
+        return $html;
     }
 }

@@ -14,21 +14,24 @@ namespace Gears\Framework\Cache;
 class File implements CacheInterface
 {
     /**
-     * Cache expiration time
+     * Cache expiration time in seconds. Setting to 0 meaning infinite time. Default is 900 (15 minutes).
      */
-    private $expireTimeSeconds = 900; // 15 minutes
+    private int $expiresIn;
 
     /**
      * Cache key
-     * @var string
      */
-    private $cacheKey;
+    private string $cacheKey;
+
+    /**
+     * Extension of cache files
+     */
+    private string $cacheFileExtension;
 
     /**
      * Cache directory
-     * @var string
      */
-    private $cacheDir;
+    private string $cacheDir;
 
     /**
      * Cache initialization
@@ -38,40 +41,33 @@ class File implements CacheInterface
      */
     public function __construct($cacheDir, $cacheParams = [])
     {
-        if (isset($cacheParams['expireTimeSeconds'])) {
-            $this->expireTimeSeconds = intval($cacheParams['expireTimeSeconds']);
-        } elseif (isset($cacheParams['noExpire'])) {
-            $this->expireTimeSeconds = false;
-        }
-
-        if (isset($cacheParams['key'])) {
-            $this->cacheKey = $cacheParams['key'];
-        }
-
         $this->cacheDir = $cacheDir;
+        $this->expiresIn = intval($cacheParams['expires_in'] ?? 900);
+        $this->cacheFileExtension = $cacheParams['file_extension'] ?? '';
+        $this->cacheKey = $cacheParams['key'] ?? '';
 
         try {
             if (!is_dir($this->cacheDir)) {
                 mkdir($this->cacheDir);
             }
         } catch (\Exception $e) {
-            throw new \Exception(sprintf('Unable to create cache directory "%s"', $this->cacheDir));
+            throw new \Exception(sprintf('Unable to create cache directory "%s"', $this->cacheDir), $e->getCode(), $e);
         }
     }
 
     /**
-     * Check if cache is valid
-     * @param string|boolean $cacheKey
-     * @return boolean
+     * {@inheritDoc}
+     * Missing cache file or expired one - both result to false.
+     * @throws \Exception
      */
-    public function isValid($cacheKey = false)
+    public function isValid($cacheKey = ''): bool
     {
         $cacheFile = $this->getCacheFile($cacheKey);
         if (file_exists($cacheFile)) {
-            if (!$this->expireTimeSeconds) {
+            if (0 == $this->expiresIn) {
                 return true;
             }
-            if (time() - filemtime($cacheFile) <= $this->expireTimeSeconds) {
+            if (time() - filemtime($cacheFile) <= $this->expiresIn) {
                 return true;
             }
         }
@@ -80,38 +76,35 @@ class File implements CacheInterface
 
     /**
      * Save data to the cache
-     * @param mixed $data
-     * @param string|boolean $cacheKey
      * @throws \Exception If cache dir is not writable
      */
-    public function set($data, $cacheKey = false)
+    public function set(mixed $data, $cacheKey = '')
     {
         if (!is_writable($this->cacheDir)) {
             throw new \Exception('Cache dir is not writable');
         }
         // store cache content
-        file_put_contents($cacheFile = $this->getCacheFile($cacheKey), json_encode($data));
+        file_put_contents($this->getCacheFile($cacheKey), serialize($data));
     }
 
     /**
-     * Get data from the cache
-     * @param string|boolean $cacheKey
-     * @return mixed|boolean Actual cache content or false if it is not valid
+     * Get data from the cache file or return NULL if it is not valid.
+     * @throws \Exception
      */
-    public function get($cacheKey = false)
+    public function get($cacheKey = ''): mixed
     {
         if ($this->isValid($cacheKey)) {
-            return json_decode(file_get_contents($this->getCacheFile($cacheKey)));
+            return unserialize(file_get_contents($this->getCacheFile($cacheKey)));
         }
-        return false;
+
+        return null;
     }
 
     /**
      * Get UNIX time when the specific cache was last modified
-     * @param bool $cacheKey
-     * @return int
+     * @throws \Exception
      */
-    public function getTime($cacheKey = false)
+    public function getTime($cacheKey = ''): int
     {
         if (file_exists($cacheFile = $this->getCacheFile($cacheKey))) {
             return filemtime($cacheFile);
@@ -121,11 +114,9 @@ class File implements CacheInterface
 
     /**
      * Get name of cache file by a given cache key
-     * @param string|boolean $cacheKey
-     * @return string
      * @throws \Exception If cache key is not available
      */
-    private function getCacheFile($cacheKey)
+    private function getCacheFile(string $cacheKey): string
     {
         if (empty($cacheKey)) {
             // cache key was possibly passed within constructor options
@@ -136,6 +127,6 @@ class File implements CacheInterface
             throw new \Exception('Cache key is not set');
         }
 
-        return $this->cacheDir . DIRECTORY_SEPARATOR . $cacheKey;
+        return $this->cacheDir . DIRECTORY_SEPARATOR . $cacheKey . rtrim('.' . $this->cacheFileExtension, '.');
     }
 }

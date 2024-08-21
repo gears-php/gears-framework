@@ -50,7 +50,7 @@ class View
     private array $functions = [];
 
     /** "Global" variables. Are passed for all templates */
-    private array $vars = [];
+    public array $vars = [];
 
     public function init(mixed $templates = null, array $extensions = [], CacheInterface $cache = null): static
     {
@@ -145,7 +145,7 @@ class View
         }
 
         if (!isset($tpl)) {
-            throw new ViewException('Template file not found: ' . $fileName);
+            throw new TemplateFileNotFoundException($fileName);
         }
 
         return $this->templates[$alias] = $tpl;
@@ -188,13 +188,4 @@ class View
 
         throw new ViewException("Function \"$name\" is not found");
     }
-
-    /** @noinspection PhpUnused */
-    public function addVariable(string $name, mixed $value): static
-    {
-        $this->vars[$name] = $value;
-
-        return $this;
-    }
-
 }

@@ -12,7 +12,7 @@ class Read extends State
     public function run($char, Parser $parser)
     {
         if ('<' == $char) {
-            $parser->switchState('Tag');
+            $parser->switchState(Tag::class);
         }
     }
 }

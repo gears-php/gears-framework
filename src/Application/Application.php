@@ -274,7 +274,7 @@ namespace Gears\Framework\Application\Helper {
     function Redirect(string $uri, int $responseCode = Response::HTTP_FOUND): Response
     {
         $response = (new Response())->setStatusCode($responseCode);
-        $response->headers->set('Location', '/' . trim($uri, ' /') . '/');
+        $response->headers->set('Location', '/' . ltrim($uri, ' /'));
 
         return $response;
     }
@@ -293,8 +293,8 @@ namespace Gears\Framework\Application\Helper {
     }
 
     /**
-     * @template T
-     * @param class-string $class
+     * @template T of ActiveRecord
+     * @param class-string<T> $class
      * @return T
      */
     function Model(string $class): ActiveRecord

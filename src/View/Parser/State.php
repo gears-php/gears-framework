@@ -10,7 +10,6 @@ use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 abstract class State
 {
     protected string $buffer = '';
-    protected string $name = '';
     protected Parser $parser;
     protected ?State $prevState;
 
@@ -33,7 +32,7 @@ abstract class State
     /**
      * Get processed buffer
      */
-    public function getProcessedBuffer()
+    public function getProcessedBuffer(): string
     {
         return $this->getBuffer();
     }
@@ -49,9 +48,9 @@ abstract class State
     /**
      * If state is the one with a given name
      */
-    public function is($stateName): bool
+    public function is(string $stateName): bool
     {
-        return $this->name == $stateName;
+        return $this->getName() == $stateName;
     }
 
     /**
@@ -65,11 +64,6 @@ abstract class State
     public function setPrevState(State $state = null): void
     {
         $this->prevState = $state;
-    }
-
-    public function getPrevState(): ?State
-    {
-        return $this->prevState;
     }
 
     /**
@@ -88,12 +82,11 @@ abstract class State
     public function __construct(Parser $parser)
     {
         $this->parser = $parser;
-        $this->name = basename(str_replace('\\', DIRECTORY_SEPARATOR, get_called_class()));
     }
 
     public function getName(): string
     {
-        return $this->name;
+        return static::class;
     }
 
     /**

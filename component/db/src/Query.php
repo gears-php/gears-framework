@@ -9,7 +9,8 @@ declare(strict_types=1);
 
 namespace Gears\Db;
 
-use Gears\Db\Query\WhereAbstract;
+use Gears\Db\Query\WhereAnd;
+use Gears\Db\Query\WhereOr;
 
 /**
  * Query constructor class
@@ -25,7 +26,7 @@ class Query
     protected array $select = [];
     private array $from = [];
     private array $join = [];
-    private ?WhereAbstract $where;
+    private ?WhereAnd $where;
     private array $group = [];
     private array $order = [];
     private ?string $limit = null;
@@ -221,9 +222,9 @@ class Query
     }
 
     /**
-     * Add a {@see WhereAbstract} object of WHERE clause
+     * Add a WHERE object clause
      */
-    public function where(WhereAbstract $where): static
+    public function where(WhereAnd $where): static
     {
         $this->where = $where;
 
@@ -233,9 +234,17 @@ class Query
     /**
      * Get WHERE clause conditions object
      */
-    public function getWhere(): ?WhereAbstract
+    public function getWhere(): ?WhereAnd
     {
         return $this->where;
+    }
+
+    /** @see WhereAnd::add() */
+    public function andWhere(...$args): static
+    {
+        $this->where->add(...$args);
+
+        return $this;
     }
 
     /**
@@ -290,16 +299,14 @@ class Query
                     $this->order($fieldKey, $tableAlias, $fieldValue);
                 }
             }
-        } else { // add a single column field
-            if (strtolower($field) == 'null') {
-                $this->order[] = 'NULL';
-            } else {
-                $this->order[] = rtrim(
-                    $this->db->escapeIdentifier($tableAlias) . '.'
-                    . $this->db->escapeIdentifier($field) . ' '
-                    . strtoupper($sort)
-                );
-            }
+        } elseif (strtolower($field) == 'null') { // add explicit NULL
+            $this->order[] = 'NULL';
+        } else {  // add a single column field
+            $this->order[] = rtrim(
+                $this->db->escapeIdentifier($tableAlias) . '.'
+                . $this->db->escapeIdentifier($field) . ' '
+                . strtoupper($sort)
+            );
         }
 
         return $this;
