@@ -80,7 +80,7 @@ class ActiveRecord implements JsonSerializable
             $fieldName = is_string($alias) ? $alias : $field;
             if (method_exists($this, $fieldName)) {
                 // use convertor method to get db-acceptable value
-                $dirtyData[$field] = $this->$fieldName();
+                $dirtyData[$field] = $this->$fieldName(read: false);
             } else {
                 $dirtyData[$field] = $this->$fieldName ?? null;
             }
