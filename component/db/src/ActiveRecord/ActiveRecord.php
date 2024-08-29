@@ -162,11 +162,13 @@ class ActiveRecord implements JsonSerializable
     /**
      * Get convertor object. Used for conversion of db value to model property value
      * when reading from db and backward transformation when writing to db.
-     * @return object{read?: \Closure, write?: \Closure}
+     * @return object{read?: \Closure, write?: \Closure}|null
      */
     private function convertor(string $prop): ?object
     {
-        return method_exists($this, $prop) ? (object)$this->$prop() : null;
+        return method_exists($this, $prop)
+            ? (object)array_merge(['read' => null, 'write' => null], $this->$prop())
+            : null;
     }
 
     private function getDb(): Db
