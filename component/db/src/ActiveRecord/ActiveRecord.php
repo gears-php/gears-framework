@@ -48,8 +48,9 @@ class ActiveRecord implements JsonSerializable
     public function fill(array $props): void
     {
         foreach ($props as $prop => $value) {
-            if (method_exists($this, $prop)) {
-                $this->$prop($value); // use convertor method to transform db raw value to suitable format
+            if ($read = $this->convertor($prop)?->read) {
+                // use "read" convertor to transform db raw value to runtime format
+                $this->$prop = $read($value);
             } else {
                 $this->$prop = $value;
             }
@@ -78,9 +79,9 @@ class ActiveRecord implements JsonSerializable
 
         foreach ($this->getFields() as $alias => $field) {
             $fieldName = is_string($alias) ? $alias : $field;
-            if (method_exists($this, $fieldName)) {
-                // use convertor method to get db-acceptable value
-                $dirtyData[$field] = $this->$fieldName(read: false);
+            if ($write = $this->convertor($fieldName)?->write) {
+                // use "write" convertor to trunsform runtime value to db raw format
+                $dirtyData[$field] = $write($this?->$fieldName);
             } else {
                 $dirtyData[$field] = $this->$fieldName ?? null;
             }
@@ -158,7 +159,17 @@ class ActiveRecord implements JsonSerializable
         return array_merge($data, $relational ?? []);
     }
 
-    protected function getDb(): Db
+    /**
+     * Get convertor object. Used for conversion of db value to model property value
+     * when reading from db and backward transformation when writing to db.
+     * @return object{read?: \Closure, write?: \Closure}
+     */
+    private function convertor(string $prop): ?object
+    {
+        return method_exists($this, $prop) ? (object)$this->$prop() : null;
+    }
+
+    private function getDb(): Db
     {
         return $this->manager->getDb();
     }
