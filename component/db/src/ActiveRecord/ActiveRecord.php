@@ -80,7 +80,7 @@ class ActiveRecord implements JsonSerializable
         foreach ($this->getFields() as $alias => $field) {
             $fieldName = is_string($alias) ? $alias : $field;
             if ($write = $this->convertor($fieldName)?->write) {
-                // use "write" convertor to trunsform runtime value to db raw format
+                // use "write" convertor to transform runtime value to db raw format
                 $dirtyData[$field] = $write($this?->$fieldName);
             } else {
                 $dirtyData[$field] = $this->$fieldName ?? null;
