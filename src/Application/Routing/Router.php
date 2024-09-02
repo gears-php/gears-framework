@@ -3,7 +3,6 @@
 namespace Gears\Framework\Application\Routing;
 
 use Gears\Framework\Application\Routing\Exception\GenerateUrlException;
-use Gears\Storage\Storage;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -11,8 +10,16 @@ class Router
 {
     /**
      * List of all available routes
+     *
+     * @var Route[]
      */
     private array $routes = [];
+    private Route $matchedRoute;
+
+    public function getMatchedRoute(): Route
+    {
+        return $this->matchedRoute;
+    }
 
     /**
      * Build routes from given configuration
@@ -91,7 +98,6 @@ class Router
             }
         );
 
-        /** @var Route $route */
         foreach ($this->routes as $route) {
             // request method limitation
             if (!in_array($request->getMethod(), $route->getAllowedMethods())) {
@@ -107,6 +113,7 @@ class Router
             }
 
             array_shift($params);
+            $this->matchedRoute = $route;
 
             // we have no placeholders values matched as for route parameters
             if (!count($params)) {
