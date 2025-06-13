@@ -15,17 +15,22 @@ class Template
     protected string $content = '';
     protected array $vars = [];
     protected ?self $parent = null;
-    protected View $view;
     protected array $blocks = [];
     protected array $blocksOpened = [];
 
     /**
      * Process template file
+     */
+    public function __construct(protected View $view)
+    {
+    }
+
+    /**
+     * Compile template file
      * @param string $filePath Full path to a template file
-     * @param View $view
      * @throws \RuntimeException If template file not found
      */
-    public function __construct(string $filePath, View $view)
+    public function compile(string $filePath): void
     {
         if (!is_file($filePath)) {
             throw new TemplateFileNotFoundException($filePath);
@@ -33,24 +38,35 @@ class Template
 
         $this->path = str_replace('/', DIRECTORY_SEPARATOR, dirname($filePath));
         $this->name = basename($filePath);
-        $this->view = $view;
 
         $templateKey = md5($filePath);
 
-        // try to use non-outdated processed template from cache
-        $cache = $view->getCache();
-        if ($cache && $cache->getTime($templateKey) > filemtime($filePath)) {
-            $this->content = $cache->get($templateKey);
+        // try to use non-outdated compiled template from cache
+        $cache = $this->view->getCache();
+        if ($cache?->isValid($templateKey) && $cache->getTime($templateKey) > filemtime($filePath)) {
+            $this->content = $cache->get($templateKey)['content'] ?: null;
         }
 
         if ($this->content) {
             return;
         }
 
-        // processing (compiling) template file only once during construction since
-        // it can be used in a loop for rendering some repeatable content
-        $this->content = (new Parser())->parseFile($filePath);
-        $cache?->set($this->content, $templateKey);
+        $this->content = implode('', (new Parser($this->nodeConverter()))->parseFile($filePath));
+
+        $cache?->set([
+            'file' => $filePath,
+            'content' => $this->content
+        ], $templateKey);
+    }
+
+    public function nodeConverter(): \Closure
+    {
+        return function (array $node, int $level) {
+            if (isset($node['html'])) {
+                return $node['html'];
+            }
+            return $level ? $node : sprintf('<?php %s ?>', var_export($node, true));
+        };
     }
 
     /**
@@ -141,14 +157,14 @@ class Template
      * Start template block
      * @noinspection PhpUnused
      */
-    protected function tBlock(array $args): void
+    private function tBlock(array $args): void
     {
         if (!isset($args['name'])) {
             throw new RenderingException(
                 sprintf(
                     'Missing &lt;block&gt; "name" attribute in %s:%d',
                     $this->getFilePath(),
-                    $args['_meta']['tag_pos']
+                    $args['_tag_pos']
                 )
             );
         }
@@ -161,7 +177,7 @@ class Template
      * Close template block
      * @noinspection PhpUnused
      */
-    protected function tEndblock(): void
+    private function tEndBlock(): void
     {
         $currentBlock = array_pop($this->blocksOpened);
 
@@ -179,68 +195,75 @@ class Template
     }
 
     /** @noinspection PhpUnused */
-    protected function tExtension(array $args): void
+    private function tExtension(array $args): void
     {
         echo $this->view->extension($args['name']);
+    }
+
+    private function tPage(array $args): string
+    {
+        return implode(array_keys($args, null));
+    }
+
+    private function tDate(array $args): void
+    {
+        ob_start();
+        echo 'date[';
+    }
+
+    private function tEndDate(array $args): string
+    {
+        return ob_get_clean() . ']';
+    }
+
+    private function tIterate(array $args): string
+    {
+        return 'iterate[';
+    }
+
+    private function tEndIterate(array $args): string
+    {
+        return ']';
+    }
+
+    private function tRaw(array $args): void
+    {
+        ob_start();
+        echo 'raw[';
+    }
+
+    private function tEndRaw(array $args): string
+    {
+        return ob_get_clean() . ']';
     }
 
     /**
      * Include another template into current template
      * @noinspection PhpUnused
      */
-    protected function tInclude(array $args): void
+    private function tInclude(array $args): void
     {
-        echo $this->view->load($args['name'])->render($this->vars + array_diff_key($args, array_flip(['_meta', 'name'])));
+        if (!$args['_void']) {
+            ob_start();
+            return;
+        }
+        echo $this->view->load($args['name'])->render(
+            $this->vars + array_diff_key($args, array_flip(['_tag_pos', '_void', 'name']))
+        );
+    }
+
+    private function tEndInclude(array $args): void
+    {
+        $templateName = trim(ob_get_clean());
+        echo $this->view->load($templateName)->render($this->vars);
     }
 
     /**
      * Extend template with current one
      * @noinspection PhpUnused
      */
-    protected function tExtends(array $args): void
+    private function tExtends(array $args): void
     {
         $this->parent($this->view->load($args['name']));
-    }
-
-    /**
-     * Invoke a partial template for each element of given iterable data
-     * @noinspection PhpUnused
-     */
-    protected function tRepeat(array $args): string
-    {
-        var_dump($args);
-        $collection = $args['for'] ?? throw new RenderingException(
-            sprintf(
-                'Missing &lt;repeat&gt; "for" attribute data in %s:%d',
-                $this->getFilePath(),
-                $args['_meta']['tag_pos']
-            )
-        );
-
-        if (!is_iterable($collection)) {
-            throw new RenderingException(
-                sprintf(
-                    '&lt;repeat&gt; "for" attribute value is not iterable in %s:%d',
-                    $this->getFilePath(),
-                    $args['_meta']['tag_pos']
-                )
-            );
-        }
-
-        if (!count($collection)) {
-            return $args['alt'] ?? '';
-        }
-
-        $tpl = $this->view->load($args['name']);
-        $html = '';
-
-        foreach (array_values($collection) as $index => $item) {
-            $html .= $tpl->render([
-                '$index' => $index,
-                ($args['as'] ?? 'item') => $item
-            ]);
-        }
-
-        return $html;
     }
 }

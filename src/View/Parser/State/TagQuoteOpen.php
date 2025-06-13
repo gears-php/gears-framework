@@ -16,16 +16,15 @@ class TagQuoteOpen extends State
         return $this->quoteSymbol;
     }
 
-    public function getProcessedBuffer(): string
-    {
-        return '';
-    }
-
-    public function run($char, Parser $parser)
+    public function process($char, Parser $parser): void
     {
         // empty quotes
         if ($parser->isChar('\'\'', -1) || $parser->isChar('""', -1)) {
             $parser->switchState(TagQuoteClose::class);
+        } elseif ($parser->isChar('<?=', 1)) {
+            $this->addBuffer($char);
+            $parser->nextChars(4);
+            $parser->switchState(Php::class);
         } elseif ('\'' == $char || '"' == $char) {
             $this->quoteSymbol = $char;
             $this->addBuffer($char);

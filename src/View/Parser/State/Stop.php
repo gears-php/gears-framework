@@ -2,17 +2,19 @@
 /**
  * @author Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
+
 namespace Gears\Framework\View\Parser\State;
 
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser;
 
-class Read extends State
+/**
+ * Stop state signals tag processing finish
+ */
+class Stop extends State
 {
-    public function run($char, Parser $parser)
+    public function process($char, Parser $parser): void
     {
-        if ('<' == $char) {
-            $parser->switchState(Tag::class);
-        }
+        $parser->nextChar();
     }
 }

@@ -2,6 +2,7 @@
 /**
  * @author Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
+
 namespace Gears\Framework\View\Parser\State;
 
 use Gears\Framework\View\Parser\State;
@@ -10,35 +11,41 @@ use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 
 class Tag extends State
 {
-    public function getProcessedBuffer(): string
-    {
-        $buffer = ltrim($this->getBuffer(), '<');
+    /** @var bool if this is a closing tag */
+    private bool $closingTag = false;
 
-        $closingTagPrefix = '';
-        if (str_starts_with($buffer, '/')) {
-            $buffer = ltrim($buffer, '/');
-            $closingTagPrefix = 'end';
-        }
-        return sprintf('<?= $this->t%s(["_meta" => ["tag_pos" => %d], ', ucfirst($closingTagPrefix . $buffer), $this->parser()->getPosition());
+
+    public function clear(): void
+    {
+        parent::clear();
+        $this->closingTag = false;
     }
 
     /**
      * @throws InvalidCharacter
+     * {@inheritDoc}
      */
-    public function run($char, Parser $parser)
+    public function process($char, Parser $parser): void
     {
         if ('<' == $char) {
-            $this->addBuffer($char);
+            return;
         } elseif ($parser->isChar('</', -1)) {
-            $this->addBuffer('/');
+            $this->closingTag = true;
         } elseif (' ' == $char) {
             $parser->switchState(TagSpace::class);
         } elseif ('/' == $char || '>' == $char) {
-            $parser->switchState(TagClose::class);
+            $parser->switchState(TagEnd::class);
         } elseif (preg_match('/[a-z0-9]/', $char)) {
             $this->addBuffer($char);
         } else {
-            $this->invalidCharacterException();
+            $this->invalidCharacterException($parser);
         }
+    }
+
+    public function getNode(): array
+    {
+        return parent::getNode() + [
+                'closing' => $this->closingTag,
+            ];
     }
 }

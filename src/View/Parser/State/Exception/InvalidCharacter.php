@@ -14,11 +14,15 @@ namespace Gears\Framework\View\Parser\State\Exception;
  */
 class InvalidCharacter extends \Exception
 {
+    /**
+     * @throws \ReflectionException
+     */
     public function __construct($stateClass, $char, $pos, $file = '')
     {
-        parent::__construct(sprintf('%s found invalid character "%s" in %s:%s',
+        parent::__construct(sprintf('%s found invalid character "%s" (ASCII 0x%02x) in %s:%s',
             (new \ReflectionClass($stateClass))->getShortName(),
             $char,
+            ord($char),
             $file,
             $pos,
         ));

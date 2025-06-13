@@ -2,6 +2,7 @@
 /**
  * @author Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
+
 namespace Gears\Framework\View\Parser;
 
 use Gears\Framework\View\Parser;
@@ -10,8 +11,7 @@ use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 abstract class State
 {
     protected string $buffer = '';
-    protected Parser $parser;
-    protected ?State $prevState;
+    protected array $node = [];
 
     /**
      * Add character to the state buffer
@@ -21,28 +21,21 @@ abstract class State
         $this->buffer .= $char;
     }
 
-    /**
-     * Get state buffer
-     */
-    public function getBuffer(): string
+    public function getNode(): array
     {
-        return $this->buffer;
+        return [
+            'type' => get_called_class(),
+            'buffer' => $this->buffer,
+        ];
     }
 
     /**
-     * Get processed buffer
+     * Clear state by emptying all temp data
      */
-    public function getProcessedBuffer(): string
-    {
-        return $this->getBuffer();
-    }
-
-    /**
-     * Clean buffer
-     */
-    public function cleanBuffer(): void
+    public function clear(): void
     {
         $this->buffer = '';
+        $this->node = [];
     }
 
     /**
@@ -54,34 +47,16 @@ abstract class State
     }
 
     /**
-     * @return Parser
-     */
-    public function parser(): Parser
-    {
-        return $this->parser;
-    }
-
-    public function setPrevState(State $state = null): void
-    {
-        $this->prevState = $state;
-    }
-
-    /**
      * @throws InvalidCharacter
      */
-    public function invalidCharacterException()
+    public function invalidCharacterException(Parser $parser)
     {
         throw new InvalidCharacter(
             get_called_class(),
-            $this->parser()->getChar(),
-            $this->parser()->getPosition(),
-            $this->parser()->getFile()
+            $parser->getChar(),
+            implode(':', $parser->getCharPosition()),
+            $parser->getFile()
         );
-    }
-
-    public function __construct(Parser $parser)
-    {
-        $this->parser = $parser;
     }
 
     public function getName(): string
@@ -92,5 +67,5 @@ abstract class State
     /**
      * Process current input stream character
      */
-    abstract public function run($char, Parser $parser);
+    abstract public function process($char, Parser $parser): void;
 }

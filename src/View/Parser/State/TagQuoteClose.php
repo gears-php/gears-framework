@@ -10,26 +10,21 @@ use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 
 class TagQuoteClose extends State
 {
-    public function getProcessedBuffer(): string
-    {
-        return ',';
-    }
-
     /**
      * @throws InvalidCharacter
      */
-    public function run($char, Parser $parser)
+    public function process($char, Parser $parser): void
     {
         if ('\'' == $char || '"' == $char) {
             $this->addBuffer($char);
         } elseif (' ' == $char) {
             $parser->switchState(TagSpace::class);
         } elseif ('/' == $char || '>' == $char) {
-            $parser->switchState(TagClose::class);
+            $parser->switchState(TagEnd::class);
         } elseif (preg_match('/\w/', $char)) {
             $parser->switchState(TagAttr::class);
         } else {
-            $this->invalidCharacterException();
+            $this->invalidCharacterException($parser);
         }
     }
 }

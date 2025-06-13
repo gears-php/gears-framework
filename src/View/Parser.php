@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @author: Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
@@ -7,125 +8,193 @@ declare(strict_types=1);
 namespace Gears\Framework\View;
 
 use Gears\Framework\View\Parser\State;
-use Gears\Framework\View\Parser\State\Read;
-use Gears\Framework\View\Parser\State\TagClose;
+use Gears\Framework\View\Parser\State\Stop;
+use Gears\Framework\View\Parser\State\Php;
+use Gears\Framework\View\Parser\State\Tag;
+use Gears\Framework\View\Parser\State\TagAttr;
+use Gears\Framework\View\Parser\State\TagAttrValue;
+use Gears\Framework\View\Parser\State\TagEnd;
 
-class Parser
+final class Parser
 {
     /**
      * Path to initial file
      */
-    protected string $file;
+    private string $file;
 
     /**
      * Input stream
      */
-    protected string $stream = '';
+    private string $stream = '';
 
     /**
-     * Parsed template output stream
+     * Nodes with all parsed tags (as array structures) and plain HTML parts (as strings)
      */
-    protected string $buffer = '';
+    private array $nodes = [];
+
+    /** Index of current tag node in nodes collection */
+    private int $nodeCounter = 0;
 
     /**
      * Current stream character offset
      */
-    protected int $offset = 0;
+    private int $offset = 0;
 
-    /**
-     * Character at current stream offset
-     */
-    protected string $char = '';
-
-    protected array $states = [];
+    /** @var State[] */
+    private array $states = [];
 
     /**
      * Current state object
      */
-    protected ?State $currentState = null;
-
-    protected int $offsetCorrection = 0;
+    private ?State $currentState = null;
 
     /**
      * List of all special template language tags to be processed
      */
-    protected array $tags = ['extends', 'block', 'include', 'repeat', 'extension'];
+    private array $tags = [
+        'extends',
+        'block',
+        'include',
+//        'repeat',
+        'extension',
+        'raw',
+        'page', // todo custom app-level tag to implement
+        'date',
+        'iterate'
+    ];
 
-    /**
-     * Initialize parser with a new stream
-     */
-    public function init(string $stream): void
+    public function __construct(private readonly ?\Closure $converter = null)
     {
-        $this->stream = str_replace(["\r\n", "\r"], "\n", $stream);
-        $this->offsetCorrection = 0;
     }
 
     /**
-     * Process template tag turning it into corresponding template method call
+     * Read file and process its content to the template meta structure
      */
-    public function processTag(int $startOffset): void
-    {
-        // take into account offset correction from previous processed tag
-        $startOffset += $this->offsetCorrection;
-        $this->offset = $startOffset - 1;
-        $this->buffer = '';
-
-        $this->switchState(Read::class);
-
-        while (!$this->currentState instanceof TagClose && $this->nextChar()) {
-            $this->state($this->currentState->getName());
-        }
-
-        $this->switchState(Read::class);
-
-        // clean (initial) tag length
-        $tagLength = $this->offset - $startOffset + 1;
-        // processed tag buffer length
-        $bufferLength = strlen($this->getBuffer());
-        // replace initial tag with processed tag code
-        $this->stream = substr_replace($this->stream, $this->getBuffer(), $startOffset, $tagLength);
-        // adjust offset correction for next tag processing iteration
-        $this->offsetCorrection += $bufferLength - $tagLength;
-    }
-
-    /**
-     * Read file and process its content
-     * @param string $filePath Full path to the file to be processed
-     * @return string Processed content
-     */
-    public function parseFile(string $filePath): string
+    public function parseFile(string $filePath): array
     {
         $this->file = $filePath;
         return $this->parse(file_get_contents($filePath));
     }
 
     /**
-     * Process input stream by parsing special tags of template language and return processed one.
+     * Process input stream by parsing special tags of template language
+     * and giving result node structure with tags metadata and raw html parts.
      */
-    public function parse(string $stream): string
+    public function parse(string $stream): array
     {
-        // initialize parser with an input stream
-        $this->init($stream);
-
-        // remove all php code inclusions
-        $cleanStream = preg_replace_callback('/(<\?(?:.*?)\?>)/s', function ($phpcode) {
-            return str_repeat(' ', strlen($phpcode[0]));
-        }, $this->stream);
+        $this->stream = str_replace(["\r\n", "\r"], "\n", $stream);
 
         // capture all template tags start positions
         preg_match_all(
             sprintf('/<\/?(?:%s)[ >]/', implode('|', $this->tags)),
-            $cleanStream,
+            $this->stream,
             $tagOffsets,
             PREG_OFFSET_CAPTURE
         );
-        unset($cleanStream);
+
+        ini_set('xdebug.var_display_max_depth', 15);
 
         foreach ($tagOffsets[0] as $tagOffset) {
+            $this->processHTML($tagOffset[1] - $this->offset);
             $this->processTag($tagOffset[1]);
         }
 
-        return $this->stream;
+        $this->processHTML(strlen($this->stream) - $this->offset);
+
+        return $this->reduce($this->nodes);
+    }
+
+    public function processHTML(int $length): void
+    {
+        $html = trim(substr($this->stream, $this->offset, $length));
+        if ($html) {
+            $this->nodes[$this->nodeCounter++] = ['html' => $html];
+        }
+    }
+
+    /** Reduce plain array of nodes into nested structure of template tags and raw html chunks */
+    public function reduce(array &$nodes, int $reduceLevel = 0): array
+    {
+        static $openedTags = [];
+        $resultNodes = [];
+        while ($node = array_splice($nodes, 0, 1)) {
+            $node = end($node);
+            if (isset($node['tag']) && $node['closing']) {
+                $oTag = array_pop($openedTags);
+                if ($oTag != $node['tag']) {
+                    throw new \RuntimeException(
+                        sprintf(
+                            'Missing opening tag for &lt;/%s&gt; tag at %s, line %d',
+                            $node['tag'],
+                            $this->file,
+                            $node['tag_pos'][0]
+                        )
+                    );
+                }
+                return $resultNodes;
+            }
+            if (isset($node['tag']) && !$node['closing'] && !$node['void']) {
+                $openedTags[] = $node['tag'];
+                $node['child_nodes'] = $this->reduce($nodes, $reduceLevel + 1);
+            }
+            $resultNodes[] = $this->converter ? call_user_func($this->converter, $node, $reduceLevel) : $node;
+        }
+
+        return $resultNodes;
+    }
+
+    /**
+     * Process template tag converting it into node structure with all tag info
+     */
+    public function processTag(int $startOffset): void
+    {
+        $this->offset = $startOffset;
+        $this->switchState(Tag::class);
+        while (!$this->currentState instanceof Stop && $this->nextChar()) {
+            $this->currentState->process($this->getChar(), $this);
+        }
+        $this->nodeCounter++;
+    }
+
+    /**
+     * Run specific state for further stream parsing.
+     */
+    public function switchState(string $stateName): void
+    {
+        if ($this->currentState) {
+            $node = $this->currentState->getNode();
+            match (get_class($this->currentState)) {
+                Tag::class => $this->nodes[$this->nodeCounter] = [
+                    'tag' => $node['buffer'],
+                    'closing' => $node['closing'],
+                    'tag_pos' => $this->getCharPosition(-strlen($node['buffer'])),
+                ],
+                TagEnd::class => $this->nodes[$this->nodeCounter]['void'] = $node['void'],
+                TagAttr::class => $this->nodes[$this->nodeCounter]['attrs'][$node['buffer']] = null,
+                TagAttrValue::class, Php::class => $this->nodes[$this->nodeCounter]['attrs'][array_key_last(
+                    $this->nodes[$this->nodeCounter]['attrs']
+                )] = $node['buffer'],
+                default => null
+            };
+        }
+
+        $this->currentState = $this->getState($stateName);
+        $this->currentState->clear();
+        $this->currentState->process($this->getChar(), $this);
+    }
+
+    /**
+     * Get state by a given state name
+     * @template T of State
+     * @param class-string<T> $stateClass
+     * @return T
+     */
+    public function getState(string $stateClass): State
+    {
+        if (!isset($this->states[$stateClass])) {
+            $this->states[$stateClass] = new $stateClass();
+        }
+        return $this->states[$stateClass];
     }
 
     /**
@@ -136,12 +205,15 @@ class Parser
         return $this->offset;
     }
 
-    public function getPosition(): string
+    /**
+     * Get line and offset of currently processed steam character
+     */
+    public function getCharPosition(int $offsetCorrection = 0): array
     {
-        $chunk = substr($this->stream, 0, $this->offset);
+        $chunk = substr($this->stream, 0, $this->offset + $offsetCorrection);
         $line = substr_count($chunk, "\n") + 1;
-        $lineOffset = $this->offset - strrpos($chunk, "\n");
-        return $line . ':' . $lineOffset;
+        $lineOffset = $this->offset + $offsetCorrection - strrpos($chunk, "\n");
+        return [$line, $lineOffset];
     }
 
     /**
@@ -149,7 +221,7 @@ class Parser
      */
     public function nextChar(): string
     {
-        return $this->char = ($this->stream[++$this->offset] ?? '');
+        return $this->stream[++$this->offset] ?? '';
     }
 
     /**
@@ -172,7 +244,7 @@ class Parser
      */
     public function getChar(): string
     {
-        return $this->char;
+        return $this->stream[$this->offset];
     }
 
     /**
@@ -201,65 +273,10 @@ class Parser
     }
 
     /**
-     * Run state with a given name
-     */
-    public function state(string $stateName): void
-    {
-        $this->getState($stateName)->run($this->getChar(), $this);
-    }
-
-    /**
-     * Switch to a new state
-     */
-    public function switchState(string $stateName): void
-    {
-        if ($this->currentState) {
-            $this->addBuffer($this->currentState->getProcessedBuffer());
-        }
-
-        $newState = $this->getState($stateName);
-        $newState->setPrevState($this->currentState);
-        $newState->cleanBuffer();
-
-        $this->currentState = $newState;
-        $this->state($this->currentState->getName());
-    }
-
-    /**
-     * Get state by a given state name
-     * @template T of State
-     * @param class-string<T> $stateClass
-     * @return T
-     */
-    public function getState(string $stateClass): State
-    {
-        if (!isset($this->states[$stateClass])) {
-            $this->states[$stateClass] = new $stateClass($this);
-        }
-        return $this->states[$stateClass];
-    }
-
-    /**
      * Return the name of input stream file
      */
     public function getFile(): string
     {
         return $this->file;
-    }
-
-    /**
-     * Return final output
-     */
-    public function getBuffer(): string
-    {
-        return $this->buffer;
-    }
-
-    /**
-     * Add parser buffer
-     */
-    public function addBuffer(string $chars): void
-    {
-        $this->buffer .= $chars;
     }
 }

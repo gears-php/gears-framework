@@ -39,7 +39,7 @@ class View
     /**
      * Cache implementation instance
      */
-    private ?CacheInterface $cache;
+    private ?CacheInterface $cache = null;
 
     /**
      * View extensions
@@ -139,7 +139,8 @@ class View
             $filePath = $filePath . DIRECTORY_SEPARATOR . $fileName;
 
             if (is_file($filePath)) {
-                $tpl = new Template($filePath, $this);
+                $this->templates[$alias] = $tpl = new Template($this);
+                $tpl->compile($filePath);
                 break;
             }
         }
