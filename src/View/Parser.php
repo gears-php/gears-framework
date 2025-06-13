@@ -8,7 +8,7 @@ namespace Gears\Framework\View;
 
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser\State\Read;
-use Gears\Framework\View\Parser\State\TagClose;
+use Gears\Framework\View\Parser\State\TagEnd;
 
 class Parser
 {
@@ -49,7 +49,8 @@ class Parser
     /**
      * List of all special template language tags to be processed
      */
-    protected array $tags = ['extends', 'block', 'include', 'repeat', 'extension'];
+    protected array $tags = ['extends', 'block', 'include', 'repeat', 'extension',
+        'raw', 'page', 'date', 'iterate'];
 
     /**
      * Initialize parser with a new stream
@@ -72,7 +73,7 @@ class Parser
 
         $this->switchState(Read::class);
 
-        while (!$this->currentState instanceof TagClose && $this->nextChar()) {
+        while (!$this->currentState instanceof TagEnd && $this->nextChar()) {
             $this->state($this->currentState->getName());
         }
 
@@ -108,8 +109,8 @@ class Parser
         $this->init($stream);
 
         // remove all php code inclusions
-        $cleanStream = preg_replace_callback('/(<\?(?:.*?)\?>)/s', function ($phpcode) {
-            return str_repeat(' ', strlen($phpcode[0]));
+        $cleanStream = preg_replace_callback('/(<\?.*?\?>)/s', function ($phpCode) {
+            return str_repeat(' ', strlen($phpCode[0]));
         }, $this->stream);
 
         // capture all template tags start positions

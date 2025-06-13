@@ -25,7 +25,7 @@ class TagSpace extends State
         } elseif (preg_match('/\w/', $char)) {
             $parser->switchState(TagAttr::class);
         } elseif ('/' == $char || '>' == $char) {
-            $parser->switchState(TagClose::class);
+            $parser->switchState(TagEnd::class);
         } else {
             $this->invalidCharacterException();
         }

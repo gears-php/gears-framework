@@ -2,17 +2,23 @@
 /**
  * @author Denis Krasilnikov <denis.krasilnikov@gears.com>
  */
+
 namespace Gears\Framework\View\Parser\State;
 
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser;
 use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
 
-class TagClose extends State
+class TagEnd extends State
 {
+    /** @var bool if this is self-closing (empty) tag */
+    private bool $void = false;
+
     public function getProcessedBuffer(): string
     {
-        return ']);?>';
+        $buff = sprintf('"_void" => %b]);?>', $this->void);
+        $this->void = false;
+        return $buff;
     }
 
     /**
@@ -21,12 +27,13 @@ class TagClose extends State
     public function run($char, Parser $parser)
     {
         if ('/' == $char) {
-            $this->addBuffer($char);
             $char = $parser->nextChar();
+            $this->void = true;
         }
         if ('>' == $char) {
-            $this->addBuffer($char);
-        } elseif ($parser->isChar('>', -1)) {
+            return;
+        }
+        if ($parser->isChar('>', -1)) {
             $parser->switchState(Read::class);
         } else {
             $this->invalidCharacterException();

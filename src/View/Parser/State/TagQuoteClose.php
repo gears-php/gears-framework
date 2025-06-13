@@ -25,7 +25,7 @@ class TagQuoteClose extends State
         } elseif (' ' == $char) {
             $parser->switchState(TagSpace::class);
         } elseif ('/' == $char || '>' == $char) {
-            $parser->switchState(TagClose::class);
+            $parser->switchState(TagEnd::class);
         } elseif (preg_match('/\w/', $char)) {
             $parser->switchState(TagAttr::class);
         } else {
