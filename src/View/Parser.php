@@ -49,21 +49,10 @@ final class Parser
     private ?State $currentState = null;
 
     /**
-     * List of all special template language tags to be processed
+     * @param array $tags List of all special template language tags to process
+     * @param \Closure|null $converter Special function to apply for each found template tag
      */
-    private array $tags = [
-        'extends',
-        'block',
-        'include',
-//        'repeat',
-        'extension',
-        'raw',
-        'page', // todo custom app-level tag to implement
-        'date',
-        'iterate'
-    ];
-
-    public function __construct(private readonly ?\Closure $converter = null)
+    public function __construct(private readonly array $tags, private readonly ?\Closure $converter = null)
     {
     }
 
@@ -92,7 +81,7 @@ final class Parser
             PREG_OFFSET_CAPTURE
         );
 
-        ini_set('xdebug.var_display_max_depth', 15);
+//        ini_set('xdebug.var_display_max_depth', 15);
 
         foreach ($tagOffsets[0] as $tagOffset) {
             $this->processHTML($tagOffset[1] - $this->offset);

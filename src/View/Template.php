@@ -17,6 +17,7 @@ class Template
     protected ?self $parent = null;
     protected array $blocks = [];
     protected array $blocksOpened = [];
+    private array $tags = ['extend', 'extension', 'include', 'iterate', 'block', 'date', 'raw', 'page'];
 
     /**
      * Process template file
@@ -51,7 +52,7 @@ class Template
             return;
         }
 
-        $this->content = implode('', (new Parser($this->nodeConverter()))->parseFile($filePath));
+        $this->content = implode('', (new Parser($this->tags, $this->nodeConverter()))->parseFile($filePath));
 
         $cache?->set([
             'file' => $filePath,
@@ -59,13 +60,24 @@ class Template
         ], $templateKey);
     }
 
+    /**
+     * Special function passed to parser in order to convert found tag into compiled template chunk
+     * @return \Closure
+     */
     public function nodeConverter(): \Closure
     {
         return function (array $node, int $level) {
             if (isset($node['html'])) {
                 return $node['html'];
             }
-            return $level ? $node : sprintf('<?php %s ?>', var_export($node, true));
+
+            foreach ($node['child_nodes'] ?? [] as &$child) {
+                if (is_string($child)) {
+                    $child = (new Parser($this->tags, $this->nodeConverter()))->parse($child);
+                }
+            }
+
+            return $level ? $node : sprintf('<?php echo $this->renderTag(%s) ?>', var_export($node, true));
         };
     }
 
@@ -126,8 +138,8 @@ class Template
         }
 
         // we have decorator parent template
-        if ($this->parent()) {
-            return $this->parent()->setBlocks($this->blocks)->render();
+        if ($this->getParent()) {
+            return $this->getParent()->setBlocks($this->blocks)->render();
         } else {
             return $processed;
         }
@@ -146,11 +158,24 @@ class Template
     }
 
     /**
-     * Get or set decorator parent template
+     * Set parent template to extend
      */
-    private function parent(Template $tpl = null): ?Template
+    private function setParent(Template $template): void
     {
-        return $tpl ? $this->parent = $tpl : $this->parent;
+        $this->parent = $template;
+    }
+
+    /**
+     * Get parent template we extend
+     */
+    private function getParent(): ?Template
+    {
+        return $this->parent;
+    }
+
+    private function renderTag(): string
+    {
+        return '';
     }
 
     /**
@@ -194,76 +219,12 @@ class Template
         echo $this->blocks[$currentBlock];
     }
 
-    /** @noinspection PhpUnused */
-    private function tExtension(array $args): void
-    {
-        echo $this->view->extension($args['name']);
-    }
-
-    private function tPage(array $args): string
-    {
-        return implode(array_keys($args, null));
-    }
-
-    private function tDate(array $args): void
-    {
-        ob_start();
-        echo 'date[';
-    }
-
-    private function tEndDate(array $args): string
-    {
-        return ob_get_clean() . ']';
-    }
-
-    private function tIterate(array $args): string
-    {
-        return 'iterate[';
-    }
-
-    private function tEndIterate(array $args): string
-    {
-        return ']';
-    }
-
-    private function tRaw(array $args): void
-    {
-        ob_start();
-        echo 'raw[';
-    }
-
-    private function tEndRaw(array $args): string
-    {
-        return ob_get_clean() . ']';
-    }
-
-    /**
-     * Include another template into current template
-     * @noinspection PhpUnused
-     */
-    private function tInclude(array $args): void
-    {
-        if (!$args['_void']) {
-            ob_start();
-            return;
-        }
-        echo $this->view->load($args['name'])->render(
-            $this->vars + array_diff_key($args, array_flip(['_tag_pos', '_void', 'name']))
-        );
-    }
-
-    private function tEndInclude(array $args): void
-    {
-        $templateName = trim(ob_get_clean());
-        echo $this->view->load($templateName)->render($this->vars);
-    }
-
     /**
      * Extend template with current one
      * @noinspection PhpUnused
      */
     private function tExtends(array $args): void
     {
-        $this->parent($this->view->load($args['name']));
+        $this->setParent($this->view->load($args['name']));
     }
 }
