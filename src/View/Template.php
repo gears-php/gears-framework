@@ -61,7 +61,7 @@ final class Template
             return;
         }
 
-        $this->nodes = (new Parser($this->tags))->parseFile($filePath);
+        $this->nodes = (new Parser(array_keys($this->tags)))->parseFile($filePath);
         $cache?->set([
             'file' => $filePath,
             'nodes' => $this->nodes

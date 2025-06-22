@@ -73,7 +73,7 @@ final class Parser
 
         // capture all template tags start positions
         preg_match_all(
-            sprintf('/<\/?(?:%s)[ >]/', implode('|', array_keys($this->tags))),
+            sprintf('/<\/?(?:%s)[ >]/', implode('|', $this->tags)),
             $this->stream,
             $tagOffsets,
             PREG_OFFSET_CAPTURE
@@ -97,7 +97,7 @@ final class Parser
         }
     }
 
-    /** Reduce plain array of nodes into nested structure of template tags and raw html chunks */
+    /** Reduce plain array of nodes into nested structure */
     public function reduce(array &$nodes): array
     {
         static $openedTags = [];
