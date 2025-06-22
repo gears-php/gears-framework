@@ -11,8 +11,9 @@ final class Iterate extends AbstractTag
 {
     protected string $name = 'iterate';
 
-    public function render(array $attrs, array $childNodes, bool $isVoid): string
+    public function process(array $attrs, string $innerHTML, bool $isVoid): void
     {
         // TODO: Implement run() method.
+        echo '';
     }
 }

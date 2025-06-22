@@ -11,6 +11,13 @@ namespace Gears\Framework\View;
 
 use Gears\Framework\Cache\CacheInterface;
 use Gears\Framework\View\Extension\ExtensionInterface;
+use Gears\Framework\View\Tag\Block;
+use Gears\Framework\View\Tag\Date;
+use Gears\Framework\View\Tag\Extend;
+use Gears\Framework\View\Tag\Extension;
+use Gears\Framework\View\Tag\IncludeTag;
+use Gears\Framework\View\Tag\Iterate;
+use Gears\Framework\View\Tag\Raw;
 use RuntimeException;
 
 /**
@@ -34,7 +41,7 @@ class View
     /**
      * Template files extension
      */
-    private string $templateFileExt = '.html.php';
+    private string $templateFileExt = '.html';
 
     /**
      * Cache implementation instance
@@ -49,11 +56,26 @@ class View
     /** Custom functions */
     private array $functions = [];
 
+    /** All supported template tags */
+    private array $tags = [
+        Block::class,
+        Date::class,
+        Extend::class,
+        Extension::class,
+        IncludeTag::class,
+        Iterate::class,
+        Raw::class,
+    ];
+
     /** "Global" variables. Are passed for all templates */
     public array $vars = [];
 
-    public function init(mixed $templates = null, array $extensions = [], CacheInterface $cache = null): static
-    {
+    public function init(
+        mixed $templates = null,
+        array $extensions = [],
+        CacheInterface $cache = null,
+        $tags = [],
+    ): static {
         // setup template file path(s)
         if (!empty($templates)) {
             if (is_string($tpl = $templates)) {
@@ -73,6 +95,8 @@ class View
                 $this->addExtension($extension);
             }
         }
+
+        array_push($this->tags, ...$tags);
 
         return $this;
     }
@@ -140,7 +164,7 @@ class View
 
             if (is_file($filePath)) {
                 $this->templates[$alias] = $tpl = new Template($this);
-                $tpl->compile($filePath);
+                $tpl->compile($filePath, $this->tags);
                 break;
             }
         }

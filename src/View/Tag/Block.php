@@ -12,8 +12,10 @@ final class Block extends AbstractTag
 {
     protected string $name = 'block';
 
-    public function render(array $attrs, array $childNodes, bool $isVoid): string
+    public function process(array $attrs, string $innerHTML, bool $isVoid): void
     {
-        // TODO: Implement run() method.
+        $this->template->getParent()?->setBlockContent($attrs['name'], $innerHTML);
+
+        echo $this->template->getBlockContent($attrs['name']) ?: $innerHTML;
     }
 }

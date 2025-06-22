@@ -2,22 +2,25 @@
 
 namespace Gears\Framework\View;
 
+use Gears\Framework\View\Tag\AbstractTag;
+
 /**
  * Template is an object representation of specific template file
  *
  * @package    Gears\Framework
  * @subpackage View
  */
-class Template
+final class Template
 {
-    protected string $name = '';
-    protected string|array $path = '';
-    protected string $content = '';
-    protected array $vars = [];
-    protected ?self $parent = null;
-    protected array $blocks = [];
-    protected array $blocksOpened = [];
-    private array $tags = ['extend', 'extension', 'include', 'iterate', 'block', 'date', 'raw', 'page'];
+    private string $name = '';
+    private string|array $path = '';
+    private array $nodes;
+    private array $vars = [];
+    private ?self $parent = null;
+    private array $blocks = [];
+
+    /** @var array<string, AbstractTag> All registered tags as <name, object> */
+    private array $tags = [];
 
     /**
      * Process template file
@@ -31,7 +34,7 @@ class Template
      * @param string $filePath Full path to a template file
      * @throws \RuntimeException If template file not found
      */
-    public function compile(string $filePath): void
+    public function compile(string $filePath, array $tags): void
     {
         if (!is_file($filePath)) {
             throw new TemplateFileNotFoundException($filePath);
@@ -39,46 +42,30 @@ class Template
 
         $this->path = str_replace('/', DIRECTORY_SEPARATOR, dirname($filePath));
         $this->name = basename($filePath);
-
         $templateKey = md5($filePath);
+
+        // tags creation should go before cache
+        foreach ($tags as $tagClass) {
+            /** @var AbstractTag $t */
+            $t = new $tagClass($this);
+            $this->tags[$t->getName()] = $t;
+        }
 
         // try to use non-outdated compiled template from cache
         $cache = $this->view->getCache();
         if ($cache?->isValid($templateKey) && $cache->getTime($templateKey) > filemtime($filePath)) {
-            $this->content = $cache->get($templateKey)['content'] ?: null;
+            $this->nodes = $cache->get($templateKey)['nodes'] ?: null;
         }
 
-        if ($this->content) {
+        if (isset($this->nodes)) {
             return;
         }
 
-        $this->content = implode('', (new Parser($this->tags, $this->nodeConverter()))->parseFile($filePath));
-
+        $this->nodes = (new Parser($this->tags))->parseFile($filePath);
         $cache?->set([
             'file' => $filePath,
-            'content' => $this->content
+            'nodes' => $this->nodes
         ], $templateKey);
-    }
-
-    /**
-     * Special function passed to parser in order to convert found tag into compiled template chunk
-     * @return \Closure
-     */
-    public function nodeConverter(): \Closure
-    {
-        return function (array $node, int $level) {
-            if (isset($node['html'])) {
-                return $node['html'];
-            }
-
-            foreach ($node['child_nodes'] ?? [] as &$child) {
-                if (is_string($child)) {
-                    $child = (new Parser($this->tags, $this->nodeConverter()))->parse($child);
-                }
-            }
-
-            return $level ? $node : sprintf('<?php echo $this->renderTag(%s) ?>', var_export($node, true));
-        };
     }
 
     /**
@@ -97,6 +84,11 @@ class Template
         return $this->name;
     }
 
+    public function getView(): View
+    {
+        return $this->view;
+    }
+
     /**
      * Get path to the template file including filename itself
      */
@@ -104,16 +96,6 @@ class Template
     {
         return $this->path . DIRECTORY_SEPARATOR . $this->name;
     }
-
-    /**
-     * Set template blocks content
-     */
-    public function setBlocks(array $blocks): static
-    {
-        $this->blocks = $blocks + $this->blocks;
-        return $this;
-    }
-
 
     /**
      * Render template
@@ -126,7 +108,9 @@ class Template
 
         try {
             ob_start();
-            eval('?>' . $this->content);
+            foreach ($this->nodes as $node) {
+                $this->renderNode($node);
+            }
             $processed = ob_get_clean();
         } catch (\Throwable $e) {
             $bufferCount = ob_get_level();
@@ -137,9 +121,8 @@ class Template
             throw new RenderingException(sprintf('Template rendering error in %s', $this->getFilePath()), 0, $e);
         }
 
-        // we have decorator parent template
         if ($this->getParent()) {
-            return $this->getParent()->setBlocks($this->blocks)->render();
+            return $this->getParent()->render();
         } else {
             return $processed;
         }
@@ -158,73 +141,52 @@ class Template
     }
 
     /**
-     * Set parent template to extend
+     * Template inheritance. Is achieved together with blocks functionality.
      */
-    private function setParent(Template $template): void
+    public function extends(string $name): void
     {
-        $this->parent = $template;
+        $this->parent = $this->view->load($name);
     }
 
     /**
      * Get parent template we extend
      */
-    private function getParent(): ?Template
+    public function getParent(): ?Template
     {
         return $this->parent;
     }
 
-    private function renderTag(): string
+    public function setBlockContent(string $blockName, string $content): void
     {
-        return '';
+        $this->blocks[$blockName] = $content;
     }
 
-    /**
-     * Start template block
-     * @noinspection PhpUnused
-     */
-    private function tBlock(array $args): void
+    public function getBlockContent(string $blockName): ?string
     {
-        if (!isset($args['name'])) {
-            throw new RenderingException(
-                sprintf(
-                    'Missing &lt;block&gt; "name" attribute in %s:%d',
-                    $this->getFilePath(),
-                    $args['_tag_pos']
-                )
-            );
+        return $this->blocks[$blockName] ?? null;
+    }
+
+    private function renderNode(array $node): void
+    {
+        if (isset($node['html'])) {
+            echo $node['html'];
+            return;
         }
 
-        $this->blocksOpened[] = $args['name'];
+        $tagName = $node['tag'];
+        if (!isset($this->tags[$tagName])) {
+            throw new \RuntimeException("Unknown template tag: $tagName");
+        }
+
         ob_start();
-    }
-
-    /**
-     * Close template block
-     * @noinspection PhpUnused
-     */
-    private function tEndBlock(): void
-    {
-        $currentBlock = array_pop($this->blocksOpened);
-
-        if (!$currentBlock) {
-            throw new RenderingException('&lt;/block&gt; used without opening counterpart');
+        foreach ($node['child_nodes'] ?? [] as $child) {
+            $this->renderNode($child);
         }
 
-        $block_content = ob_get_clean();
-
-        if (!isset($this->blocks[$currentBlock])) {
-            $this->blocks[$currentBlock] = $block_content;
-        }
-
-        echo $this->blocks[$currentBlock];
-    }
-
-    /**
-     * Extend template with current one
-     * @noinspection PhpUnused
-     */
-    private function tExtends(array $args): void
-    {
-        $this->setParent($this->view->load($args['name']));
+        $this->tags[$tagName]->process(
+            $node['attrs'] ?? [],
+            ob_get_clean(),
+            $node['void']
+        );
     }
 }

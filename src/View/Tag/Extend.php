@@ -10,10 +10,10 @@ namespace Gears\Framework\View\Tag;
 
 final class Extend extends AbstractTag
 {
-    protected string $name = 'extend';
+    protected string $name = 'extends';
 
-    public function render(array $attrs, array $childNodes, bool $isVoid): string
+    public function process(array $attrs, string $innerHTML, bool $isVoid): void
     {
-        // TODO: Implement run() method.
+        $this->template->extends($attrs['name']);
     }
 }

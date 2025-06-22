@@ -9,7 +9,6 @@ namespace Gears\Framework\View;
 
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser\State\Stop;
-use Gears\Framework\View\Parser\State\Php;
 use Gears\Framework\View\Parser\State\Tag;
 use Gears\Framework\View\Parser\State\TagAttr;
 use Gears\Framework\View\Parser\State\TagAttrValue;
@@ -50,9 +49,8 @@ final class Parser
 
     /**
      * @param array $tags List of all special template language tags to process
-     * @param \Closure|null $converter Special function to apply for each found template tag
      */
-    public function __construct(private readonly array $tags, private readonly ?\Closure $converter = null)
+    public function __construct(private readonly array $tags)
     {
     }
 
@@ -75,13 +73,11 @@ final class Parser
 
         // capture all template tags start positions
         preg_match_all(
-            sprintf('/<\/?(?:%s)[ >]/', implode('|', $this->tags)),
+            sprintf('/<\/?(?:%s)[ >]/', implode('|', array_keys($this->tags))),
             $this->stream,
             $tagOffsets,
             PREG_OFFSET_CAPTURE
         );
-
-//        ini_set('xdebug.var_display_max_depth', 15);
 
         foreach ($tagOffsets[0] as $tagOffset) {
             $this->processHTML($tagOffset[1] - $this->offset);
@@ -102,7 +98,7 @@ final class Parser
     }
 
     /** Reduce plain array of nodes into nested structure of template tags and raw html chunks */
-    public function reduce(array &$nodes, int $reduceLevel = 0): array
+    public function reduce(array &$nodes): array
     {
         static $openedTags = [];
         $resultNodes = [];
@@ -124,9 +120,9 @@ final class Parser
             }
             if (isset($node['tag']) && !$node['closing'] && !$node['void']) {
                 $openedTags[] = $node['tag'];
-                $node['child_nodes'] = $this->reduce($nodes, $reduceLevel + 1);
+                $node['child_nodes'] = $this->reduce($nodes);
             }
-            $resultNodes[] = $this->converter ? call_user_func($this->converter, $node, $reduceLevel) : $node;
+            $resultNodes[] = $node;
         }
 
         return $resultNodes;
@@ -160,7 +156,7 @@ final class Parser
                 ],
                 TagEnd::class => $this->nodes[$this->nodeCounter]['void'] = $node['void'],
                 TagAttr::class => $this->nodes[$this->nodeCounter]['attrs'][$node['buffer']] = null,
-                TagAttrValue::class, Php::class => $this->nodes[$this->nodeCounter]['attrs'][array_key_last(
+                TagAttrValue::class => $this->nodes[$this->nodeCounter]['attrs'][array_key_last(
                     $this->nodes[$this->nodeCounter]['attrs']
                 )] = $node['buffer'],
                 default => null

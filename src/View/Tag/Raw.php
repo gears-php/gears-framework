@@ -12,8 +12,8 @@ final class Raw extends AbstractTag
 {
     protected string $name = 'raw';
 
-    public function render(array $attrs, array $childNodes, bool $isVoid): string
+    public function process(array $attrs, string $innerHTML, bool $isVoid): void
     {
-        // TODO: Implement run() method.
+        echo htmlspecialchars_decode($innerHTML);
     }
 }

@@ -13,14 +13,12 @@ final class IncludeTag extends AbstractTag
 {
     protected string $name = 'include';
 
-    public function render(array $attrs, array $childNodes, bool $isVoid): string
+    public function process(array $attrs, string $innerHTML, bool $isVoid): void
     {
         if ($isVoid) {
-            return '// todo include';
+            echo $this->template->getView()->load($attrs['name'])->render();
+        } else {
+            echo $this->template->getView()->load($innerHTML)->render();
         }
-
-        return $this->view->load($attrs['name'])->render(
-            array_diff_key($attrs, array_flip(['name']))
-        );
     }
 }
