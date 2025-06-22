@@ -210,21 +210,6 @@ final class Parser
     }
 
     /**
-     * Get next $count of characters by moving forward on input stream.
-     */
-    public function nextChars(int $count = 1): string
-    {
-        $count >= 1 || throw new \ValueError('Given count must be 1 or greater.');
-        $chars = '';
-
-        while ($count-- && ($char = $this->nextChar())) {
-            $chars .= $char;
-        }
-
-        return $chars;
-    }
-
-    /**
      * Get current stream character
      */
     public function getChar(): string
