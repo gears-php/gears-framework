@@ -19,6 +19,15 @@ abstract class AbstractTag
         return $this->name;
     }
 
-    abstract public function process(array $attrs, string $innerHTML, bool $isVoid): void;
+    public function processNode(array $node): void
+    {
+        ob_start();
+        foreach ($node['child_nodes'] ?? [] as $child) {
+            $this->template->renderNode($child);
+        }
 
+        $this->process($node['attrs'] ?? [], ob_get_clean(), $node['void']);
+    }
+
+    abstract public function process(array $attrs, string $innerHTML, bool $isVoid): void;
 }

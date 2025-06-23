@@ -84,6 +84,16 @@ final class Template
         return $this->name;
     }
 
+    public function setVar(string $name, mixed $value): void
+    {
+        $this->vars[$name] = $value;
+    }
+
+    public function getVar(string $name): mixed
+    {
+        return $this->vars[$name] ?? null;
+    }
+
     public function getView(): View
     {
         return $this->view;
@@ -95,6 +105,21 @@ final class Template
     public function getFilePath(): string
     {
         return $this->path . DIRECTORY_SEPARATOR . $this->name;
+    }
+
+    public function renderNode(array $node): void
+    {
+        if (isset($node['html'])) {
+            echo $node['html'];
+            return;
+        }
+
+        $tagName = $node['tag'];
+        if (!isset($this->tags[$tagName])) {
+            throw new \RuntimeException("Unknown template tag: $tagName");
+        }
+
+        $this->tags[$tagName]->processNode($node);
     }
 
     /**
@@ -128,12 +153,6 @@ final class Template
         }
     }
 
-    /** Get template variable value */
-    public function __get(string $name): mixed
-    {
-        return $this->vars[$name] ?? null;
-    }
-
     /** Call view extension function */
     public function __call(string $name, array $args): mixed
     {
@@ -164,29 +183,5 @@ final class Template
     public function getBlockContent(string $blockName): ?string
     {
         return $this->blocks[$blockName] ?? null;
-    }
-
-    private function renderNode(array $node): void
-    {
-        if (isset($node['html'])) {
-            echo $node['html'];
-            return;
-        }
-
-        $tagName = $node['tag'];
-        if (!isset($this->tags[$tagName])) {
-            throw new \RuntimeException("Unknown template tag: $tagName");
-        }
-
-        ob_start();
-        foreach ($node['child_nodes'] ?? [] as $child) {
-            $this->renderNode($child);
-        }
-
-        $this->tags[$tagName]->process(
-            $node['attrs'] ?? [],
-            ob_get_clean(),
-            $node['void']
-        );
     }
 }
