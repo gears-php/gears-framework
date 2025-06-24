@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Gears\Framework\View\Tag;
 
-/**
- * @noinspection PhpUnused
- */
-
 final class Extend extends AbstractTag
 {
     protected string $name = 'extends';

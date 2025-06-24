@@ -6,8 +6,6 @@ namespace Gears\Framework\View\Tag;
 
 /**
  * Include another template into current template
- *
- * @noinspection PhpUnused
  */
 final class IncludeTag extends AbstractTag
 {

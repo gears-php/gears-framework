@@ -84,11 +84,13 @@ final class Template
         return $this->name;
     }
 
+    /** Set template variable value. Overrides any existing one having same name */
     public function setVar(string $name, mixed $value): void
     {
         $this->vars[$name] = $value;
     }
 
+    /** Get template variable value */
     public function getVar(string $name): mixed
     {
         return $this->vars[$name] ?? null;
@@ -107,6 +109,9 @@ final class Template
         return $this->path . DIRECTORY_SEPARATOR . $this->name;
     }
 
+    /**
+     * Render given template node
+     */
     public function renderNode(array $node): void
     {
         if (isset($node['html'])) {

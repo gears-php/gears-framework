@@ -6,10 +6,6 @@ namespace Gears\Framework\View\Tag;
 
 use Gears\Framework\View\RenderingException;
 
-/**
- * @noinspection PhpUnused
- */
-
 final class Iterate extends AbstractTag
 {
     protected string $name = 'iterate';
