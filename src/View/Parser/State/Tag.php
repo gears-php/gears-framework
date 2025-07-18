@@ -35,7 +35,7 @@ class Tag extends State
             $parser->switchState(TagSpace::class);
         } elseif ('/' == $char || '>' == $char) {
             $parser->switchState(TagEnd::class);
-        } elseif (preg_match('/[a-z0-9]/', $char)) {
+        } elseif (preg_match('/[a-z0-9_-]/', $char)) {
             $this->addBuffer($char);
         } else {
             $this->invalidCharacterException($parser);

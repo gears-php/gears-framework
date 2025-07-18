@@ -26,7 +26,7 @@ abstract class AbstractTag
             $this->template->renderNode($child);
         }
 
-        $this->process($node['attrs'] ?? [], ob_get_clean(), $node['void']);
+        $this->process($node['attrs'] ?? [], trim(ob_get_clean()), $node['void']);
     }
 
     abstract public function process(array $attrs, string $innerHTML, bool $isVoid): void;

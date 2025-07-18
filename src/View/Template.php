@@ -53,7 +53,7 @@ final class Template
 
         // try to use non-outdated compiled template from cache
         $cache = $this->view->getCache();
-        if ($cache?->isValid($templateKey) && $cache->getTime($templateKey) > filemtime($filePath)) {
+        if ($cache?->isValid($templateKey)) {
             $this->nodes = $cache->get($templateKey)['nodes'] ?: null;
         }
 
@@ -159,13 +159,13 @@ final class Template
     }
 
     /** Call view extension function */
-    public function __call(string $name, array $args): mixed
+    public function callFunction(string $name, array $args): mixed
     {
         return $this->view->callFunction($name, $args);
     }
 
     /**
-     * Template inheritance. Is achieved together with blocks functionality.
+     * Template inheritance. It is achieved together with blocks functionality.
      */
     public function extends(string $name): void
     {
