@@ -155,7 +155,7 @@ class Router
     public function generateUrl(string $routeName, array $params, ?Request $request = null): string
     {
         if (!isset($this->routes[$routeName])) {
-            throw new GenerateUrlException("Invalid route name: $routeName");
+            throw new GenerateUrlException("Invalid route name: $routeName", 500);
         }
 
         $url = strtr($this->routes[$routeName]->getMatchPattern(), array_flip(substr_replace(array_flip($params), ':', 0, 0)));
