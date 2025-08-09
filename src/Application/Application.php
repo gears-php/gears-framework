@@ -64,6 +64,8 @@ namespace Gears\Framework\Application {
                 $this->handleException($e);
             }
 
+            $this->services->set('config', $this->config);
+
             $this->setupServices();
             $this->setupDb();
             $this->setupActiveRecord();
