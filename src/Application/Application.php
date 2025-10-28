@@ -11,13 +11,16 @@ namespace Gears\Framework\Application {
     use Gears\Db\ActiveRecord\ActiveManager;
     use Gears\Db\Db;
     use Gears\Framework\Debug;
+    use Gears\Framework\Events\RequestEvent;
+    use Gears\Framework\Events\ResponseEvent;
     use Gears\Storage\Reader\Exception\FileNotFound;
     use Gears\Storage\Storage;
-    use Gears\Framework\Event\Dispatcher;
+    use Gears\Framework\Events\Dispatcher;
     use Gears\Framework\Application\Routing\Router;
     use Gears\Framework\Application\Routing\Exception\RouteNotFound;
     use Gears\Framework\Application\Controller\UndefinedActionException;
     use Gears\Framework\Application\Controller\ControllerResolver;
+    use Psr\EventDispatcher\EventDispatcherInterface;
     use Symfony\Component\HttpFoundation\JsonResponse;
     use Symfony\Component\HttpFoundation\Request;
     use Symfony\Component\HttpFoundation\Response;
@@ -30,13 +33,14 @@ namespace Gears\Framework\Application {
      * @subpackage App
      * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
      */
-    class Application extends Dispatcher
+    final class Application
     {
         private ?Request $request = null;
 
         public function __construct(
             private readonly Storage $config = new Storage(),
             private readonly ServiceContainer $services = new ServiceContainer(),
+            private readonly EventDispatcherInterface $dispatcher = new Dispatcher(),
             private readonly Router $router = new Router(),
         ) {
         }
@@ -65,6 +69,7 @@ namespace Gears\Framework\Application {
             }
 
             $this->services->set('config', $this->config);
+            $this->services->set('events', $this->dispatcher);
 
             $this->setupServices();
             $this->setupDb();
@@ -103,12 +108,19 @@ namespace Gears\Framework\Application {
          *
          * @throws RouteNotFound|UndefinedActionException
          */
-        public function handle(Request $request)
+        public function handle(Request $request): void
         {
             $this->services->set('request', $this->request = $request);
 
             if (!$route = $this->router->match($request)) {
                 throw new RouteNotFound($request->getMethod() . ' ' . $request->getPathInfo());
+            }
+
+            $this->dispatcher->dispatch($requestEvent = new RequestEvent($request, $route));
+
+            if ($requestEvent->getResponse()) {
+                $requestEvent->getResponse()->send();
+                return;
             }
 
             $controllerResolver = (new ControllerResolver($this->config['controllers_namespace_prefix']))->resolve(
@@ -127,9 +139,8 @@ namespace Gears\Framework\Application {
                 $response = new JsonResponse($response);
             }
 
-            $this->dispatch('app.response', [$response]);
+            $this->dispatcher->dispatch(new ResponseEvent($response));
             $response->send();
-            $this->dispatch('app.done');
         }
 
         public function getConfigDir(): string
@@ -148,7 +159,7 @@ namespace Gears\Framework\Application {
         /**
          * Exception handler function. Trying to display detailed exception info
          */
-        public function handleException(Throwable $e)
+        public function handleException(Throwable $e): void
         {
             $statusCode = $e instanceof HttpExceptionInterface ? $e->getCode() : 500;
 
@@ -196,7 +207,7 @@ namespace Gears\Framework\Application {
         }
 
         /** Setup services from special classes */
-        private function setupServices()
+        private function setupServices(): void
         {
             foreach (require_once $this->getAppDir() . '/src/setup.php' as $setupClass) {
                 (new $setupClass($this->config, $this->services))->setup();
@@ -204,7 +215,7 @@ namespace Gears\Framework\Application {
         }
 
         /** Setup Database service */
-        private function setupDb()
+        private function setupDb(): void
         {
             if ($this->services->has('db')) {
                 return;
@@ -216,7 +227,7 @@ namespace Gears\Framework\Application {
         }
 
         /** Setup Active Record service */
-        private function setupActiveRecord()
+        private function setupActiveRecord(): void
         {
             if ($this->services->has('arm')) {
                 return;
@@ -239,6 +250,7 @@ namespace Gears\Framework\Application\Helper {
     use Gears\Db\ActiveRecord\ActiveRecord;
     use Gears\Db\Db;
     use Gears\Framework\Application\Routing\Router;
+    use Symfony\Component\HttpFoundation\RedirectResponse;
     use Symfony\Component\HttpFoundation\Request;
 
     use Symfony\Component\HttpFoundation\Response;
@@ -273,12 +285,9 @@ namespace Gears\Framework\Application\Helper {
     /**
      * Redirect to another url location
      */
-    function Redirect(string $uri, int $responseCode = Response::HTTP_FOUND): Response
+    function Redirect(string $url, int $responseCode = Response::HTTP_FOUND): Response
     {
-        $response = (new Response())->setStatusCode($responseCode);
-        $response->headers->set('Location', '/' . ltrim($uri, ' /'));
-
-        return $response;
+        return new RedirectResponse($url, $responseCode);
     }
 
     /** @noinspection PhpIncompatibleReturnTypeInspection */
