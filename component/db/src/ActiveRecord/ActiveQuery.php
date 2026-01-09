@@ -130,4 +130,13 @@ class ActiveQuery extends Query
 
         return array_values($records);
     }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    public function order(array|string $field, string $tableAlias = '', string $sort = self::ASC): static
+    {
+        return parent::order($field, $tableAlias ?: $this->getTableName(), $sort);
+    }
 }
