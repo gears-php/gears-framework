@@ -96,6 +96,12 @@ final class Template
         return $this->vars[$name] ?? null;
     }
 
+    /** Get all template variables */
+    public function getVars(): array
+    {
+        return $this->vars;
+    }
+
     public function getView(): View
     {
         return $this->view;

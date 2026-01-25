@@ -14,9 +14,9 @@ final class IncludeTag extends AbstractTag
     public function process(array $attrs, string $innerHTML, bool $isVoid): void
     {
         if ($isVoid) {
-            echo $this->template->getView()->load($attrs['name'])->render();
+            echo $this->template->getView()->load($attrs['name'])->render($this->template->getVars());
         } else {
-            echo $this->template->getView()->load($innerHTML)->render();
+            echo $this->template->getView()->load($innerHTML)->render($this->template->getVars());
         }
     }
 }

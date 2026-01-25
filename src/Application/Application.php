@@ -306,12 +306,18 @@ namespace Gears\Framework\Application\Helper {
     /**
      * @template T of ActiveRecord
      * @param class-string<T> $class
+     * @param mixed $id
      * @return T
      */
-    function Model(string $class): ActiveRecord
+    function Model(string $class, mixed $id = null): ActiveRecord
     {
         /** @var ActiveManager $manager */
         $manager = _container()->get('arm');
+
+        if ($id !== null) {
+            return $manager->find($class, $id);
+        }
+
         return $manager->createRecord($class);
     }
 }
