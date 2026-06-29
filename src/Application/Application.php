@@ -161,9 +161,12 @@ namespace Gears\Framework\Application {
          */
         public function handleException(Throwable $e): void
         {
+            error_log((string)$e);
+
             $statusCode = $e instanceof HttpExceptionInterface ? $e->getCode() : 500;
 
             if (!Debug::enabled()) {
+                header('Content-Type: text/html; charset=UTF-8');
                 http_response_code($statusCode);
                 echo "<h1>Oops! An Error Occurred</h1><h2>The server returned $statusCode code</h2>";
 
