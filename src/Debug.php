@@ -1,162 +1,77 @@
 <?php
-/**
- * @copyright For the full copyright and license information, please view the LICENSE files included in this source code.
- */
 declare(strict_types=1);
 
 namespace Gears\Framework;
 
-/**
- * @package    Gears\Framework
- * @subpackage Debug
- * @author    Denis Krasilnikov <denis.krasilnikov@gears.com>
- */
 class Debug
 {
-    private const SCRIPT_LABEL = '__SCRIPT TIME__';
-
-    /**
-     * Patterns for preg replacements
-     */
-    private static array $pattern = [
-        "/<br\s?\/>/", // <br /> tag
-        "/<\/?\w+>/i" // other tags
-    ];
-
-    /**
-     * Replacement values for different types of debug info cleaning
-     *
-     * default - no cleaning of debug info
-     * clean   - clean for `console`. All html tags are stripped and <br /> is replaced with "\n"
-     */
-    private static array $replacements = [
-        'default' => [],
-        'console' => ["\n", ""],
-    ];
-
-    /**
-     * Stores all debug info
-     */
-    private static string $buffer = '';
-
-    /**
-     * Determines whether debug is enabled or not
-     */
+    private static array $buffer = [];
     private static bool $enabled = false;
+    private static float $startTime = 0.0;
+    private static float $endTime = 0.0;
 
-    /**
-     * Time labels storage. Time-labels are used to find execution time of some code chunk
-     */
-    private static array $timeLabels = [];
+    private function __construct() {}
 
-    private function __construct()
-    {
-    }
-
-    /**
-     * Enable debugging
-     */
     public static function enable(): void
     {
         self::$enabled = true;
-        self::timeStart(self::SCRIPT_LABEL);
+        self::$startTime = microtime(true);
     }
 
-    /**
-     * Whether debug is enabled or not
-     */
     public static function enabled(): bool
     {
         return self::$enabled;
     }
 
-    /**
-     * Adding some info to debug messages storage. Debugging should be
-     * previously enabled otherwise storage is left empty
-     */
-    public static function add(): void
+    public static function timeLabel(string $message): void
     {
         if (self::$enabled) {
-            $args = func_get_args();
-            foreach ($args as $mixed) {
-                self::$buffer .= htmlentities(addslashes(is_scalar($mixed) ? $mixed : var_export($mixed, true))) . '<br/>';
+            self::$buffer[] = [
+                'message' => $message,
+                'time'    => microtime(true) - self::$startTime
+            ];
+        }
+    }
+
+    public static function scriptEnd(): void
+    {
+        if (self::$enabled && self::$endTime === 0.0) {
+            self::$endTime = round((microtime(true) - self::$startTime) * 1000, 3);
+        }
+    }
+
+    public static function dump(): string
+    {
+        if (!self::$enabled) return '';
+        if (self::$endTime === 0.0) self::scriptEnd();
+
+        $memUsage = self::getMemoryUsage();
+        $isCli = (php_sapi_name() === 'cli');
+
+        if ($isCli) {
+            $cliOutput = "\n🚀 [GEARS TIMELINE]\n";
+            foreach (self::$buffer as $marker) {
+                $cliOutput .= sprintf("[+%s ms] %s\n", round($marker['time'] * 1000, 3), $marker['message']);
             }
+            $cliOutput .= sprintf("⏱️ %s ms | 🧠 %s\n", self::$endTime, $memUsage);
+            return $cliOutput;
         }
+
+        $htmlOutput = '';
+        foreach (self::$buffer as $marker) {
+            $htmlOutput .= sprintf('<b>[+%s ms]</b> %s<br/>', round($marker['time'] * 1000, 3), htmlspecialchars($marker['message'], ENT_QUOTES, 'UTF-8'));
+        }
+        $htmlOutput .= sprintf('<hr style="border:0; border-top:1px solid #444; margin:10px 0;"/>⏱️ <b>Total:</b> %s ms | 🧠 <b>Memory:</b> %s', self::$endTime, $memUsage);
+
+        return '<div style="background:#18171B; color:#FFF; padding:15px; font-family:monospace; border-left:5px solid #ff5555; line-height:1.5; font-size:13px;">' . $htmlOutput . '</div>';
     }
 
-    public static function get(): string
-    {
-        if (!self::$enabled) {
-            return '';
-        }
-
-        $type = php_sapi_name() !== 'cli' ? 'default' : 'console';
-
-        if (!empty(self::$replacements[$type])) {
-            return preg_replace(self::$pattern, self::$replacements[$type], self::$buffer);
-        } else {
-            return self::$buffer;
-        }
-    }
-
-    /**
-     * Record a new time label for time difference calculation.
-     */
-    public static function timeStart(string $label): ?float
-    {
-        if (self::$enabled && !isset(self::$timeLabels[$label])) {
-            self::$timeLabels[$label] = microtime(true);
-
-            return self::$timeLabels[$label];
-        }
-
-        return null;
-    }
-
-    /**
-     * Close a given time label, add resulting time diff to debug info and return it.
-     */
-    public static function timeEnd(string $label): ?float
-    {
-        if (!self::$enabled) {
-            return 0;
-        }
-
-        $time = microtime(true) - self::$timeLabels[$label];
-        unset(self::$timeLabels[$label]);
-
-        self::add($label . "\n" . $time);
-
-        return $time;
-    }
-
-    /**
-     * Get script memory usage
-     */
     public static function getMemoryUsage(): ?string
     {
-        if (!self::$enabled) {
-            return null;
-        }
-
-        $memUsage = memory_get_usage(true);
-
-        if ($memUsage < 1024) {
-            $memUsage .= ' bytes';
-        } elseif ($memUsage < 1048576) {
-            $memUsage = round($memUsage / 1024, 2) . ' Kb';
-        } else {
-            $memUsage = round($memUsage / 1048576, 2) . ' Mb';
-        }
-
-        return $memUsage;
-    }
-
-    /**
-     * Get script execution time
-     */
-    public static function scriptTime(): float
-    {
-        return round(self::timeEnd(self::SCRIPT_LABEL), 3);
+        if (!self::$enabled) return null;
+        $memUsage = memory_get_peak_usage(true);
+        if ($memUsage < 1024) return $memUsage . ' bytes';
+        if ($memUsage < 1048576) return round($memUsage / 1024, 2) . ' Kb';
+        return round($memUsage / 1048576, 2) . ' Mb';
     }
 }
