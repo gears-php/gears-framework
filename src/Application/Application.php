@@ -50,10 +50,10 @@ namespace Gears\Framework\Application {
          */
         public function setup(): self
         {
-            _container($this->services);
-
             $env = $_SERVER['APP_ENV'] ?? 'prod';
             ($env == 'dev') && Debug::enable();
+
+            _container($this->services);
 
             set_exception_handler([$this, 'handleException']);
             set_error_handler([$this, 'handleError']);
