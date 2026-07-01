@@ -3,7 +3,7 @@
     "type": "library",
     "description": "The Gears PHP Framework",
     "keywords": ["framework", "mvc"],
-    "version": "0.1.0",
+    "version": "dev-main",
     "authors": [
         {
             "name": "Denis Krasilnikov",
@@ -12,7 +12,8 @@
     ],
     "require": {
         "php": ">=8.0",
-        "symfony/http-foundation": "^6.0",
+        "psr/event-dispatcher": "^1.0",
+        "symfony/http-foundation": "^7.0",
         "mustangostang/spyc": "0.5.*@dev"
     },
     "replace": {
