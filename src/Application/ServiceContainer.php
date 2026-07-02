@@ -22,7 +22,7 @@ function _container(ServiceContainer $container = null): ServiceContainer
  * Simple container implementation for various application services
  * @package Gears\Framework\Application
  */
-class ServiceContainer
+class ServiceContainer implements \ArrayAccess
 {
     /**
      * Internal services storage
@@ -108,5 +108,24 @@ class ServiceContainer
         }
 
         throw new RuntimeException(sprintf('"%s" service does not exist', $name));
+    }
+
+    public function offsetExists(mixed $offset): bool
+    {
+        return $this->has($offset);
+    }
+
+    public function offsetGet(mixed $offset): object|null
+    {
+        return $this->has($offset) ? $this->get($offset) : null;
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+        $this->set($offset, $value);
+    }
+
+    public function offsetUnset(mixed $offset): void
+    {
     }
 }
