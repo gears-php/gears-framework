@@ -106,7 +106,7 @@ abstract class WhereAbstract
             $value = $this->db->escape($value);
         }
 
-        $this->conditions[] = sprintf('%s=%s', $field, $value);
+        $this->conditions[] = sprintf('%s = %s', $field, $value);
         return $this;
     }
 

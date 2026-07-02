@@ -38,6 +38,12 @@ abstract class Db implements ArrayAccess
      */
     protected string|Query $lastQuery;
 
+    /** Debugging mode flag */
+    private bool $debug = false;
+
+    /** Log of executed quires (raw sql, time in ms) */
+    private array $queryLog = [];
+
     /**
      * Instantiate new db adapter connection
      * @param array $config Connection properties
@@ -64,6 +70,12 @@ abstract class Db implements ArrayAccess
     {
         $this->connection = $this->createConnection($config, $options);
         $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    }
+
+    /** Set debugging mode */
+    public function setDebug(bool $debug)
+    {
+        $this->debug = $debug;
     }
 
     /**
@@ -97,9 +109,26 @@ abstract class Db implements ArrayAccess
      */
     public function query(string|Query $query, array $params = []): self
     {
+        $startMs = 0;
+        if ($this->debug) {
+            $startMs = microtime(true);
+        }
+
         $this->prepare($query)->execute($params);
 
+        if ($this->debug) {
+            $this->queryLog[] = [
+                'raw' => $this->interpolateQuery($query . '', $params),
+                'time' => (microtime(true) - $startMs) * 1000
+            ];
+        }
+
         return $this;
+    }
+
+    public function getQueryLog(): array
+    {
+        return $this->queryLog;
     }
 
     public function getStatement(): PDOStatement
@@ -311,4 +340,43 @@ abstract class Db implements ArrayAccess
      * Create new db connection based on given connection config parameters and additional options
      */
     abstract protected function createConnection(array $config, array $options = []): PDO;
+
+    /** SQL query interpolation */
+    private function interpolateQuery(string $query, array $params): string
+    {
+        if (empty($params)) {
+            return $query;
+        }
+
+        // Single-pass type casting to SQL format
+        $formatted = array_map(static function ($v) {
+            return match (true) {
+                is_string($v) => "'" . addslashes($v) . "'",
+                is_bool($v)   => $v ? '1' : '0',
+                is_null($v)   => 'NULL',
+                default       => $v,
+            };
+        }, $params);
+
+        // Named parameters (:name)
+        if (is_string(key($params))) {
+            $map = [];
+            foreach ($formatted as $k => $v) {
+                $map[$k[0] === ':' ? $k : ':' . $k] = $v;
+            }
+            // Sort keys by length descending to prevent partial replacements (e.g., :id replacing part of :id_status)
+            krsort($map);
+
+            return strtr($query, $map);
+        }
+
+        // Positional parameters (?)
+        $segments = explode('?', $query);
+        $result = array_shift($segments);
+        foreach ($segments as $i => $segment) {
+            $result .= ($formatted[$i] ?? '?') . $segment;
+        }
+
+        return $result;
+    }
 }
