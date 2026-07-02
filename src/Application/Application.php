@@ -50,8 +50,8 @@ namespace Gears\Framework\Application {
          */
         public function setup(): self
         {
-            $env = $_SERVER['APP_ENV'] ?? 'prod';
-            ($env == 'dev') && Debug::enable();
+            $debugMode = $_SERVER['APP_DEBUG'] == 'true';
+            $debugMode && Debug::enable();
 
             _container($this->services);
 
@@ -62,8 +62,6 @@ namespace Gears\Framework\Application {
 
             try {
                 $this->config->load($this->getConfigDir() . "/app$fileExt");
-                $envFile = $this->getConfigDir() . "/app$env$fileExt";
-                is_file($envFile) && $this->config->merge($envFile);
             } catch (FileNotFound $e) {
                 $this->handleException($e);
             }
@@ -140,6 +138,10 @@ namespace Gears\Framework\Application {
             }
 
             $this->dispatcher->dispatch(new ResponseEvent($response));
+            if (Debug::enabled()) {
+                $content = $response->getContent();
+                $response->setContent($content . Debug::getDebugBar($this->services['db']?->getQueryLog()));
+            }
             $response->send();
         }
 
@@ -225,7 +227,8 @@ namespace Gears\Framework\Application {
             }
 
             if ($dbCfg = $this->config['db']) {
-                $this->services->set('db', Db::connect($dbCfg));
+                $this->services->set('db', $db = Db::connect($dbCfg));
+                $db->setDebug(Debug::enabled());
             }
         }
 

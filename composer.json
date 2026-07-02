@@ -25,9 +25,6 @@
             "Gears\\Framework\\": "src/",
             "Gears\\Storage\\": "component/storage/src/",
             "Gears\\Db\\": "component/db/src/"
-        },
-        "files": [
-            "src/helpers.php"
-        ]
+        }
     }
 }
