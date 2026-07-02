@@ -10,15 +10,12 @@ declare(strict_types=1);
 namespace Gears\Framework\View;
 
 use Gears\Framework\Cache\CacheInterface;
-use Gears\Framework\View\Extension\ExtensionInterface;
 use Gears\Framework\View\Tag\Block;
 use Gears\Framework\View\Tag\Date;
 use Gears\Framework\View\Tag\Extend;
-use Gears\Framework\View\Tag\Extension;
 use Gears\Framework\View\Tag\IncludeTag;
 use Gears\Framework\View\Tag\Iterate;
 use Gears\Framework\View\Tag\Raw;
-use RuntimeException;
 
 /**
  * View
@@ -48,11 +45,6 @@ class View
      */
     private ?CacheInterface $cache = null;
 
-    /**
-     * View extensions
-     */
-    private array $extensions;
-
     /** Custom functions */
     private array $functions = [];
 
@@ -61,7 +53,6 @@ class View
         Block::class,
         Date::class,
         Extend::class,
-        Extension::class,
         IncludeTag::class,
         Iterate::class,
         Raw::class,
@@ -72,7 +63,6 @@ class View
 
     public function init(
         mixed $templates = null,
-        array $extensions = [],
         CacheInterface $cache = null,
         $tags = [],
     ): static {
@@ -88,12 +78,6 @@ class View
         // setup cache storage
         if (isset($cache)) {
             $this->setCache($cache);
-        }
-
-        if ($extensions) {
-            foreach ($extensions as $extension) {
-                $this->addExtension($extension);
-            }
         }
 
         array_push($this->tags, ...$tags);
@@ -182,20 +166,6 @@ class View
     public function render(string $template, array $vars = null): string
     {
         return $this->load($template)->render($this->vars + $vars);
-    }
-
-    public function addExtension(ExtensionInterface $ext): void
-    {
-        $this->extensions[$ext->getName()] = $ext;
-    }
-
-    public function extension($name): string
-    {
-        if (!isset($this->extensions[$name])) {
-            throw new RuntimeException("View extension `$name` is not registered");
-        }
-
-        return $this->extensions[$name]();
     }
 
     public function addFunction(string $name, callable $func): static
