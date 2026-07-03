@@ -138,10 +138,12 @@ namespace Gears\Framework\Application {
             }
 
             $this->dispatcher->dispatch(new ResponseEvent($response));
-            if (Debug::enabled()) {
+
+            if (Debug::enabled() && !$this->isAsyncRequest()) {
                 $content = $response->getContent();
                 $response->setContent($content . Debug::getDebugBar($this->services['db']?->getQueryLog()));
             }
+            
             $response->send();
         }
 
@@ -175,10 +177,7 @@ namespace Gears\Framework\Application {
                 return;
             }
 
-            if ($this->request && ($this->request->isXmlHttpRequest() || str_contains(
-                        $this->request->getContentTypeFormat() . '',
-                        'json'
-                    ))) {
+            if ($this->isAsyncRequest()) {
                 $content = json_encode([
                     'exception' => [
                         'message' => $e->getMessage(),
@@ -245,6 +244,14 @@ namespace Gears\Framework\Application {
                 $this->services->set('arm', $arm = new ActiveManager($db));
                 $arm->setMetadataDirs([$this->getConfigDir() . '/active_record']);
             }
+        }
+
+        private function isAsyncRequest(): bool
+        {
+            return $this->request && ($this->request->isXmlHttpRequest() || str_contains(
+                        $this->request->getContentTypeFormat() . '',
+                        'json'
+                    ));
         }
     }
 }
