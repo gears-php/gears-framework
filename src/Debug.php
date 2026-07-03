@@ -6,7 +6,7 @@ namespace Gears\Framework {
 
     class Debug
     {
-        private static array $buffer = [];
+        private static array $labels = [];
         private static bool $enabled = false;
 
         private function __construct()
@@ -26,7 +26,7 @@ namespace Gears\Framework {
         public static function timeLabel(string $message): void
         {
             if (self::$enabled) {
-                self::$buffer[] = [
+                self::$labels[] = [
                     'message' => $message,
                     'time' => microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']
                 ];
@@ -45,13 +45,18 @@ namespace Gears\Framework {
 
             $sqlHtml = '';
             if ($sqlQueries) {
-                $sqlHtml .= '<div id="gears-queries-popup" style="display: none; border-bottom: 1px solid #dee2e6; margin: 6px 0 6px; padding-bottom: 6px; max-height: 150px; overflow-y: auto; font-size: 12px; text-align: left;">';
+                $sqlKeywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'ON', 'AS', 'ORDER BY', 'GROUP BY', 'LIMIT', 'OFFSET', 'SET', 'INTO', 'VALUES'];
+                $highlightRegex = '/\b(' . implode('|', $sqlKeywords) . ')\b/i';
+                $sqlHtml .= '<div id="gears-queries-popup" style="display: none; border-bottom: 1px solid #dee2e6; margin: 6px 0 6px;  max-height: 30vw; overflow-y: auto; font-size: 12px; text-align: left;">';
+                $styleFrom2nd = '';
                 foreach ($sqlQueries as $sql) {
                     $sqlHtml .= sprintf(
-                        '<div style="margin-bottom: 3px; line-height: 1.6;"><span style="color: darkgray; margin-right: 5px;">%.1f ms</span>&nbsp;%s</div>',
+                        '<div style="%s margin-bottom: 7px; line-height: 1.6;"><span style="color: darkgray; margin-right: 5px;">%.1f ms</span>&nbsp;%s</div>',
+                        $styleFrom2nd,
                         $sql['time'],
-                        htmlspecialchars($sql['raw'])
+                        preg_replace($highlightRegex, '<span style="color: darkmagenta; font-size: 11px">$1</span>', htmlspecialchars($sql['raw']))
                     );
+                    $styleFrom2nd = 'border-top: 1px solid #eef2e6; padding-top: 6px;';
                 }
                 $sqlHtml .= '</div>';
             }
@@ -93,7 +98,7 @@ namespace Gears\Framework\Debug\Helper {
         $isCli = (php_sapi_name() === 'cli');
 
         // One Light theme scheme configurations
-        $styles = [
+        static $styles = [
             T_VARIABLE => 'color: #e45649;', // variables
             T_STRING => 'color: #4078f2;', // constructs (stdClass, etc.)
             T_CONSTANT_ENCAPSED_STRING => 'color: #50a14f;', // string values
@@ -103,10 +108,10 @@ namespace Gears\Framework\Debug\Helper {
             T_DOC_COMMENT => 'color: #a0a1a7; font-style: italic;',
         ];
 
-        $arrow_style = 'color: #a626a4; font-weight: bold;'; // purple for =>
-        $key_style = 'color: #b76b00; font-weight: 500;'; // warm brown for array keys
-        $char_style = 'color: #383a42;'; // slate dark grey for brackets/commas
-        $badge_style = 'color: #a626a4; font-weight: bold; font-size: 11px;'; // purple style for array:N badge
+        static $arrowStyle = 'color: #a626a4; font-weight: bold;'; // purple for =>
+        static $keyStyle = 'color: #b76b00; font-weight: 500;'; // warm brown for array keys
+        static $charStyle = 'color: #383a42;'; // slate dark grey for brackets/commas
+        static $badgeStyle = 'color: #a626a4; font-weight: bold; font-size: 11px;'; // purple style for array:N badge
 
         foreach ($vars as $var) {
             $output = var_export($var, true);
@@ -128,7 +133,7 @@ namespace Gears\Framework\Debug\Helper {
                 if (is_array($token)) {
                     $compiledTokens[$tokenCount++] = [
                         'type' => $token[0],
-                        'text' => '<span style="' . ($styles[$token[0]] ?? $badge_style) . '">' . htmlspecialchars($token[1]) . '</span>'
+                        'text' => '<span style="' . ($styles[$token[0]] ?? $badgeStyle) . '">' . htmlspecialchars($token[1]) . '</span>'
                     ];
                     continue;
                 }
@@ -141,7 +146,7 @@ namespace Gears\Framework\Debug\Helper {
 
                 $compiledTokens[$tokenCount++] = [
                     'type' => ($token === '=>' ? T_DOUBLE_ARROW : 'CHAR'),
-                    'text' => '<span style="' . ($token === '=>' ? $arrow_style : $char_style) . '">' . htmlspecialchars($text) . '</span>'
+                    'text' => '<span style="' . ($token === '=>' ? $arrowStyle : $charStyle) . '">' . htmlspecialchars($text) . '</span>'
                 ];
             }
 
@@ -158,7 +163,7 @@ namespace Gears\Framework\Debug\Helper {
                 $allowedTypes = [T_CONSTANT_ENCAPSED_STRING, T_LNUMBER, T_DNUMBER, T_STRING];
                 if ($prev >= 0 && in_array($compiledTokens[$prev]['type'], $allowedTypes, true)) {
                     if (preg_match('/<span[^>]*>(.*)<\/span>/s', $compiledTokens[$prev]['text'], $match)) {
-                        $compiledTokens[$prev]['text'] = '<span style="' . $key_style . '">' . $match[1] . '</span>';
+                        $compiledTokens[$prev]['text'] = '<span style="' . $keyStyle . '">' . $match[1] . '</span>';
                     }
                 }
             }
