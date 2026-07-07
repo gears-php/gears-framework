@@ -98,12 +98,14 @@ final class Parser
     }
 
     /** Reduce plain array of nodes into nested structure */
-    public function reduce(array &$nodes): array
+    public function reduce(array &$nodes, int &$index = 0): array
     {
         static $openedTags = [];
         $resultNodes = [];
-        while ($node = array_splice($nodes, 0, 1)) {
-            $node = end($node);
+        $count = count($nodes);
+
+        while ($index < $count) {
+            $node = $nodes[$index++];
             if (isset($node['tag']) && $node['closing']) {
                 $oTag = array_pop($openedTags);
                 if ($oTag != $node['tag']) {
@@ -120,7 +122,7 @@ final class Parser
             }
             if (isset($node['tag']) && !$node['closing'] && !$node['void']) {
                 $openedTags[] = $node['tag'];
-                $node['child_nodes'] = $this->reduce($nodes);
+                $node['child_nodes'] = $this->reduce($nodes, $index);
             }
             $resultNodes[] = $node;
         }
@@ -183,21 +185,14 @@ final class Parser
     }
 
     /**
-     * Get current stream offset position
-     */
-    public function getOffset(): int
-    {
-        return $this->offset;
-    }
-
-    /**
      * Get line and offset of currently processed steam character
      */
     public function getCharPosition(int $offsetCorrection = 0): array
     {
-        $chunk = substr($this->stream, 0, $this->offset + $offsetCorrection);
-        $line = substr_count($chunk, "\n") + 1;
-        $lineOffset = $this->offset + $offsetCorrection - strrpos($chunk, "\n");
+        $pos = $this->offset + $offsetCorrection;
+        $line = substr_count($this->stream, "\n", 0, $pos) + 1;
+        $lastNewline = strrpos($this->stream, "\n", $pos - strlen($this->stream));
+        $lineOffset = ($lastNewline === false) ? $pos : ($pos - $lastNewline - 1);
         return [$line, $lineOffset];
     }
 
@@ -218,28 +213,24 @@ final class Parser
     }
 
     /**
-     * Get stream character(s) by the given offset
-     * @param int $offset (optional) Offset value relative to the current inner offset
-     * @param int $count (optional) Number of characters to take
-     */
-    public function getCharAt(int $offset = 0, int $count = 1): string
-    {
-        $offset += $this->getOffset();
-        if ($offset >= 0) {
-            return substr($this->stream, $offset, $count);
-        }
-        return '';
-    }
-
-    /**
      * Match given character(s) with the ones at specific relative offset
-     * @param string $char Character or character string
+     * @param string $chars Character or character string
      * @param int $offset (optional) Offset value relative to the current inner offset
      * @return bool
      */
-    public function isChar(string $char, int $offset = 0): bool
+    public function isChar(string $chars, int $offset = 0): bool
     {
-        return $char == $this->getCharAt($offset, strlen($char));
+        $len = strlen($chars);
+        $start = $this->offset + $offset;
+
+        for ($i = 0; $i < $len; $i++) {
+            $pos = $start + $i;
+            if (!isset($this->stream[$pos]) || $this->stream[$pos] !== $chars[$i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

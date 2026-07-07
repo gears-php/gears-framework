@@ -21,7 +21,7 @@ class TagQuoteOpen extends State
         // empty quotes
         if ($parser->isChar('\'\'', -1) || $parser->isChar('""', -1)) {
             $parser->switchState(TagQuoteClose::class);
-        } elseif ('\'' == $char || '"' == $char) {
+        } elseif ('\'' === $char || '"' === $char) {
             $this->quoteSymbol = $char;
             $this->addBuffer($char);
             $parser->nextChar();

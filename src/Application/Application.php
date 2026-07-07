@@ -143,7 +143,7 @@ namespace Gears\Framework\Application {
                 $content = $response->getContent();
                 $response->setContent($content . Debug::getDebugBar($this->services['db']?->getQueryLog()));
             }
-            
+
             $response->send();
         }
 

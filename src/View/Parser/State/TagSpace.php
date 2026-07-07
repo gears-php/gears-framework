@@ -16,11 +16,17 @@ class TagSpace extends State
      */
     public function process($char, Parser $parser): void
     {
-        if (' ' == $char) {
+        $ord = ord($char);
+        if (' ' === $char) {
             $this->addBuffer($char);
-        } elseif (preg_match('/\w/', $char)) {
+        } elseif (
+            ($ord >= 97 && $ord <= 122) || // a-z
+            ($ord >= 65 && $ord <= 90)  || // A-Z
+            ($ord >= 48 && $ord <= 57)  || // 0-9
+            $char === '_'
+        ) {
             $parser->switchState(TagAttr::class);
-        } elseif ('/' == $char || '>' == $char) {
+        } elseif ('/' === $char || '>' === $char) {
             $parser->switchState(TagEnd::class);
         } else {
             $this->invalidCharacterException($parser);

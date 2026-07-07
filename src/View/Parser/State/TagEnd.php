@@ -28,11 +28,11 @@ class TagEnd extends State
      */
     public function process($char, Parser $parser): void
     {
-        if ('/' == $char) {
+        if ('/' === $char) {
             $char = $parser->nextChar();
             $this->void = true;
         }
-        if ('>' == $char) {
+        if ('>' === $char) {
             $parser->switchState(Stop::class);
             return;
         }

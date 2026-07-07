@@ -27,15 +27,21 @@ class Tag extends State
      */
     public function process($char, Parser $parser): void
     {
+        $ord = ord($char);
         if ('<' == $char) {
             return;
         } elseif ($parser->isChar('</', -1)) {
             $this->closingTag = true;
-        } elseif (' ' == $char) {
+        } elseif (' ' === $char) {
             $parser->switchState(TagSpace::class);
-        } elseif ('/' == $char || '>' == $char) {
+        } elseif ('/' === $char || '>' === $char) {
             $parser->switchState(TagEnd::class);
-        } elseif (preg_match('/[a-z0-9_-]/', $char)) {
+        } elseif (
+            ($ord >= 97 && $ord <= 122) || // a-z
+            ($ord >= 48 && $ord <= 57) || // 0-9
+            '_' === $char ||
+            '-' === $char
+        ) {
             $this->addBuffer($char);
         } else {
             $this->invalidCharacterException($parser);
