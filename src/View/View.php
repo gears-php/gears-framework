@@ -10,12 +10,8 @@ declare(strict_types=1);
 namespace Gears\Framework\View;
 
 use Gears\Framework\Cache\CacheInterface;
-use Gears\Framework\View\Tag\Block;
-use Gears\Framework\View\Tag\Date;
-use Gears\Framework\View\Tag\Extend;
-use Gears\Framework\View\Tag\IncludeTag;
-use Gears\Framework\View\Tag\Iterate;
-use Gears\Framework\View\Tag\Raw;
+use Gears\Framework\View\Exception\EngineException;
+use Gears\Framework\View\Exception\TemplateFileNotFoundException;
 
 /**
  * View
@@ -26,11 +22,6 @@ use Gears\Framework\View\Tag\Raw;
 class View
 {
     /**
-     * Stores paths where to search for template files
-     */
-    private array $templatePaths = [];
-
-    /**
      * Collection of all currently loaded templates
      */
     private array $templates = [];
@@ -40,57 +31,38 @@ class View
      */
     private string $templateFileExt = '.html';
 
-    /**
-     * Cache implementation instance
-     */
-    private ?CacheInterface $cache = null;
-
     /** Custom functions */
     private array $functions = [];
 
     /** All supported template tags */
-    private array $tags = [
-        Block::class,
-        Date::class,
-        Extend::class,
-        IncludeTag::class,
-        Iterate::class,
-        Raw::class,
-    ];
+    private array $tags = [];
 
-    /** "Global" variables. Are passed for all templates */
-    public array $vars = [];
+    /** @var array List of templates directories */
+    private array $templatePaths = [];
 
-    public function init(
-        mixed $templates = null,
-        CacheInterface $cache = null,
-        $tags = [],
-    ): static {
+    public function __construct(
+        string|array $templatesDir,
+        private readonly ?CacheInterface $cache = null,
+        private readonly string $locale = '',
+        private readonly bool $debugMode = false
+    ) {
         // setup template file path(s)
-        if (!empty($templates)) {
-            if (is_string($tpl = $templates)) {
-                $this->addTemplatePath($tpl);
-            } elseif (is_array($tpl)) {
-                $this->setTemplatePaths($tpl);
-            }
+        if (is_string($templatesDir)) {
+            $this->addTemplatePath($templatesDir);
+        } else {
+            $this->setTemplatePaths($templatesDir);
         }
-
-        // setup cache storage
-        if (isset($cache)) {
-            $this->setCache($cache);
-        }
-
-        array_push($this->tags, ...$tags);
-
-        return $this;
     }
 
-    /**
-     * Set cache storage
-     */
-    public function setCache(CacheInterface $cache): void
+    public function loadTags(string $tagsDir): static
     {
-        $this->cache = $cache;
+        // add external tag handlers
+        foreach (glob($tagsDir . '/*.php') as $file) {
+            $tagName = basename($file, '.php');
+            $this->tags[$tagName] = include $file;
+        }
+
+        return $this;
     }
 
     /**
@@ -120,35 +92,26 @@ class View
     }
 
     /**
-     * Get template by full or relative name OR alias name (for already stored templates)
+     * Get template instance by its name.
      *
-     * @param string $name Template name to get the template. Extension is optional
-     * @param string|null $alias (optional) Unique name under which to store and access template for future
+     * @param string $name Template name. File extension is optional
      */
-    public function load(string $name, string $alias = null): Template
+    public function load(string $name): Template
     {
         // possibly we are accessing already stored template
-        if (!is_string($alias) && isset($this->templates[$name])) {
+        if (isset($this->templates[$name])) {
             return $this->templates[$name];
         }
 
         // make sure file name includes extension since it is optional to be passed within $name
         $fileName = str_replace($this->templateFileExt, '', $name) . $this->templateFileExt;
 
-        // if no template alias name given use file name
-        $alias = $alias ?: $fileName;
-
-        // whether template object is already stored under alias name
-        if (isset($this->templates[$alias])) {
-            return $this->templates[$alias];
-        }
-        // search for template file within template paths and store it using alias name
         foreach ($this->templatePaths as $filePath) {
             $filePath = $filePath . DIRECTORY_SEPARATOR . $fileName;
 
             if (is_file($filePath)) {
-                $this->templates[$alias] = $tpl = new Template($this);
-                $tpl->compile($filePath, $this->tags);
+                $this->templates[$name] = $tpl = new Template($this, $this->tags);
+                $tpl->compile($filePath);
                 break;
             }
         }
@@ -157,7 +120,7 @@ class View
             throw new TemplateFileNotFoundException($fileName);
         }
 
-        return $this->templates[$alias] = $tpl;
+        return $this->templates[$name] = $tpl;
     }
 
     /**
@@ -165,7 +128,7 @@ class View
      */
     public function render(string $template, array $vars = null): string
     {
-        return $this->load($template)->render($this->vars + $vars);
+        return $this->load($template)->render($vars);
     }
 
     public function addFunction(string $name, callable $func): static
@@ -181,6 +144,16 @@ class View
             return $this->functions[$name](...$args);
         }
 
-        throw new ViewException("Function \"$name\" is not found");
+        throw new EngineException("Function \"$name\" is not found");
+    }
+
+    public function getLocale(): string
+    {
+        return $this->locale;
+    }
+
+    public function isDebugMode(): bool
+    {
+        return $this->debugMode;
     }
 }

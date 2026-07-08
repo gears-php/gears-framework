@@ -152,7 +152,7 @@ class Router
         return null;
     }
 
-    public function generateUrl(string $routeName, array $params, ?Request $request = null): string
+    public function generateUrl(string $routeName, array $params = [], ?Request $request = null): string
     {
         if (!isset($this->routes[$routeName])) {
             throw new GenerateUrlException("Invalid route name: $routeName", 500);

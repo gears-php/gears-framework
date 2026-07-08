@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Gears\Framework\View;
+namespace Gears\Framework\View\Exception;
 
-class TemplateFileNotFoundException extends ViewException
+class TemplateFileNotFoundException extends EngineException
 {
     public function __construct(string $message = "", int $code = 0, ?\Throwable $previous = null)
     {

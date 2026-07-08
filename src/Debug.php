@@ -45,7 +45,29 @@ namespace Gears\Framework {
 
             $sqlHtml = '';
             if ($sqlQueries) {
-                $sqlKeywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'FROM', 'WHERE', 'AND', 'OR', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'ON', 'AS', 'ORDER BY', 'GROUP BY', 'LIMIT', 'OFFSET', 'SET', 'INTO', 'VALUES'];
+                $sqlKeywords = [
+                    'SELECT',
+                    'INSERT',
+                    'UPDATE',
+                    'DELETE',
+                    'FROM',
+                    'WHERE',
+                    'AND',
+                    'OR',
+                    'JOIN',
+                    'LEFT',
+                    'RIGHT',
+                    'INNER',
+                    'ON',
+                    'AS',
+                    'ORDER BY',
+                    'GROUP BY',
+                    'LIMIT',
+                    'OFFSET',
+                    'SET',
+                    'INTO',
+                    'VALUES'
+                ];
                 $highlightRegex = '/\b(' . implode('|', $sqlKeywords) . ')\b/i';
                 $sqlHtml .= '<div id="gears-queries-popup" style="display: none; border-bottom: 1px solid #dee2e6; margin: 6px 0 6px;  max-height: 30vw; overflow-y: auto; font-size: 12px; text-align: left;">';
                 $styleFrom2nd = '';
@@ -54,7 +76,11 @@ namespace Gears\Framework {
                         '<div style="%s margin-bottom: 7px; line-height: 1.6;"><span style="color: darkgray; margin-right: 5px;">%.1f ms</span>&nbsp;%s</div>',
                         $styleFrom2nd,
                         $sql['time'],
-                        preg_replace($highlightRegex, '<span style="color: darkmagenta; font-size: 11px">$1</span>', htmlspecialchars($sql['raw']))
+                        preg_replace(
+                            $highlightRegex,
+                            '<span style="color: darkmagenta; font-size: 11px">$1</span>',
+                            htmlspecialchars($sql['raw'])
+                        )
                     );
                     $styleFrom2nd = 'border-top: 1px solid #eef2e6; padding-top: 6px;';
                 }
@@ -86,100 +112,106 @@ namespace Gears\Framework {
     }
 }
 
-namespace Gears\Framework\Debug\Helper {
+namespace {
+    if (!function_exists('Dump')) {
+        /**
+         * Pretty variables dump WITHOUT script termination
+         */
+        function Dump(...$vars): void
+        {
+            $isCli = (php_sapi_name() === 'cli');
 
-    use JetBrains\PhpStorm\NoReturn;
+            // One Light theme scheme configurations
+            static $styles = [
+                T_VARIABLE => 'color: #e45649;', // variables
+                T_STRING => 'color: #4078f2;', // constructs (stdClass, etc.)
+                T_CONSTANT_ENCAPSED_STRING => 'color: #50a14f;', // string values
+                T_LNUMBER => 'color: #886801;', // integers
+                T_DNUMBER => 'color: #886801;', // floats
+                T_COMMENT => 'color: #a0a1a7; font-style: italic;', // comments
+                T_DOC_COMMENT => 'color: #a0a1a7; font-style: italic;',
+            ];
 
-    /**
-     * Pretty variables dump WITHOUT script termination
-     */
-    function Dump(...$vars): void
-    {
-        $isCli = (php_sapi_name() === 'cli');
+            static $arrowStyle = 'color: #a626a4; font-weight: bold;'; // purple for =>
+            static $keyStyle = 'color: #b76b00; font-weight: 500;'; // warm brown for array keys
+            static $charStyle = 'color: #383a42;'; // slate dark grey for brackets/commas
+            static $badgeStyle = 'color: #a626a4; font-weight: bold; font-size: 11px;'; // purple style for array:N badge
 
-        // One Light theme scheme configurations
-        static $styles = [
-            T_VARIABLE => 'color: #e45649;', // variables
-            T_STRING => 'color: #4078f2;', // constructs (stdClass, etc.)
-            T_CONSTANT_ENCAPSED_STRING => 'color: #50a14f;', // string values
-            T_LNUMBER => 'color: #886801;', // integers
-            T_DNUMBER => 'color: #886801;', // floats
-            T_COMMENT => 'color: #a0a1a7; font-style: italic;', // comments
-            T_DOC_COMMENT => 'color: #a0a1a7; font-style: italic;',
-        ];
+            foreach ($vars as $var) {
+                $output = var_export($var, true);
 
-        static $arrowStyle = 'color: #a626a4; font-weight: bold;'; // purple for =>
-        static $keyStyle = 'color: #b76b00; font-weight: 500;'; // warm brown for array keys
-        static $charStyle = 'color: #383a42;'; // slate dark grey for brackets/commas
-        static $badgeStyle = 'color: #a626a4; font-weight: bold; font-size: 11px;'; // purple style for array:N badge
+                if ($isCli) {
+                    echo "\n💡 [GEARS DUMP]:\n" . $output . "\n";
+                    continue;
+                }
 
-        foreach ($vars as $var) {
-            $output = var_export($var, true);
+                if (is_array($var)) {
+                    $output = 'array:' . count($var) . substr($output, 5);
+                }
 
-            if ($isCli) {
-                echo "\n💡 [GEARS DUMP]:\n" . $output . "\n";
-                continue;
-            }
+                $tokens = token_get_all("<?php " . $output);
+                $compiledTokens = [];
+                $tokenCount = 0;
 
-            if (is_array($var)) {
-                $output = 'array:' . count($var) . substr($output, 5);
-            }
+                foreach (array_filter($tokens, fn($t) => !is_array($t) || $t[0] !== T_OPEN_TAG) as $token) {
+                    if (is_array($token)) {
+                        $compiledTokens[$tokenCount++] = [
+                            'type' => $token[0],
+                            'text' => '<span style="' . ($styles[$token[0]] ?? $badgeStyle) . '">' . htmlspecialchars(
+                                    $token[1]
+                                ) . '</span>'
+                        ];
+                        continue;
+                    }
 
-            $tokens = token_get_all("<?php " . $output);
-            $compiledTokens = [];
-            $tokenCount = 0;
+                    $text = match ($token) {
+                        '(' => '[',
+                        ')' => ']',
+                        default => $token
+                    };
 
-            foreach (array_filter($tokens, fn($t) => !is_array($t) || $t[0] !== T_OPEN_TAG) as $token) {
-                if (is_array($token)) {
                     $compiledTokens[$tokenCount++] = [
-                        'type' => $token[0],
-                        'text' => '<span style="' . ($styles[$token[0]] ?? $badgeStyle) . '">' . htmlspecialchars($token[1]) . '</span>'
+                        'type' => ($token === '=>' ? T_DOUBLE_ARROW : 'CHAR'),
+                        'text' => '<span style="' . ($token === '=>' ? $arrowStyle : $charStyle) . '">' . htmlspecialchars(
+                                $text
+                            ) . '</span>'
                     ];
-                    continue;
                 }
 
-                $text = match ($token) {
-                    '(' => '[',
-                    ')' => ']',
-                    default => $token
-                };
+                for ($i = 0; $i < $tokenCount; $i++) {
+                    if ($compiledTokens[$i]['type'] !== T_DOUBLE_ARROW) {
+                        continue;
+                    }
 
-                $compiledTokens[$tokenCount++] = [
-                    'type' => ($token === '=>' ? T_DOUBLE_ARROW : 'CHAR'),
-                    'text' => '<span style="' . ($token === '=>' ? $arrowStyle : $charStyle) . '">' . htmlspecialchars($text) . '</span>'
-                ];
-            }
+                    $prev = $i - 1;
+                    while ($prev >= 0 && $compiledTokens[$prev]['type'] === T_WHITESPACE) {
+                        $prev--;
+                    }
 
-            for ($i = 0; $i < $tokenCount; $i++) {
-                if ($compiledTokens[$i]['type'] !== T_DOUBLE_ARROW) {
-                    continue;
-                }
-
-                $prev = $i - 1;
-                while ($prev >= 0 && $compiledTokens[$prev]['type'] === T_WHITESPACE) {
-                    $prev--;
-                }
-
-                $allowedTypes = [T_CONSTANT_ENCAPSED_STRING, T_LNUMBER, T_DNUMBER, T_STRING];
-                if ($prev >= 0 && in_array($compiledTokens[$prev]['type'], $allowedTypes, true)) {
-                    if (preg_match('/<span[^>]*>(.*)<\/span>/s', $compiledTokens[$prev]['text'], $match)) {
-                        $compiledTokens[$prev]['text'] = '<span style="' . $keyStyle . '">' . $match[1] . '</span>';
+                    $allowedTypes = [T_CONSTANT_ENCAPSED_STRING, T_LNUMBER, T_DNUMBER, T_STRING];
+                    if ($prev >= 0 && in_array($compiledTokens[$prev]['type'], $allowedTypes, true)) {
+                        if (preg_match('/<span[^>]*>(.*)<\/span>/s', $compiledTokens[$prev]['text'], $match)) {
+                            $compiledTokens[$prev]['text'] = '<span style="' . $keyStyle . '">' . $match[1] . '</span>';
+                        }
                     }
                 }
-            }
 
-            echo '<pre style="background: #fdfdfd; border: 1px solid #e9ecef; padding: 8px 12px; font-family: monospace; font-size: 12px; margin: 8px 0; overflow-x: auto; border-radius: 4px; line-height: 1.4;">';
-            echo implode('', array_column($compiledTokens, 'text'));
-            echo '</pre>';
+                echo '<pre style="background: #fdfdfd; border: 1px solid #e9ecef; padding: 8px 12px; font-family: monospace; font-size: 12px; margin: 8px 0; overflow-x: auto; border-radius: 4px; line-height: 1.4;">';
+                echo implode('', array_column($compiledTokens, 'text'));
+                echo '</pre>';
+            }
         }
     }
 
-    /**
-     * Dump and Die
-     */
-    #[NoReturn] function Dd(...$vars): void
-    {
-        Dump(...$vars);
-        die();
+    if (!function_exists('Dd')) {
+        /**
+         * Dump and Die
+         */
+        #[\JetBrains\PhpStorm\NoReturn] function Dd(...$vars): void
+        {
+            Dump(...$vars);
+            die();
+        }
     }
 }
+

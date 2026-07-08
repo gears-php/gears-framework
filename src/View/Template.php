@@ -2,7 +2,10 @@
 
 namespace Gears\Framework\View;
 
-use Gears\Framework\View\Tag\AbstractTag;
+use Gears\Framework\View\Exception\EngineException;
+use Gears\Framework\View\Exception\RenderingException;
+use Gears\Framework\View\Exception\TemplateFileNotFoundException;
+use IntlDateFormatter;
 
 /**
  * Template is an object representation of specific template file
@@ -13,28 +16,44 @@ use Gears\Framework\View\Tag\AbstractTag;
 final class Template
 {
     private string $name = '';
-    private string|array $path = '';
+    private string $path = '';
     private array $nodes;
     private array $vars = [];
     private ?self $parent = null;
     private array $blocks = [];
 
-    /** @var array<string, AbstractTag> All registered tags as <name, object> */
-    private array $tags = [];
+    /** @var array<string, callable> All registered tags as rendering handlers */
+    private array $tags;
+
+    /**
+     * Name of all internal system tags
+     * @var string[]
+     */
+    private array $sysTags;
 
     /**
      * Process template file
      */
-    public function __construct(protected View $view)
+    public function __construct(protected View $view, array $tags)
     {
+        $this->tags = [
+            'block' => $this->block(...),
+            'date' => $this->date(...),
+            'extends' => $this->extends(...),
+            'include' => $this->include(...),
+            'raw' => $this->raw(...),
+            'repeat' => $this->repeat(...),
+        ];
+        $this->sysTags = array_keys($this->tags);
+        $this->tags = array_merge($tags, $this->tags);
     }
 
     /**
-     * Compile template file
+     * Compile template file into nodes tree
      * @param string $filePath Full path to a template file
-     * @throws \RuntimeException If template file not found
+     * @throws TemplateFileNotFoundException If template file not found
      */
-    public function compile(string $filePath, array $tags): void
+    public function compile(string $filePath): void
     {
         if (!is_file($filePath)) {
             throw new TemplateFileNotFoundException($filePath);
@@ -43,13 +62,6 @@ final class Template
         $this->path = str_replace('/', DIRECTORY_SEPARATOR, dirname($filePath));
         $this->name = basename($filePath);
         $templateKey = md5($filePath);
-
-        // tags creation should go before cache
-        foreach ($tags as $tagClass) {
-            /** @var AbstractTag $t */
-            $t = new $tagClass($this);
-            $this->tags[$t->getName()] = $t;
-        }
 
         // try to use non-outdated compiled template from cache
         $cache = $this->view->getCache();
@@ -84,27 +96,20 @@ final class Template
         return $this->name;
     }
 
-    /** Set template variable value. Overrides any existing one having same name */
-    public function setVar(string $name, mixed $value): void
-    {
-        $this->vars[$name] = $value;
-    }
-
-    /** Get template variable value */
-    public function getVar(string $name): mixed
-    {
-        return $this->vars[$name] ?? null;
-    }
-
     /** Get all template variables */
     public function getVars(): array
     {
         return $this->vars;
     }
 
-    public function getView(): View
+    public function getLocale(): string
     {
-        return $this->view;
+        return $this->view->getLocale();
+    }
+
+    public function isDebugMode(): bool
+    {
+        return $this->view->isDebugMode();
     }
 
     /**
@@ -115,68 +120,11 @@ final class Template
         return $this->path . DIRECTORY_SEPARATOR . $this->name;
     }
 
-    /**
-     * Render given template node
-     */
-    public function renderNode(array $node): void
-    {
-        if (isset($node['html'])) {
-            echo $node['html'];
-            return;
-        }
-
-        $tagName = $node['tag'];
-        if (!isset($this->tags[$tagName])) {
-            throw new \RuntimeException("Unknown template tag: $tagName");
-        }
-
-        $this->tags[$tagName]->processNode($node);
-    }
-
-    /**
-     * Render template
-     * @param array $vars Template variables
-     * @return string Rendered template content
-     */
-    public function render(array $vars = []): string
-    {
-        $this->vars = $vars;
-
-        try {
-            ob_start();
-            foreach ($this->nodes as $node) {
-                $this->renderNode($node);
-            }
-            $processed = ob_get_clean();
-        } catch (\Throwable $e) {
-            $bufferCount = ob_get_level();
-            while ($bufferCount--) {
-                ob_end_clean();
-            }
-
-            throw new RenderingException(sprintf('Template rendering error in %s', $this->getFilePath()), 0, $e);
-        }
-
-        if ($this->getParent()) {
-            return $this->getParent()->render();
-        } else {
-            return $processed;
-        }
-    }
-
-    /** Call view extension function */
-    public function callFunction(string $name, array $args): mixed
-    {
-        return $this->view->callFunction($name, $args);
-    }
-
-    /**
-     * Template inheritance. It is achieved together with blocks functionality.
-     */
-    public function extends(string $name): void
-    {
-        $this->parent = $this->view->load($name);
-    }
+//    /** Call view extension function */
+//    public function callFunction(string $name, array $args): mixed
+//    {
+//        return $this->view->callFunction($name, $args);
+//    }
 
     /**
      * Get parent template we extend
@@ -194,5 +142,161 @@ final class Template
     public function getBlockContent(string $blockName): ?string
     {
         return $this->blocks[$blockName] ?? null;
+    }
+
+    /**
+     * Render template
+     * @param array $vars Template variables
+     * @return string Rendered template content
+     */
+    public function render(array $vars = []): string
+    {
+        $this->vars = $vars;
+        try {
+            ob_start();
+            foreach ($this->nodes as $node) {
+                echo $this->renderNode($node);
+            }
+            $processed = ob_get_clean();
+        } catch (\Throwable $e) {
+            $bufferCount = ob_get_level();
+            while ($bufferCount--) {
+                ob_end_clean();
+            }
+            throw new EngineException(sprintf('Template rendering error in %s', $this->getFilePath()), 0, $e);
+        }
+
+        if ($this->getParent()) {
+            return $this->getParent()->render();
+        } else {
+            return $processed;
+        }
+    }
+
+    public function renderChildNodes(array $node): string
+    {
+        $html = '';
+        foreach ($node['child_nodes'] ?? [] as $child) {
+            $html .= $this->renderNode($child);
+        }
+        return $html;
+    }
+
+    /** Render given AST node */
+    private function renderNode(array $node): string
+    {
+        if (isset($node['html'])) {
+            // plain html without azul tags
+            return $node['html'];
+        }
+
+        $ctx = new TagContext($node, $this);
+        $ctx->innerHTML = $this->renderChildNodes($node);
+        ob_start();
+        return call_user_func(
+                $this->tags[$node['tag']],
+                $ctx,
+                in_array($node['tag'], $this->sysTags) ? $node : null
+            ) . ob_get_clean();
+    }
+
+    private function block(TagContext $ctx): string
+    {
+        if (empty($ctx->attrs['name'])) {
+            throw new RenderingException('Missing "name" attribute', $ctx);
+        }
+
+        $name = $ctx->attrs['name'];
+        $this->getParent()?->setBlockContent($name, $ctx->innerHTML);
+        return $this->getBlockContent($name) ?: $ctx->innerHTML;
+    }
+
+    private function formatDate(string $dtm, string $locale, string $dateFormat, string $timeFormat): string
+    {
+        $formats = [
+            'none' => IntlDateFormatter::NONE,
+            'short' => IntlDateFormatter::SHORT,
+            'medium' => IntlDateFormatter::MEDIUM,
+            'long' => IntlDateFormatter::LONG,
+            'full' => IntlDateFormatter::FULL,
+        ];
+
+        $dfm = $formats[$dateFormat] ?? throw new EngineException(
+            "Unknown date format '$dateFormat' for IntlDateFormatter"
+        );
+        $tfm = $formats[$timeFormat] ?? throw new EngineException(
+            "Unknown time format '$dateFormat' for IntlDateFormatter"
+        );
+        $formatter = IntlDateFormatter::create($locale, $dfm, $tfm);
+
+        return $formatter->format(strtotime($dtm)) ?: '';
+    }
+
+    private function date(TagContext $ctx): string
+    {
+        if (empty($ctx->innerHTML)) {
+            throw new RenderingException('Inner HTML should not be empty', $ctx);
+        }
+
+        return $this->formatDate(
+            trim($ctx->innerHTML),
+            $ctx->attrs['locale'] ?? $this->view->getLocale(),
+            $ctx->attrs['df'] ?? 'long',
+            $ctx->attrs['tf'] ?? 'short',
+        );
+    }
+
+    /** Template inheritance. It is achieved together with @see block() functionality. */
+    private function extends(TagContext $ctx): void
+    {
+        if (empty($ctx->attrs['name'])) {
+            throw new RenderingException('Missing "name" attribute', $ctx);
+        }
+        $this->parent = $this->view->load($ctx->attrs['name']);
+    }
+
+    private function include(TagContext $ctx): string
+    {
+        if ($ctx->isVoid) {
+            if (empty($ctx->attrs['name'])) {
+                throw new RenderingException('Missing "name" attribute', $ctx);
+            }
+            return $this->view->load($ctx->attrs['name'])->render($this->vars);
+        }
+
+        if (empty($ctx->innerHTML)) {
+            throw new RenderingException('Inner HTML should not be empty', $ctx);
+        }
+
+        return $this->view->load($ctx->innerHTML)->render($this->vars);
+    }
+
+    private function raw(TagContext $ctx): string
+    {
+        if (empty($ctx->innerHTML)) {
+            throw new RenderingException('Inner HTML should not be empty', $ctx);
+        }
+        return htmlspecialchars_decode($ctx->innerHTML);
+    }
+
+    private function repeat(TagContext $ctx, array $node): string
+    {
+        $sourceVar = key($ctx->attrs);
+        $sourceCollection = $ctx->v($sourceVar);
+        if (!is_iterable($sourceCollection)) {
+            throw new RenderingException(
+                sprintf('Template variable "%s" is not iterable', $sourceVar),
+                $ctx
+            );
+        }
+        $destVar = current($ctx->attrs);
+        $backupValue = $this->vars[$destVar];
+        $html = '';
+        foreach ($sourceCollection as $value) {
+            $this->vars[$destVar] = $value;
+            $html .= $this->renderChildNodes($node);
+        }
+        $this->vars[$destVar] = $backupValue;
+        return $html;
     }
 }

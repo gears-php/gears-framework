@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace Gears\Framework\View;
 
+use Gears\Framework\View\Exception\TemplateSyntaxException;
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser\State\Stop;
 use Gears\Framework\View\Parser\State\Tag;
@@ -35,9 +36,24 @@ final class Parser
     private int $nodeCounter = 0;
 
     /**
-     * Current stream character offset
+     * Current stream character byte offset
      */
     private int $offset = 0;
+
+    /**
+     * Byte offsets of every line start
+     */
+    private array $lineOffsets = [];
+
+    /**
+     * Current line number (1-based)
+     */
+    private int $line = 1;
+
+    /**
+     * Current column number in Unicode characters (1-based)
+     */
+    private int $column = 1;
 
     /** @var State[] */
     private array $states = [];
@@ -70,10 +86,11 @@ final class Parser
     public function parse(string $stream): array
     {
         $this->stream = str_replace(["\r\n", "\r"], "\n", $stream);
+        $this->buildLineOffsets();
 
         // capture all template tags start positions
         preg_match_all(
-            sprintf('/<\/?(?:%s)[ >]/', implode('|', $this->tags)),
+            sprintf('/<!--.*?-->(*SKIP)(*F)|<\/?(?:%s)[ >]/s', implode('|', $this->tags)),
             $this->stream,
             $tagOffsets,
             PREG_OFFSET_CAPTURE
@@ -109,13 +126,12 @@ final class Parser
             if (isset($node['tag']) && $node['closing']) {
                 $oTag = array_pop($openedTags);
                 if ($oTag != $node['tag']) {
-                    throw new \RuntimeException(
-                        sprintf(
-                            'Missing opening tag for &lt;/%s&gt; tag at %s, line %d',
-                            $node['tag'],
-                            $this->file,
-                            $node['tag_pos'][0]
-                        )
+                    throw new TemplateSyntaxException(
+                        sprintf('Missing opening tag for &lt;/%s&gt; tag', $node['tag']),
+                        $this->file,
+                        $node['tag_pos'][0],
+                        $node['tag_pos'][1] - 1
+
                     );
                 }
                 return $resultNodes;
@@ -131,19 +147,6 @@ final class Parser
     }
 
     /**
-     * Process template tag converting it into node structure with all tag info
-     */
-    public function processTag(int $startOffset): void
-    {
-        $this->offset = $startOffset;
-        $this->switchState(Tag::class);
-        while (!$this->currentState instanceof Stop && $this->nextChar()) {
-            $this->currentState->process($this->getChar(), $this);
-        }
-        $this->nodeCounter++;
-    }
-
-    /**
      * Run specific state for further stream parsing.
      */
     public function switchState(string $stateName): void
@@ -154,7 +157,7 @@ final class Parser
                 Tag::class => $this->nodes[$this->nodeCounter] = [
                     'tag' => $node['buffer'],
                     'closing' => $node['closing'],
-                    'tag_pos' => $this->getCharPosition(-strlen($node['buffer'])),
+                    'tag_pos' => $this->getCharPosition(-strlen($node['buffer']) - 1),
                 ],
                 TagEnd::class => $this->nodes[$this->nodeCounter]['void'] = $node['void'],
                 TagAttr::class => $this->nodes[$this->nodeCounter]['attrs'][$node['buffer']] = null,
@@ -190,10 +193,27 @@ final class Parser
     public function getCharPosition(int $offsetCorrection = 0): array
     {
         $pos = $this->offset + $offsetCorrection;
-        $line = substr_count($this->stream, "\n", 0, $pos) + 1;
-        $lastNewline = strrpos($this->stream, "\n", $pos - strlen($this->stream));
-        $lineOffset = ($lastNewline === false) ? $pos : ($pos - $lastNewline - 1);
-        return [$line, $lineOffset];
+        $left = 0;
+        $right = count($this->lineOffsets) - 1;
+
+        while ($left <= $right) {
+            $middle = intdiv($left + $right, 2);
+
+            if ($this->lineOffsets[$middle] <= $pos) {
+                $left = $middle + 1;
+            } else {
+                $right = $middle - 1;
+            }
+        }
+
+        $line = $right + 1;
+        $lineStart = $this->lineOffsets[$right];
+        $column = mb_strlen(
+                substr($this->stream, $lineStart, $pos - $lineStart),
+                'UTF-8'
+            ) + 1;
+
+        return [$line, $column];
     }
 
     /**
@@ -239,5 +259,31 @@ final class Parser
     public function getFile(): string
     {
         return $this->file;
+    }
+
+    private function buildLineOffsets(): void
+    {
+        $this->lineOffsets = [0];
+
+        $length = strlen($this->stream);
+
+        for ($i = 0; $i < $length; $i++) {
+            if ($this->stream[$i] === "\n") {
+                $this->lineOffsets[] = $i + 1;
+            }
+        }
+    }
+
+    /**
+     * Process template tag converting it into node structure with all tag info
+     */
+    private function processTag(int $startOffset): void
+    {
+        $this->offset = $startOffset;
+        $this->switchState(Tag::class);
+        while (!$this->currentState instanceof Stop && $this->nextChar()) {
+            $this->currentState->process($this->getChar(), $this);
+        }
+        $this->nodeCounter++;
     }
 }

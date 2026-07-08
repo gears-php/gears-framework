@@ -6,7 +6,7 @@
 namespace Gears\Framework\View\Parser;
 
 use Gears\Framework\View\Parser;
-use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
+use Gears\Framework\View\Exception\TemplateSyntaxException;
 
 abstract class State
 {
@@ -47,15 +47,19 @@ abstract class State
     }
 
     /**
-     * @throws InvalidCharacter
+     * @throws TemplateSyntaxException
      */
     public function invalidCharacterException(Parser $parser)
     {
-        throw new InvalidCharacter(
-            get_called_class(),
-            $parser->getChar(),
-            implode(':', $parser->getCharPosition()),
-            $parser->getFile()
+        $pos = $parser->getCharPosition();
+        throw new TemplateSyntaxException(
+            sprintf(
+                'Found invalid character "%s" (ASCII 0x%02x)',
+                $char = $parser->getChar(),
+                ord($char),
+            ), $parser->getFile(),
+            $pos[0],
+            $pos[1],
         );
     }
 

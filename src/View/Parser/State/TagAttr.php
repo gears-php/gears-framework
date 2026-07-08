@@ -7,12 +7,12 @@ namespace Gears\Framework\View\Parser\State;
 
 use Gears\Framework\View\Parser\State;
 use Gears\Framework\View\Parser;
-use Gears\Framework\View\Parser\State\Exception\InvalidCharacter;
+use Gears\Framework\View\Exception\TemplateSyntaxException;
 
 class TagAttr extends State
 {
     /**
-     * @throws InvalidCharacter
+     * @throws TemplateSyntaxException
      */
     public function process($char, Parser $parser): void
     {
